@@ -48,6 +48,38 @@ if (fs.existsSync(caminhoConfig)) {
   }
 }
 
+/* DETALHES POR FOTO: um `_info.json` dentro da propria pasta.
+   Fica ao lado das fotos, e a chave e so o nome do arquivo - nao o
+   caminho inteiro. Caminho longo e onde ela erraria digitando.
+   O `_` na frente ja faz o gerador ignorar o arquivo como imagem.
+
+   Aceita duas formas, e a curta existe porque na maioria das vezes ela
+   so vai querer a frase:
+     "foto.jpg": "A frase que aparece grande"
+     "foto.jpg": { "name": "...", "phrase": "...", "link": "..." } */
+const lerInfo = (dir) => {
+  const caminho = path.join(dir, "_info.json");
+  if (!fs.existsSync(caminho)) return {};
+  try {
+    const lido = JSON.parse(fs.readFileSync(caminho, "utf8"));
+    return (lido && typeof lido === "object") ? lido : {};
+  } catch (e) {
+    console.error("_info.json invalido em " + dir + ", seguindo sem ele: " + e.message);
+    return {};
+  }
+};
+
+/* Procura pelo nome do arquivo, COM e SEM extensao: escrever
+   "ouro-preto" ou "ouro-preto.jpg" tem que dar no mesmo. */
+const acharInfo = (info, arquivo) => {
+  const nome = path.basename(arquivo);
+  const semExt = path.basename(arquivo, path.extname(arquivo));
+  const bruto = info[nome] !== undefined ? info[nome] : info[semExt];
+  if (bruto === undefined) return {};
+  if (typeof bruto === "string") return { phrase: bruto };
+  return (bruto && typeof bruto === "object") ? bruto : {};
+};
+
 /* lista os arquivos de uma pasta, inclusive subpastas */
 const listar = (dir, base) => {
   const saida = [];
@@ -64,7 +96,7 @@ const listar = (dir, base) => {
 const itens = [];
 const colecoes = [];
 
-const montar = (arquivos, nomeColecao) => {
+const montar = (arquivos, nomeColecao, info) => {
   /* CAPA DE VIDEO por nome igual: "reel.mp4" + "reel.jpg" viram UM item
      com poster, nao dois. Sem isto a capa apareceria como se fosse uma
      obra separada, duplicando tudo na grade. */
@@ -83,7 +115,14 @@ const montar = (arquivos, nomeColecao) => {
   for (const a of arquivos) {
     if (posters.has(a)) continue;
     const ehVid = EXT_VID.test(a);
-    const item = { name: titulo(a) };
+    const d = acharInfo(info || {}, a);
+    /* o nome sai do ARQUIVO por padrao: renomear a foto ja resolve o
+       titulo, sem abrir arquivo nenhum. O `_info.json` so entra quando
+       ela quiser um nome diferente do nome do arquivo. */
+    const item = { name: String(d.name || d.nome || titulo(a)) };
+    const frase = d.phrase || d.frase || d.description;
+    if (frase) item.phrase = String(frase);
+    if (d.link) item.link = String(d.link);
     if (ehVid) {
       item.video = url(a);
       const semExt = a.slice(0, a.length - path.extname(a).length);
@@ -95,9 +134,10 @@ const montar = (arquivos, nomeColecao) => {
       item.image = url(a);
     }
     if (nomeColecao) item.collection = conf.name || nomeColecao;
-    /* tag herda a colecao quando ela nao definir outra: assim os filtros
-       ja nascem funcionando, e ela ajusta so se quiser */
-    const tag = conf.tag === undefined ? nomeColecao : conf.tag;
+    /* tag: a da foto manda; senao a da colecao; senao o nome da pasta.
+       Assim os filtros ja nascem funcionando e ela ajusta so o que quiser. */
+    const tag = d.tag !== undefined ? d.tag
+      : (conf.tag === undefined ? nomeColecao : conf.tag);
     if (tag) item.tag = tag;
     itens.push(item);
   }
@@ -112,7 +152,7 @@ for (const pasta of pastas) {
   const arquivos = listar(path.join(RAIZ, pasta), pasta);
   if (!arquivos.length) continue;
   const antes = itens.length;
-  montar(arquivos, pasta);
+  montar(arquivos, pasta, lerInfo(path.join(RAIZ, pasta)));
   const conf = config.collections[pasta] || {};
   const primeira = itens.slice(antes).find((i) => i.image);
   colecoes.push({
@@ -128,7 +168,7 @@ const soltos = fs.readdirSync(RAIZ)
   .filter((n) => !ignorar(n) && fs.statSync(path.join(RAIZ, n)).isFile()
     && (EXT_IMG.test(n) || EXT_VID.test(n)))
   .sort();
-if (soltos.length) montar(soltos, "");
+if (soltos.length) montar(soltos, "", lerInfo(RAIZ));
 
 colecoes.sort((a, b) => (a._ordem - b._ordem) || a.name.localeCompare(b.name));
 for (const c of colecoes) delete c._ordem;
