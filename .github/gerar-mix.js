@@ -80,6 +80,29 @@ const acharInfo = (info, arquivo) => {
   return (bruto && typeof bruto === "object") ? bruto : {};
 };
 
+/* O ARQUIVO DA FERRAMENTA: mix-info.json, na raiz.
+   Quem escreve e o organizador.html. Ele NAO mexe no images.json de
+   proposito - esse e do robo, e dois donos no mesmo arquivo virariam
+   briga toda vez que ela subisse uma foto.
+   Chave aqui e o caminho INTEIRO ("Photography/foto.jpg"), porque a
+   ferramenta conhece o caminho e nao precisa digitar nada. */
+let ferramenta = { tags: [], tagsVisiveis: 2, items: {} };
+const caminhoFerr = path.join(RAIZ, "mix-info.json");
+if (fs.existsSync(caminhoFerr)) {
+  try {
+    const lido = JSON.parse(fs.readFileSync(caminhoFerr, "utf8"));
+    if (lido && typeof lido === "object") {
+      ferramenta = {
+        tags: Array.isArray(lido.tags) ? lido.tags : [],
+        tagsVisiveis: lido.tagsVisiveis === undefined ? 2 : lido.tagsVisiveis,
+        items: (lido.items && typeof lido.items === "object") ? lido.items : {},
+      };
+    }
+  } catch (e) {
+    console.error("mix-info.json invalido, seguindo sem ele:", e.message);
+  }
+}
+
 /* lista os arquivos de uma pasta, inclusive subpastas */
 const listar = (dir, base) => {
   const saida = [];
@@ -115,7 +138,15 @@ const montar = (arquivos, nomeColecao, info) => {
   for (const a of arquivos) {
     if (posters.has(a)) continue;
     const ehVid = EXT_VID.test(a);
-    const d = acharInfo(info || {}, a);
+    /* TRES fontes, da mais fraca para a mais forte:
+         1. o nome do arquivo e a pasta   (nada a digitar)
+         2. o _info.json da pasta         (edicao a mao)
+         3. o mix-info.json da ferramenta (o organizador)
+       A ferramenta vence porque e o ultimo lugar onde ela mexeu de
+       forma deliberada, item por item, olhando a foto. */
+    const dPasta = acharInfo(info || {}, a);
+    const dFerr = ferramenta.items[a.split(path.sep).join("/")] || {};
+    const d = Object.assign({}, dPasta, dFerr);
     /* o nome sai do ARQUIVO por padrao: renomear a foto ja resolve o
        titulo, sem abrir arquivo nenhum. O `_info.json` so entra quando
        ela quiser um nome diferente do nome do arquivo. */
@@ -173,10 +204,22 @@ if (soltos.length) montar(soltos, "", lerInfo(RAIZ));
 colecoes.sort((a, b) => (a._ordem - b._ordem) || a.name.localeCompare(b.name));
 for (const c of colecoes) delete c._ordem;
 
-const saida = { collections: colecoes, items: itens };
+/* ORDEM DAS TAGS.
+   O componente mostra as primeiras na barra e esconde o resto atras do
+   "+". Sem uma ordem declarada, ela sairia da ordem em que as fotos
+   aparecem - ou seja, mudaria sozinha ao subir uma foto nova.
+   As tags que existem de verdade, na ordem que ela definiu; as que
+   sobrarem entram no fim. */
+const usadas = [...new Set(itens.map((i) => i.tag).filter(Boolean))];
+const tags = ferramenta.tags.filter((t) => usadas.includes(t));
+for (const t of usadas) if (!tags.includes(t)) tags.push(t);
+
+const saida = { tags, tagsVisiveis: ferramenta.tagsVisiveis, collections: colecoes, items: itens };
 fs.writeFileSync(path.join(RAIZ, "images.json"), JSON.stringify(saida, null, 2) + "\n");
 
 console.log("images.json: " + itens.length + " itens em " + colecoes.length + " colecoes");
+console.log("  tags (" + tags.length + "): " + (tags.join(", ") || "nenhuma")
+  + "   -> " + ferramenta.tagsVisiveis + " a vista");
 for (const c of colecoes) {
   console.log("  - " + c.name + ": " + itens.filter((i) => i.collection === c.name).length);
 }

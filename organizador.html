@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mix — Organizador</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Paleta e medidas do site. Escala de 8px em tudo - espacamento
+   aleatorio e a causa mais comum de um layout parecer amador.
+   ============================================================ */
+:root{
+  --tinta:#352270; --ativo:#EDE7FB; --campo:#F4F1FC; --fundo:#F2F0FC;
+  --branco:#fff; --amarelo:#FFF20B; --verde:#24FB99;
+  --linha:rgba(53,34,112,.10);
+  --mola:cubic-bezier(.22,1,.36,1);
+  --r:16px; --r-g:22px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Outfit',ui-sans-serif,system-ui,sans-serif;
+  background:var(--fundo); color:var(--tinta);
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:120px;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{border:none;background:none;cursor:pointer}
+
+/* vidro - o mesmo da barra do site */
+.vidro{
+  background:rgba(255,255,255,.72);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border:1px solid rgba(255,255,255,.55);
+}
+
+/* ---------- BARRA DE CIMA ---------- */
+.topo{
+  position:sticky; top:0; z-index:40;
+  display:flex; align-items:center; gap:12px;
+  padding:12px 20px; flex-wrap:wrap;
+  box-shadow:0 1px 0 var(--linha), 0 8px 24px -20px rgba(53,34,112,.4);
+}
+.marca{font-weight:700; font-size:15px; letter-spacing:-.01em; flex-shrink:0}
+.marca small{display:block;font-weight:400;font-size:11px;opacity:.5;letter-spacing:0}
+.fonte{
+  flex:1; min-width:240px; display:flex; align-items:center; gap:8px;
+  background:var(--campo); border-radius:999px; padding:0 6px 0 14px; height:38px;
+}
+.fonte input{flex:1;border:none;outline:none;background:none;font-size:13px;min-width:0}
+.contador{font-size:12px;opacity:.55;white-space:nowrap}
+
+.btn{
+  height:38px; padding:0 18px; border-radius:999px;
+  font-size:13px; font-weight:500; white-space:nowrap;
+  background:var(--campo); transition:transform .18s var(--mola), background .18s;
+}
+.btn:hover{background:var(--ativo)}
+.btn:active{transform:scale(.96)}
+.btn.forte{background:var(--tinta); color:#fff}
+.btn.forte:hover{background:#432b8c}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.btn.icone{width:38px;padding:0;display:grid;place-items:center}
+
+/* ---------- FILTROS ---------- */
+.filtros{
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  padding:20px 20px 4px; max-width:1320px; margin:0 auto;
+}
+.chip{
+  height:34px; padding:0 15px; border-radius:999px; font-size:13px;
+  background:rgba(255,255,255,.7); transition:all .18s var(--mola);
+  display:inline-flex; align-items:center; gap:7px;
+}
+.chip:hover{background:#fff}
+.chip.on{background:var(--ativo); font-weight:600}
+.chip .n{opacity:.45; font-size:12px}
+.chip.alerta{background:#FFF6C4}
+.chip.alerta.on{background:var(--amarelo)}
+.esp{flex:1}
+
+/* ---------- GRADE ----------
+   Cartao 3:4 como o do site. auto-fill com minmax(min(100%,W),W):
+   nunca estica, e encolhe em vez de vazar em tela estreita. */
+.grade{
+  display:grid; gap:14px; padding:16px 20px;
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),190px));
+  justify-content:center; max-width:1320px; margin:0 auto;
+}
+.card{
+  position:relative; aspect-ratio:3/4; border-radius:var(--r);
+  overflow:hidden; background:var(--ativo); cursor:pointer;
+  box-shadow:0 2px 10px rgba(53,34,112,.07);
+  transition:transform .22s var(--mola), box-shadow .22s var(--mola);
+  outline:0 solid transparent;
+}
+.card:hover{transform:translateY(-3px); box-shadow:0 12px 26px rgba(53,34,112,.15)}
+.card.sel{outline:3px solid var(--tinta); outline-offset:2px}
+.card img,.card video{width:100%;height:100%;object-fit:cover;display:block}
+
+/* marca de selecao - circulo iOS no canto */
+.marca-sel{
+  position:absolute; top:8px; right:8px; width:24px; height:24px;
+  border-radius:50%; display:grid; place-items:center;
+  background:rgba(255,255,255,.55); backdrop-filter:blur(10px);
+  border:1.5px solid rgba(255,255,255,.85); color:transparent;
+  transition:all .2s var(--mola);
+}
+.card.sel .marca-sel{background:var(--tinta); border-color:var(--tinta); color:#fff}
+
+.tag-card{
+  position:absolute; top:8px; left:8px; max-width:calc(100% - 44px);
+  padding:3px 9px; border-radius:999px; font-size:10px; font-weight:600;
+  letter-spacing:.03em; color:#fff;
+  background:rgba(255,255,255,.26); backdrop-filter:blur(12px) saturate(180%);
+  -webkit-backdrop-filter:blur(12px) saturate(180%);
+  border:1px solid rgba(255,255,255,.45);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.tag-card.vazia{background:rgba(255,242,11,.85); color:#000; border-color:transparent}
+
+.pe{
+  position:absolute; left:0; right:0; bottom:0; padding:22px 10px 9px;
+  background:linear-gradient(to top,rgba(20,12,50,.78),transparent);
+  color:#fff; pointer-events:none;
+}
+.pe .nome{font-size:11.5px; font-weight:500; line-height:1.3;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.pe .frase{font-size:10px; opacity:.75; margin-top:1px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.lapis{
+  position:absolute; bottom:8px; right:8px; width:28px; height:28px;
+  border-radius:50%; display:grid; place-items:center;
+  background:rgba(255,255,255,.85); color:var(--tinta);
+  opacity:0; transition:opacity .2s;
+}
+.card:hover .lapis{opacity:1}
+.selo-video{
+  position:absolute; inset:0; display:grid; place-items:center; pointer-events:none;
+}
+.selo-video i{
+  width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  background:rgba(255,255,255,.24); backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.45); color:#fff;
+}
+
+/* ---------- BARRA DE ACAO (aparece na selecao) ---------- */
+.acoes{
+  position:fixed; left:50%; bottom:20px; z-index:60;
+  transform:translate(-50%,140%); transition:transform .34s var(--mola);
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:10px 12px; border-radius:var(--r-g); max-width:calc(100vw - 32px);
+  box-shadow:0 18px 48px -18px rgba(53,34,112,.5);
+}
+.acoes.on{transform:translate(-50%,0)}
+.acoes .quantos{font-size:13px;font-weight:600;padding-left:6px;white-space:nowrap}
+.acoes .div{width:1px;height:26px;background:var(--linha)}
+
+/* ---------- PAINEL DE DETALHES ---------- */
+.fundo-painel{
+  position:fixed; inset:0; z-index:70; background:rgba(27,18,64,.28);
+  backdrop-filter:blur(3px); opacity:0; pointer-events:none; transition:opacity .28s;
+}
+.fundo-painel.on{opacity:1;pointer-events:auto}
+.painel{
+  position:fixed; top:0; right:0; bottom:0; z-index:71; width:min(400px,100vw);
+  background:var(--branco); box-shadow:-20px 0 60px -30px rgba(53,34,112,.5);
+  transform:translateX(101%); transition:transform .34s var(--mola);
+  display:flex; flex-direction:column;
+}
+.painel.on{transform:none}
+.painel header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 18px; border-bottom:1px solid var(--linha);
+}
+.painel header h2{font-size:14px;font-weight:600}
+.painel .corpo{padding:18px; overflow-y:auto; flex:1}
+.previa{width:100%; border-radius:var(--r); background:var(--ativo);
+  aspect-ratio:3/4; object-fit:cover; margin-bottom:6px}
+.caminho{font-size:10.5px; opacity:.45; word-break:break-all; margin-bottom:16px}
+.campo{margin-bottom:14px}
+.campo label{display:block; font-size:10.5px; text-transform:uppercase;
+  letter-spacing:.09em; opacity:.5; font-weight:600; margin-bottom:6px}
+.campo input,.campo textarea{
+  width:100%; background:var(--campo); border:1px solid transparent;
+  border-radius:12px; padding:11px 13px; font-size:14px; outline:none;
+  transition:border-color .18s;
+}
+.campo input:focus,.campo textarea:focus{border-color:var(--tinta)}
+.campo textarea{resize:vertical; min-height:74px; line-height:1.45}
+.nav{display:flex;gap:8px}
+.nav .btn{flex:1;justify-content:center;display:flex;align-items:center}
+
+/* ---------- MODAL DE TAGS ---------- */
+.modal{
+  position:fixed; inset:0; z-index:80; display:grid; place-items:center;
+  background:rgba(27,18,64,.34); backdrop-filter:blur(4px);
+  opacity:0; pointer-events:none; transition:opacity .26s; padding:20px;
+}
+.modal.on{opacity:1;pointer-events:auto}
+.caixa{
+  background:#fff; border-radius:var(--r-g); width:min(440px,100%);
+  max-height:86vh; overflow-y:auto; padding:22px;
+  box-shadow:0 30px 80px -30px rgba(53,34,112,.6);
+}
+.caixa h2{font-size:16px;font-weight:600;margin-bottom:4px}
+.caixa p.sub{font-size:12.5px;opacity:.6;line-height:1.5;margin-bottom:18px}
+.linha-tag{
+  display:flex; align-items:center; gap:10px; padding:9px 12px;
+  background:var(--campo); border-radius:12px; margin-bottom:6px;
+}
+.linha-tag .nome{flex:1;font-size:14px;font-weight:500}
+.linha-tag .n{font-size:12px;opacity:.45}
+.linha-tag button{width:26px;height:26px;border-radius:8px;background:#fff;
+  display:grid;place-items:center;transition:background .15s}
+.linha-tag button:hover{background:var(--ativo)}
+.linha-tag button:disabled{opacity:.25;cursor:default;background:#fff}
+.corte{
+  display:flex;align-items:center;gap:10px;margin:12px 0;
+  font-size:11px;text-transform:uppercase;letter-spacing:.09em;
+  opacity:.5;font-weight:600;
+}
+.corte::before,.corte::after{content:"";flex:1;height:1px;background:var(--linha)}
+
+.aviso{
+  padding:14px 16px; border-radius:14px; background:#FFF6C4;
+  font-size:13px; line-height:1.5; margin:16px auto; max-width:900px;
+}
+.vazio{text-align:center;padding:80px 20px;opacity:.5;font-size:14px;line-height:1.6}
+svg{display:block}
+</style>
+</head>
+<body>
+
+<header class="topo vidro">
+  <div class="marca">Mix<small>organizador</small></div>
+
+  <label class="fonte">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="opacity:.4">
+      <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/>
+      <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.5-1.5"/>
+    </svg>
+    <input id="url" placeholder="link do images.json">
+  </label>
+
+  <button class="btn icone" id="btRecarregar" title="Recarregar">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/>
+    </svg>
+  </button>
+
+  <span class="contador" id="contador"></span>
+  <button class="btn" id="btTags">Tags e ordem</button>
+  <button class="btn forte" id="btExportar">Exportar</button>
+</header>
+
+<div class="filtros" id="filtros"></div>
+<div id="aviso"></div>
+<main class="grade" id="grade"></main>
+
+<div class="acoes vidro" id="acoes">
+  <span class="quantos" id="quantos">0</span>
+  <button class="btn" id="btLimpar">Limpar</button>
+  <span class="div"></span>
+  <span style="font-size:12px;opacity:.55;padding-left:2px">marcar como</span>
+  <span id="tagsAcao" style="display:flex;gap:6px;flex-wrap:wrap"></span>
+</div>
+
+<div class="fundo-painel" id="fundoPainel"></div>
+<aside class="painel" id="painel">
+  <header>
+    <h2>Detalhes</h2>
+    <button class="btn icone" id="btFechar">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </header>
+  <div class="corpo" id="corpoPainel"></div>
+</aside>
+
+<div class="modal" id="modalTags">
+  <div class="caixa">
+    <h2>Tags e ordem</h2>
+    <p class="sub">As de cima aparecem na barra do site. As de baixo ficam escondidas
+      atrás do <strong>+</strong>. Arraste a linha do corte para decidir quantas ficam à vista.</p>
+    <div id="listaTags"></div>
+    <div style="display:flex;gap:8px;margin-top:18px">
+      <button class="btn" id="btFecharTags" style="flex:1">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   ESTADO
+   ------------------------------------------------------------
+   `edicoes` e o que a ferramenta produz: um mapa
+   caminho-no-repositorio -> detalhes. E salvo no navegador a cada
+   mudanca, entao fechar a aba sem exportar nao perde nada.
+   ============================================================ */
+const CHAVE = "mix-organizador-v1";
+let itens = [];            // vindos do images.json
+let edicoes = {};          // { "Pasta/foto.jpg": {name,phrase,link,tag,collection} }
+let ordemTags = [];
+let tagsVisiveis = 2;
+let selecao = new Set();
+let filtro = "";           // "" = todas | "__sem" = sem tag | nome da tag
+let atual = null;          // item aberto no painel
+
+const $ = (id) => document.getElementById(id);
+const salvar = () => {
+  try {
+    localStorage.setItem(CHAVE, JSON.stringify({
+      url: $("url").value, edicoes, ordemTags, tagsVisiveis
+    }));
+  } catch (e) { /* modo anonimo: segue sem lembrar */ }
+};
+
+/* O caminho no repositorio e a CHAVE de tudo. Sai da propria URL do
+   CDN: .../gh/user/repo@main/Pasta/foto.jpg -> "Pasta/foto.jpg" */
+const caminhoDe = (u) => {
+  const m = /cdn\.jsdelivr\.net\/gh\/[^/]+\/[^/]+@[^/]+\/(.+)$/.exec(u || "");
+  if (m) { try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; } }
+  return u || "";
+};
+const esc = (t) => String(t == null ? "" : t)
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+/* valor efetivo: o que ela editou vence o que veio do JSON */
+const val = (it, campo) => {
+  const e = edicoes[it.caminho] || {};
+  return e[campo] !== undefined && e[campo] !== "" ? e[campo] : (it[campo] || "");
+};
+const editar = (caminho, campo, valor) => {
+  if (!edicoes[caminho]) edicoes[caminho] = {};
+  if (valor === "" || valor == null) delete edicoes[caminho][campo];
+  else edicoes[caminho][campo] = valor;
+  if (!Object.keys(edicoes[caminho]).length) delete edicoes[caminho];
+  salvar();
+};
+
+/* ---------- CARREGAR ---------- */
+async function carregar() {
+  const url = $("url").value.trim();
+  if (!url) return;
+  $("grade").innerHTML = '<div class="vazio">carregando…</div>';
+  try {
+    const r = await fetch(url + (url.includes("?") ? "&" : "?") + "t=" + Date.now());
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const d = await r.json();
+    const lista = Array.isArray(d) ? d : (d.items || d.itens || []);
+    itens = lista.map((it, i) => {
+      const img = it.image || it.imagem || "";
+      const vid = it.video || "";
+      return {
+        i, image: img, video: vid,
+        caminho: caminhoDe(vid || img),
+        name: it.name || it.nome || "",
+        phrase: it.phrase || it.frase || "",
+        link: it.link || "",
+        tag: it.tag || "",
+        collection: it.collection || it.colecao || "",
+      };
+    });
+    /* tags novas entram no fim da ordem; as que sumiram saem */
+    const achadas = [...new Set(itens.map((x) => val(x, "tag")).filter(Boolean))];
+    ordemTags = ordemTags.filter((t) => achadas.includes(t));
+    achadas.forEach((t) => { if (!ordemTags.includes(t)) ordemTags.push(t); });
+    salvar(); desenhar();
+  } catch (e) {
+    $("grade").innerHTML = '<div class="vazio">Não consegui ler.<br><br>' + esc(e.message)
+      + '<br><br>Confira o link, e se o repositório é <strong>público</strong>.</div>';
+  }
+}
+
+/* ---------- DESENHAR ---------- */
+function contarTag(t) { return itens.filter((x) => val(x, "tag") === t).length; }
+function semTag() { return itens.filter((x) => !val(x, "tag")).length; }
+
+function visiveis() {
+  if (filtro === "__sem") return itens.filter((x) => !val(x, "tag"));
+  if (filtro) return itens.filter((x) => val(x, "tag") === filtro);
+  return itens;
+}
+
+function desenhar() {
+  /* --- filtros --- */
+  const f = [];
+  f.push('<button class="chip' + (filtro === "" ? " on" : "") + '" data-f="">Todas <span class="n">'
+    + itens.length + '</span></button>');
+  const nSem = semTag();
+  if (nSem) {
+    f.push('<button class="chip alerta' + (filtro === "__sem" ? " on" : "")
+      + '" data-f="__sem">Sem tag <span class="n">' + nSem + '</span></button>');
+  }
+  ordemTags.forEach((t) => {
+    f.push('<button class="chip' + (filtro === t ? " on" : "") + '" data-f="' + esc(t) + '">'
+      + esc(t) + ' <span class="n">' + contarTag(t) + '</span></button>');
+  });
+  f.push('<span class="esp"></span>');
+  f.push('<button class="chip" id="btTudo">Selecionar tudo</button>');
+  $("filtros").innerHTML = f.join("");
+  $("filtros").querySelectorAll("[data-f]").forEach((b) => {
+    b.onclick = () => { filtro = b.dataset.f; desenhar(); };
+  });
+  const bt = $("btTudo");
+  if (bt) bt.onclick = () => { visiveis().forEach((x) => selecao.add(x.caminho)); desenhar(); };
+
+  /* --- aviso do "sem tag": o que falta e mais util que o que ja esta feito --- */
+  $("aviso").innerHTML = nSem
+    ? '<div class="aviso"><strong>' + nSem + '</strong> ' + (nSem === 1 ? "foto ainda não tem" : "fotos ainda não têm")
+      + ' tag. Elas aparecem no site, mas só no filtro “All”.</div>'
+    : "";
+
+  /* --- grade --- */
+  const lista = visiveis();
+  if (!lista.length) {
+    $("grade").innerHTML = '<div class="vazio">' + (itens.length
+      ? "Nada aqui com esse filtro." : "Cole o link do images.json aí em cima.") + '</div>';
+  } else {
+    $("grade").innerHTML = lista.map((it) => {
+      const t = val(it, "tag"), nome = val(it, "name"), fr = val(it, "phrase");
+      const capa = it.image || it.video;
+      return '<div class="card' + (selecao.has(it.caminho) ? " sel" : "") + '" data-c="'
+        + esc(it.caminho) + '">'
+        + (it.image
+            ? '<img src="' + esc(it.image) + '" loading="lazy" alt="">'
+            : '<video src="' + esc(it.video) + '" preload="metadata" muted></video>')
+        + (it.video ? '<div class="selo-video"><i><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></i></div>' : "")
+        + '<span class="tag-card' + (t ? "" : " vazia") + '">' + esc(t || "sem tag") + '</span>'
+        + '<span class="marca-sel"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>'
+        + '<div class="pe"><div class="nome">' + esc(nome || it.caminho.split("/").pop()) + '</div>'
+        + (fr ? '<div class="frase">' + esc(fr) + '</div>' : "") + '</div>'
+        + '<button class="lapis" data-editar="' + esc(it.caminho) + '" title="Detalhes">'
+        + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>'
+        + '</div>';
+    }).join("");
+
+    $("grade").querySelectorAll(".card").forEach((el) => {
+      el.onclick = (ev) => {
+        if (ev.target.closest("[data-editar]")) return;
+        const c = el.dataset.c;
+        if (selecao.has(c)) selecao.delete(c); else selecao.add(c);
+        desenhar();
+      };
+      el.ondblclick = () => abrirPainel(el.dataset.c);
+    });
+    $("grade").querySelectorAll("[data-editar]").forEach((b) => {
+      b.onclick = (ev) => { ev.stopPropagation(); abrirPainel(b.dataset.editar); };
+    });
+  }
+
+  /* --- contador e barra de acao --- */
+  const editados = Object.keys(edicoes).length;
+  $("contador").textContent = itens.length
+    ? itens.length + " fotos" + (editados ? " · " + editados + " editadas" : "") : "";
+  $("quantos").textContent = selecao.size + (selecao.size === 1 ? " foto" : " fotos");
+  $("acoes").classList.toggle("on", selecao.size > 0);
+  $("tagsAcao").innerHTML = ordemTags.map((t) =>
+    '<button class="chip" data-t="' + esc(t) + '">' + esc(t) + '</button>').join("")
+    + '<button class="chip" data-t="">tirar tag</button>'
+    + '<button class="chip" id="btNovaTag">+ nova</button>';
+  $("tagsAcao").querySelectorAll("[data-t]").forEach((b) => {
+    b.onclick = () => aplicarTag(b.dataset.t);
+  });
+  const nv = $("btNovaTag");
+  if (nv) nv.onclick = () => {
+    const t = (prompt("Nome da tag nova:") || "").trim();
+    if (t) { if (!ordemTags.includes(t)) ordemTags.push(t); aplicarTag(t); }
+  };
+}
+
+function aplicarTag(t) {
+  selecao.forEach((c) => editar(c, "tag", t));
+  if (t && !ordemTags.includes(t)) ordemTags.push(t);
+  selecao.clear(); salvar(); desenhar();
+}
+
+/* ---------- PAINEL ---------- */
+function abrirPainel(caminho) {
+  const it = itens.find((x) => x.caminho === caminho);
+  if (!it) return;
+  atual = it;
+  const cols = [...new Set(itens.map((x) => val(x, "collection")).filter(Boolean))];
+  $("corpoPainel").innerHTML =
+    (it.image ? '<img class="previa" src="' + esc(it.image) + '" alt="">'
+              : '<video class="previa" src="' + esc(it.video) + '" controls preload="metadata"></video>')
+    + '<div class="caminho">' + esc(it.caminho) + '</div>'
+    + '<div class="campo"><label>Nome</label><input id="fNome" value="' + esc(val(it, "name")) + '" placeholder="' + esc(it.caminho.split("/").pop()) + '"></div>'
+    + '<div class="campo"><label>Frase — o texto grande</label><textarea id="fFrase" placeholder="aparece quando clica no cantinho colorido">' + esc(val(it, "phrase")) + '</textarea></div>'
+    + '<div class="campo"><label>Link</label><input id="fLink" value="' + esc(val(it, "link")) + '" placeholder="https://instagram.com/p/…"></div>'
+    + '<div class="campo"><label>Tag</label><div style="display:flex;gap:6px;flex-wrap:wrap" id="fTags">'
+      + ordemTags.map((t) => '<button class="chip' + (val(it, "tag") === t ? " on" : "") + '" data-t="' + esc(t) + '">' + esc(t) + '</button>').join("")
+      + '<button class="chip' + (!val(it, "tag") ? " on" : "") + '" data-t="">nenhuma</button></div></div>'
+    + '<div class="campo"><label>Coleção</label><div style="display:flex;gap:6px;flex-wrap:wrap" id="fCols">'
+      + cols.map((c) => '<button class="chip' + (val(it, "collection") === c ? " on" : "") + '" data-c="' + esc(c) + '">' + esc(c) + '</button>').join("")
+      + '</div></div>'
+    + '<div class="nav"><button class="btn" id="btAnt">← anterior</button><button class="btn" id="btProx">próxima →</button></div>';
+
+  const liga = (id, campo) => {
+    const el = $(id);
+    el.oninput = () => { editar(it.caminho, campo, el.value.trim()); };
+    el.onchange = () => desenhar();
+  };
+  liga("fNome", "name"); liga("fFrase", "phrase"); liga("fLink", "link");
+  $("fTags").querySelectorAll("[data-t]").forEach((b) => {
+    b.onclick = () => { editar(it.caminho, "tag", b.dataset.t); abrirPainel(caminho); desenhar(); };
+  });
+  $("fCols").querySelectorAll("[data-c]").forEach((b) => {
+    b.onclick = () => {
+      editar(it.caminho, "collection", val(it, "collection") === b.dataset.c ? "" : b.dataset.c);
+      abrirPainel(caminho); desenhar();
+    };
+  });
+  const lista = visiveis();
+  const idx = lista.findIndex((x) => x.caminho === caminho);
+  $("btAnt").disabled = idx <= 0;
+  $("btProx").disabled = idx < 0 || idx >= lista.length - 1;
+  $("btAnt").onclick = () => abrirPainel(lista[idx - 1].caminho);
+  $("btProx").onclick = () => abrirPainel(lista[idx + 1].caminho);
+
+  $("painel").classList.add("on");
+  $("fundoPainel").classList.add("on");
+}
+function fecharPainel() {
+  $("painel").classList.remove("on");
+  $("fundoPainel").classList.remove("on");
+  atual = null; desenhar();
+}
+
+/* ---------- TAGS E ORDEM ---------- */
+function desenharTags() {
+  const l = [];
+  ordemTags.forEach((t, i) => {
+    if (i === tagsVisiveis) l.push('<div class="corte">escondidas atrás do +</div>');
+    l.push('<div class="linha-tag"><span class="nome">' + esc(t) + '</span>'
+      + '<span class="n">' + contarTag(t) + '</span>'
+      + '<button data-sobe="' + i + '"' + (i === 0 ? " disabled" : "") + '>'
+      + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg></button>'
+      + '<button data-desce="' + i + '"' + (i === ordemTags.length - 1 ? " disabled" : "") + '>'
+      + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div>');
+  });
+  if (tagsVisiveis >= ordemTags.length) l.push('<div class="corte">nenhuma escondida</div>');
+  l.push('<div style="display:flex;align-items:center;gap:10px;margin-top:16px;font-size:13px">'
+    + '<span style="opacity:.6">à vista na barra:</span>'
+    + '<button class="chip" id="menos">−</button><strong id="qtdVis">' + tagsVisiveis + '</strong>'
+    + '<button class="chip" id="mais">+</button></div>');
+  $("listaTags").innerHTML = l.join("");
+  $("listaTags").querySelectorAll("[data-sobe]").forEach((b) => {
+    b.onclick = () => { const i = +b.dataset.sobe;
+      [ordemTags[i - 1], ordemTags[i]] = [ordemTags[i], ordemTags[i - 1]];
+      salvar(); desenharTags(); desenhar(); };
+  });
+  $("listaTags").querySelectorAll("[data-desce]").forEach((b) => {
+    b.onclick = () => { const i = +b.dataset.desce;
+      [ordemTags[i + 1], ordemTags[i]] = [ordemTags[i], ordemTags[i + 1]];
+      salvar(); desenharTags(); desenhar(); };
+  });
+  $("menos").onclick = () => { tagsVisiveis = Math.max(0, tagsVisiveis - 1); salvar(); desenharTags(); };
+  $("mais").onclick = () => { tagsVisiveis = Math.min(ordemTags.length, tagsVisiveis + 1); salvar(); desenharTags(); };
+}
+
+/* ---------- EXPORTAR ---------- */
+function exportar() {
+  const saida = { tags: ordemTags, tagsVisiveis, items: {} };
+  Object.keys(edicoes).sort().forEach((c) => { saida.items[c] = edicoes[c]; });
+  const txt = JSON.stringify(saida, null, 2) + "\n";
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([txt], { type: "application/json" }));
+  a.download = "mix-info.json";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ---------- LIGAR ---------- */
+$("btRecarregar").onclick = carregar;
+$("url").onchange = () => { salvar(); carregar(); };
+$("btExportar").onclick = exportar;
+$("btLimpar").onclick = () => { selecao.clear(); desenhar(); };
+$("btFechar").onclick = fecharPainel;
+$("fundoPainel").onclick = fecharPainel;
+$("btTags").onclick = () => { desenharTags(); $("modalTags").classList.add("on"); };
+$("btFecharTags").onclick = () => $("modalTags").classList.remove("on");
+$("modalTags").onclick = (e) => { if (e.target === $("modalTags")) $("modalTags").classList.remove("on"); };
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { fecharPainel(); $("modalTags").classList.remove("on"); }
+  if (!atual) return;
+  if (e.key === "ArrowRight" && !$("btProx").disabled) $("btProx").click();
+  if (e.key === "ArrowLeft" && !$("btAnt").disabled) $("btAnt").click();
+});
+
+/* ---------- INICIO ---------- */
+(function () {
+  let g = {};
+  try { g = JSON.parse(localStorage.getItem(CHAVE) || "{}"); } catch (e) {}
+  $("url").value = g.url || "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/images.json";
+  edicoes = g.edicoes || {};
+  ordemTags = g.ordemTags || ["Design", "Motion", "Draw", "Photo", "3D"];
+  tagsVisiveis = g.tagsVisiveis === undefined ? 2 : g.tagsVisiveis;
+  desenhar();
+  carregar();
+})();
+</script>
+</body>
+</html>

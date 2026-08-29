@@ -1,4 +1,8 @@
 {
+  "tags": [
+    "Photo"
+  ],
+  "tagsVisiveis": 2,
   "collections": [
     {
       "name": "Photography",
@@ -11,13 +15,13 @@
       "name": "627a0c96f7611a4519143310e1e62e5b",
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Photography/627a0c96f7611a4519143310e1e62e5b.jpg",
       "collection": "Photography",
-      "tag": "Photography"
+      "tag": "Photo"
     },
     {
       "name": "6adc87905a6c511070f0abf943a92658",
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Photography/6adc87905a6c511070f0abf943a92658.jpg",
       "collection": "Photography",
-      "tag": "Photography"
+      "tag": "Photo"
     }
   ]
 }

@@ -1,0 +1,13 @@
+{
+  "_leia": "Este arquivo vai na RAIZ do repositorio. Define a tag padrao de cada colecao e a ordem delas. A ferramenta pode sobrescrever foto por foto.",
+
+  "collections": {
+    "UI":           { "tag": "Design", "order": 1 },
+    "Social Media": { "tag": "Design", "order": 2 },
+    "Editing":      { "tag": "Motion", "order": 3 },
+    "Motion":       { "tag": "Motion", "order": 4 },
+    "3D":           { "tag": "3D",     "order": 5 },
+    "Photography":  { "tag": "Photo",  "order": 6 },
+    "Drawing":      { "tag": "Draw",   "order": 7 }
+  }
+}
