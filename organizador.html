@@ -665,8 +665,12 @@ function abrirPainel(caminho) {
     (it.image ? '<img class="previa" src="' + esc(it.image) + '" alt="">'
               : '<video class="previa" src="' + esc(it.video) + '" controls preload="metadata"></video>')
     + '<div class="caminho">' + esc(it.caminho) + '</div>'
-    + '<div class="campo"><label>Nome</label><input id="fNome" value="' + esc(val(it, "name")) + '" placeholder="' + esc(it.caminho.split("/").pop()) + '"></div>'
-    + '<div class="campo"><label>Frase — o texto grande</label><textarea id="fFrase" placeholder="aparece quando clica no cantinho colorido">' + esc(val(it, "phrase")) + '</textarea></div>'
+    /* Os rotulos falam pelo TAMANHO na tela, nao pelo nome do campo no
+       arquivo. Ela descreveu assim: "grande e o titulo, pequeno embaixo
+       e o detalhe". As chaves do JSON continuam `phrase` e `name` para
+       nao quebrar o que ja esta gravado. */
+    + '<div class="campo"><label>Título — o texto GRANDE</label><textarea id="fFrase" placeholder="aparece ao clicar no cantinho colorido">' + esc(val(it, "phrase")) + '</textarea></div>'
+    + '<div class="campo"><label>Detalhe — o pequeno embaixo</label><input id="fNome" value="' + esc(val(it, "name")) + '" placeholder="' + esc(it.caminho.split("/").pop()) + '"></div>'
     + '<div class="campo"><label>Link</label><input id="fLink" value="' + esc(val(it, "link")) + '" placeholder="https://instagram.com/p/…"></div>'
     + '<div class="campo"><label>Tag</label><div style="display:flex;gap:6px;flex-wrap:wrap" id="fTags">'
       + ordemTags.map((t) => '<button class="chip' + (val(it, "tag") === t ? " on" : "") + '" data-t="' + esc(t) + '">' + esc(t) + '</button>').join("")
