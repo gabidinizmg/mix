@@ -514,6 +514,18 @@ async function carregar() {
         collection: it.collection || it.colecao || "",
       };
     });
+    /* A ORDEM VEM DO REPOSITORIO, nao do navegador dela.
+       Este era o ciclo: eu corrigia a ordem no mix-info.json, ela
+       clicava em Salvar, e a ferramenta escrevia por cima com a ordem
+       velha que estava guardada no navegador. O navegador dela era a
+       fonte da verdade sem ninguem ter decidido isso.
+       Agora o images.json manda - e ele ja carrega `tags`, escrito pelo
+       robo. O navegador so acrescenta o que for novo. */
+    if (Array.isArray(d.tags) && d.tags.length) {
+      ordemTags = d.tags.map(String);
+      if (typeof d.tagsVisiveis === "number") tagsVisiveis = d.tagsVisiveis;
+    }
+
     /* A ORDEM DECLARADA NAO SE PERDE.
        Antes esta linha descartava toda tag que nao estivesse em uso
        naquele momento. Como no comeco so existia uma foto marcada, a
