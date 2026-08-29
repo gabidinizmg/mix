@@ -226,6 +226,26 @@ button{border:none;background:none;cursor:pointer}
 }
 .corte::before,.corte::after{content:"";flex:1;height:1px;background:var(--linha)}
 
+/* estado do salvamento - o unico lugar onde o verde da marca aparece */
+.estado{
+  display:flex;align-items:center;gap:7px;font-size:12.5px;white-space:nowrap;
+  padding:0 4px;
+}
+.estado.ok{color:#0B7A4B;font-weight:500}
+.estado.erro{color:#B3261E;font-weight:500}
+.girando{width:13px;height:13px;border:2px solid var(--linha);
+  border-top-color:var(--tinta);border-radius:50%;animation:gira .7s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+.passo{
+  display:flex;gap:11px;align-items:flex-start;padding:11px 0;
+  border-bottom:1px solid var(--linha);font-size:13.5px;line-height:1.55;
+}
+.passo:last-of-type{border-bottom:none}
+.passo b{
+  flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--ativo);
+  display:grid;place-items:center;font-size:11.5px;font-weight:700;margin-top:1px;
+}
+.passo code{background:var(--campo);padding:1px 6px;border-radius:5px;font-size:12.5px}
 .aviso{
   padding:14px 16px; border-radius:14px; background:#FFF6C4;
   font-size:13px; line-height:1.5; margin:16px auto; max-width:900px;
@@ -254,8 +274,10 @@ svg{display:block}
   </button>
 
   <span class="contador" id="contador"></span>
+  <span class="estado" id="estado"></span>
   <button class="btn" id="btTags">Tags e ordem</button>
-  <button class="btn forte" id="btExportar">Exportar</button>
+  <button class="btn" id="btExportar" title="Baixar o arquivo em vez de salvar">Baixar</button>
+  <button class="btn forte" id="btSalvar">Salvar no GitHub</button>
 </header>
 
 <div class="filtros" id="filtros"></div>
@@ -281,6 +303,40 @@ svg{display:block}
   <div class="corpo" id="corpoPainel"></div>
 </aside>
 
+<div class="modal" id="modalChave">
+  <div class="caixa">
+    <h2>Conectar ao GitHub</h2>
+    <p class="sub">Uma vez só. Depois disso, é um botão e pronto — sem baixar,
+      sem arrastar, sem commit.</p>
+
+    <div class="passo"><b>1</b><div>Abre
+      <a href="https://github.com/settings/personal-access-tokens/new" target="_blank"
+         style="color:var(--tinta);font-weight:600">esta página</a> do GitHub.
+      Ela cria a chave.</div></div>
+    <div class="passo"><b>2</b><div>Em <b>Token name</b>, escreve <code>organizador</code>.
+      Em <b>Expiration</b>, escolhe o prazo que quiser.</div></div>
+    <div class="passo"><b>3</b><div>Em <b>Repository access</b>, marca
+      <b>Only select repositories</b> e escolhe <code>mix</code>.
+      <br><span style="opacity:.6">Assim a chave não alcança mais nada seu.</span></div></div>
+    <div class="passo"><b>4</b><div>Em <b>Permissions → Repository permissions</b>,
+      procura <b>Contents</b> e põe em <b>Read and write</b>. Só essa.</div></div>
+    <div class="passo"><b>5</b><div><b>Generate token</b>, copia o código que aparece
+      e cola aqui embaixo.</div></div>
+
+    <div class="campo" style="margin-top:18px">
+      <label>A chave</label>
+      <input type="password" id="fChave" placeholder="github_pat_..." autocomplete="off">
+    </div>
+    <p class="sub" style="margin-bottom:14px">
+      Ela fica guardada só neste navegador, no seu computador. Não vai para lugar nenhum
+      além do próprio GitHub.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn" id="btApagarChave" style="flex:1">Apagar chave</button>
+      <button class="btn forte" id="btGuardarChave" style="flex:2">Guardar e salvar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="modalTags">
   <div class="caixa">
     <h2>Tags e ordem</h2>
@@ -302,6 +358,7 @@ svg{display:block}
    mudanca, entao fechar a aba sem exportar nao perde nada.
    ============================================================ */
 const CHAVE = "mix-organizador-v1";
+const CHAVE_TOKEN = "mix-organizador-token";   /* guardado separado do resto */
 let itens = [];            // vindos do images.json
 let edicoes = {};          // { "Pasta/foto.jpg": {name,phrase,link,tag,collection} }
 let ordemTags = [];
@@ -309,15 +366,69 @@ let tagsVisiveis = 2;
 let selecao = new Set();
 let filtro = "";           // "" = todas | "__sem" = sem tag | nome da tag
 let atual = null;          // item aberto no painel
+let ultimaEdicao = 0;      // para saber se ha trabalho nao salvo
+let ultimoSalvo = 0;
+
+/* A chave vive numa gaveta propria: assim exportar, importar ou limpar
+   as edicoes nunca arrasta o token junto por descuido. */
+const lerToken = () => { try { return localStorage.getItem(CHAVE_TOKEN) || ""; } catch (e) { return ""; } };
+const gravarToken = (t) => { try { t ? localStorage.setItem(CHAVE_TOKEN, t) : localStorage.removeItem(CHAVE_TOKEN); } catch (e) {} };
+
+/* De onde salvar: sai do proprio link do JSON que ela ja colou.
+   .../gh/USUARIO/REPO@BRANCH/images.json */
+const donoDoRepo = () => {
+  const m = /cdn\.jsdelivr\.net\/gh\/([^/]+)\/([^/@]+)@([^/]+)\//.exec($("url").value.trim());
+  return m ? { dono: m[1], repo: m[2], branch: m[3] } : null;
+};
+
+/* base64 de texto com acento. `btoa` sozinho quebra em "ç" e "ã";
+   e o spread do TextEncoder estoura a pilha num arquivo grande, por
+   isso vai em blocos. */
+const paraBase64 = (txt) => {
+  const bytes = new TextEncoder().encode(txt);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(bin);
+};
+
+const mostrarEstado = (texto, tipo) => {
+  const el = $("estado");
+  if (!texto) { el.innerHTML = ""; el.className = "estado"; return; }
+  el.className = "estado" + (tipo ? " " + tipo : "");
+  el.innerHTML = (tipo === "indo" ? '<span class="girando"></span>' : "")
+    + '<span>' + esc(texto) + '</span>';
+};
 
 const $ = (id) => document.getElementById(id);
+let armazenaOk = true;
 const salvar = () => {
+  ultimaEdicao = Date.now();
   try {
     localStorage.setItem(CHAVE, JSON.stringify({
       url: $("url").value, edicoes, ordemTags, tagsVisiveis
     }));
-  } catch (e) { /* modo anonimo: segue sem lembrar */ }
+  } catch (e) {
+    /* NAO PODE FALHAR CALADO.
+       Antes isto era um catch vazio: se o navegador nao guardasse
+       (janela anonima, armazenamento cheio, site bloqueado), a
+       ferramenta seguia funcionando e ela podia perder duas horas de
+       trabalho sem nunca ver um aviso. */
+    if (armazenaOk) {
+      armazenaOk = false;
+      desenhar();
+    }
+  }
 };
+
+/* Aviso ao fechar com trabalho nao salvo. O navegador mostra o texto
+   dele, nao o meu - o que importa e a pergunta existir. */
+window.addEventListener("beforeunload", (e) => {
+  if (Object.keys(edicoes).length && ultimaEdicao > ultimoSalvo) {
+    e.preventDefault(); e.returnValue = "";
+  }
+});
 
 /* O caminho no repositorio e a CHAVE de tudo. Sai da propria URL do
    CDN: .../gh/user/repo@main/Pasta/foto.jpg -> "Pasta/foto.jpg" */
@@ -421,10 +532,13 @@ function desenhar() {
   if (bt) bt.onclick = () => { visiveis().forEach((x) => selecao.add(x.caminho)); desenhar(); };
 
   /* --- aviso do "sem tag": o que falta e mais util que o que ja esta feito --- */
-  $("aviso").innerHTML = nSem
+  const avisoArmazena = armazenaOk ? "" :
+    '<div class="aviso" style="background:#FFE3E0"><strong>Este navegador não está guardando suas edições.</strong> '
+    + 'Salve no GitHub antes de fechar a aba, senão o trabalho se perde.</div>';
+  $("aviso").innerHTML = avisoArmazena + (nSem
     ? '<div class="aviso"><strong>' + nSem + '</strong> ' + (nSem === 1 ? "foto ainda não tem" : "fotos ainda não têm")
       + ' tag. Elas aparecem no site, mas só no filtro “All”.</div>'
-    : "";
+    : "");
 
   /* --- grade --- */
   const lista = visiveis();
@@ -468,6 +582,9 @@ function desenhar() {
   const editados = Object.keys(edicoes).length;
   $("contador").textContent = itens.length
     ? itens.length + " fotos" + (editados ? " · " + editados + " editadas" : "") : "";
+  $("btSalvar").textContent = lerToken() ? "Salvar no GitHub" : "Conectar ao GitHub";
+  $("btExportar").disabled = !Object.keys(edicoes).length;
+  $("btSalvar").disabled = !Object.keys(edicoes).length && !!lerToken();
   $("quantos").textContent = selecao.size + (selecao.size === 1 ? " foto" : " fotos");
   $("acoes").classList.toggle("on", selecao.size > 0);
   $("tagsAcao").innerHTML = ordemTags.map((t) =>
@@ -578,11 +695,71 @@ function desenharTags() {
   $("mais").onclick = () => { tagsVisiveis = Math.min(ordemTags.length, tagsVisiveis + 1); salvar(); desenharTags(); };
 }
 
+/* ---------- SALVAR DIRETO NO GITHUB ----------
+   Um botao no lugar de: exportar, achar o arquivo baixado, arrastar
+   para a pasta, commit, push. O robo do repositorio faz o resto
+   sozinho, como ja fazia com as fotos. */
+async function salvarNoGitHub() {
+  const token = lerToken();
+  if (!token) { $("modalChave").classList.add("on"); return; }
+  const alvo = donoDoRepo();
+  if (!alvo) {
+    mostrarEstado("O link lá em cima não parece do jsDelivr", "erro");
+    return;
+  }
+  const api = "https://api.github.com/repos/" + alvo.dono + "/" + alvo.repo
+    + "/contents/mix-info.json";
+  const cab = {
+    "Authorization": "Bearer " + token,
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+  mostrarEstado("salvando…", "indo");
+  try {
+    /* O GitHub exige o `sha` do arquivo atual para substituir - e a
+       trava que impede duas gravacoes se atropelarem. 404 aqui e
+       normal: quer dizer que o arquivo ainda nao existe. */
+    let sha = null;
+    const atual = await fetch(api + "?ref=" + encodeURIComponent(alvo.branch), { headers: cab });
+    if (atual.status === 200) sha = (await atual.json()).sha;
+    else if (atual.status === 401) throw new Error("A chave não foi aceita. Refaça no botão Salvar.");
+    else if (atual.status === 403) throw new Error("A chave não tem permissão de escrita em Contents.");
+    else if (atual.status !== 404) throw new Error("HTTP " + atual.status);
+
+    const corpo = {
+      message: "mix-info.json pelo organizador",
+      content: paraBase64(textoDoArquivo()),
+      branch: alvo.branch,
+    };
+    if (sha) corpo.sha = sha;
+
+    const r = await fetch(api, { method: "PUT", headers: cab, body: JSON.stringify(corpo) });
+    if (!r.ok) {
+      let msg = "HTTP " + r.status;
+      try { msg = (await r.json()).message || msg; } catch (e2) {}
+      if (r.status === 409) msg = "O arquivo mudou no GitHub. Recarregue e salve de novo.";
+      throw new Error(msg);
+    }
+    ultimoSalvo = Date.now();
+    const n = Object.keys(edicoes).length;
+    mostrarEstado("salvo · " + n + (n === 1 ? " foto" : " fotos") + " · o robô já está rodando", "ok");
+    setTimeout(() => mostrarEstado("salvo há pouco", "ok"), 6000);
+  } catch (e) {
+    mostrarEstado(String((e && e.message) || e), "erro");
+  }
+}
+
 /* ---------- EXPORTAR ---------- */
-function exportar() {
+function textoDoArquivo() {
   const saida = { tags: ordemTags, tagsVisiveis, items: {} };
   Object.keys(edicoes).sort().forEach((c) => { saida.items[c] = edicoes[c]; });
-  const txt = JSON.stringify(saida, null, 2) + "\n";
+  return JSON.stringify(saida, null, 2) + "\n";
+}
+
+function exportar() {
+  const txt = textoDoArquivo();
+  ultimoSalvo = Date.now();
+  mostrarEstado("baixado — agora suba o arquivo no repositório", "ok");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([txt], { type: "application/json" }));
   a.download = "mix-info.json";
@@ -594,6 +771,22 @@ function exportar() {
 $("btRecarregar").onclick = carregar;
 $("url").onchange = () => { salvar(); carregar(); };
 $("btExportar").onclick = exportar;
+$("btSalvar").onclick = salvarNoGitHub;
+$("btGuardarChave").onclick = () => {
+  const t = $("fChave").value.trim();
+  if (!t) return;
+  gravarToken(t);
+  $("fChave").value = "";
+  $("modalChave").classList.remove("on");
+  salvarNoGitHub();
+};
+$("btApagarChave").onclick = () => {
+  gravarToken("");
+  $("fChave").value = "";
+  $("modalChave").classList.remove("on");
+  mostrarEstado("chave apagada", "");
+};
+$("modalChave").onclick = (e) => { if (e.target === $("modalChave")) $("modalChave").classList.remove("on"); };
 $("btLimpar").onclick = () => { selecao.clear(); desenhar(); };
 $("btFechar").onclick = fecharPainel;
 $("fundoPainel").onclick = fecharPainel;
@@ -606,7 +799,9 @@ document.addEventListener("keydown", (e) => {
     /* dentro de um campo, Esc so sai do campo. Fechar o painel inteiro
        no primeiro Esc faria ela perder o lugar por reflexo. */
     if (digitando) { e.target.blur(); return; }
-    fecharPainel(); $("modalTags").classList.remove("on");
+    fecharPainel();
+    $("modalTags").classList.remove("on");
+    $("modalChave").classList.remove("on");
     return;
   }
   if (!atual) return;
