@@ -241,9 +241,18 @@ button{border:none;background:none;cursor:pointer}
   border-bottom:1px solid var(--linha);font-size:13.5px;line-height:1.55;
 }
 .passo:last-of-type{border-bottom:none}
-.passo b{
+/* SO o numero vira circulo. Antes isto era `.passo b`, e cada termo em
+   negrito dentro do texto ("Token name", "Expiration") virava um
+   circulo de 22px com a palavra vazando por cima - ilegivel. */
+.passo .n{
   flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--ativo);
   display:grid;place-items:center;font-size:11.5px;font-weight:700;margin-top:1px;
+}
+.passo b{font-weight:600}
+.passo .obs{display:block;margin-top:5px;opacity:.62;font-size:12.5px;line-height:1.5}
+.passo .alerta{
+  display:block;margin-top:6px;padding:8px 11px;border-radius:9px;
+  background:#FFF6C4;font-size:12.5px;line-height:1.5;
 }
 .passo code{background:var(--campo);padding:1px 6px;border-radius:5px;font-size:12.5px}
 .aviso{
@@ -309,19 +318,36 @@ svg{display:block}
     <p class="sub">Uma vez só. Depois disso, é um botão e pronto — sem baixar,
       sem arrastar, sem commit.</p>
 
-    <div class="passo"><b>1</b><div>Abre
+    <div class="passo"><span class="n">1</span><div>Abre
       <a href="https://github.com/settings/personal-access-tokens/new" target="_blank"
-         style="color:var(--tinta);font-weight:600">esta página</a> do GitHub.
-      Ela cria a chave.</div></div>
-    <div class="passo"><b>2</b><div>Em <b>Token name</b>, escreve <code>organizador</code>.
-      Em <b>Expiration</b>, escolhe o prazo que quiser.</div></div>
-    <div class="passo"><b>3</b><div>Em <b>Repository access</b>, marca
+         style="color:var(--tinta);font-weight:600">esta página</a> do GitHub.</div></div>
+
+    <div class="passo"><span class="n">2</span><div>Em <b>Token name</b>,
+      escreve <code>organizador</code>.</div></div>
+
+    <div class="passo"><span class="n">3</span><div>Em <b>Expiration</b>, escolhe
+      <b>1 year</b>.
+      <span class="obs">Serve para fechar a janela: se a chave vazar um dia, ela deixa
+      de valer sozinha. Se preferir <b>No expiration</b>, tudo bem também — dá para
+      apagar a chave a qualquer momento, num clique, e gerar outra.</span></div></div>
+
+    <div class="passo"><span class="n">4</span><div>Em <b>Repository access</b>, marca
       <b>Only select repositories</b> e escolhe <code>mix</code>.
-      <br><span style="opacity:.6">Assim a chave não alcança mais nada seu.</span></div></div>
-    <div class="passo"><b>4</b><div>Em <b>Permissions → Repository permissions</b>,
-      procura <b>Contents</b> e põe em <b>Read and write</b>. Só essa.</div></div>
-    <div class="passo"><b>5</b><div><b>Generate token</b>, copia o código que aparece
-      e cola aqui embaixo.</div></div>
+      <span class="obs">Assim a chave não alcança mais nada seu.</span></div></div>
+
+    <div class="passo"><span class="n">5</span><div>Em <b>Permissions</b>, clica em
+      <b>+ Add permissions</b>. Abre uma caixa branca com um campo de busca.
+      <span class="alerta"><b>Busca por <code>Contents</code></b> — não por
+      “Repository”. Repository é a <i>categoria</i>, não existe permissão com esse
+      nome, e a busca não acha nada útil.</span>
+      <span class="obs">Marca <b>Contents</b> e põe em <b>Read and write</b>.
+      O <b>Metadata</b> aparece sozinho como obrigatório e não dá para tirar — o
+      contador mostrar <b>2</b> está certo.</span></div></div>
+
+    <div class="passo"><span class="n">6</span><div><b>Generate token</b>, copia o
+      código e cola aqui embaixo.
+      <span class="obs">O GitHub mostra o código <b>uma vez só</b>. Se fechar a página
+      sem copiar, é só gerar outro — não tem problema.</span></div></div>
 
     <div class="campo" style="margin-top:18px">
       <label>A chave</label>
@@ -329,7 +355,8 @@ svg{display:block}
     </div>
     <p class="sub" style="margin-bottom:14px">
       Ela fica guardada só neste navegador, no seu computador. Não vai para lugar nenhum
-      além do próprio GitHub.</p>
+      além do próprio GitHub. Quando ela vencer, o botão Salvar avisa em vermelho —
+      é só voltar aqui e colar uma nova.</p>
     <div style="display:flex;gap:8px">
       <button class="btn" id="btApagarChave" style="flex:1">Apagar chave</button>
       <button class="btn forte" id="btGuardarChave" style="flex:2">Guardar e salvar</button>
