@@ -1,0 +1,8 @@
+{
+  "_leia": "Ordem das tags na barra de filtros do site, e detalhes por foto. Este arquivo e da ferramenta (organizador.html) - exportar por la substitui ele inteiro.",
+
+  "tags": ["Design", "Motion", "Draw", "Photo", "3D"],
+  "tagsVisiveis": 2,
+
+  "items": {}
+}

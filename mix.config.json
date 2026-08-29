@@ -1,5 +1,5 @@
 {
-  "_leia": "Este arquivo vai na RAIZ do repositorio. Define a tag padrao de cada colecao e a ordem delas. A ferramenta pode sobrescrever foto por foto.",
+  "_leia": "Define a TAG padrao de cada colecao e a ordem das colecoes na grade. A ferramenta (organizador.html) pode trocar a tag de uma foto especifica, sem mexer aqui.",
 
   "collections": {
     "UI":           { "tag": "Design", "order": 1 },
