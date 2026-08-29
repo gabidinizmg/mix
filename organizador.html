@@ -330,13 +330,24 @@ const esc = (t) => String(t == null ? "" : t)
   .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 
 /* valor efetivo: o que ela editou vence o que veio do JSON */
+/* VAZIO DE PROPOSITO vs SEM EDICAO - sao coisas diferentes.
+   A versao anterior apagava a chave nos dois casos, e ai o `val` caia
+   de volta no valor do images.json. Como o robo escreve uma tag para
+   TODA foto, "tirar tag" restaurava a tag do robo no mesmo instante:
+   o botao existia e nao fazia nada, sem erro nem aviso.
+     null  = ela apagou de proposito  -> fica vazio
+     ausente = ela nunca mexeu        -> vale o que veio do robo
+   O gerar-mix.js ja trata null certo: `if (tag) item.tag = tag` deixa
+   o campo de fora. */
 const val = (it, campo) => {
   const e = edicoes[it.caminho] || {};
-  return e[campo] !== undefined && e[campo] !== "" ? e[campo] : (it[campo] || "");
+  return e[campo] !== undefined ? (e[campo] || "") : (it[campo] || "");
 };
 const editar = (caminho, campo, valor) => {
   if (!edicoes[caminho]) edicoes[caminho] = {};
-  if (valor === "" || valor == null) delete edicoes[caminho][campo];
+  /* "" vindo de um campo de texto = "volta ao padrao" (o nome do
+     arquivo). `null` vindo de um botao = "vazio, de proposito". */
+  if (valor === "") delete edicoes[caminho][campo];
   else edicoes[caminho][campo] = valor;
   if (!Object.keys(edicoes[caminho]).length) delete edicoes[caminho];
   salvar();
@@ -464,7 +475,8 @@ function desenhar() {
     + '<button class="chip" data-t="">tirar tag</button>'
     + '<button class="chip" id="btNovaTag">+ nova</button>';
   $("tagsAcao").querySelectorAll("[data-t]").forEach((b) => {
-    b.onclick = () => aplicarTag(b.dataset.t);
+    /* data-t vazio e o botao "tirar tag": vira null, o vazio deliberado */
+    b.onclick = () => aplicarTag(b.dataset.t === "" ? null : b.dataset.t);
   });
   const nv = $("btNovaTag");
   if (nv) nv.onclick = () => {
@@ -507,7 +519,10 @@ function abrirPainel(caminho) {
   };
   liga("fNome", "name"); liga("fFrase", "phrase"); liga("fLink", "link");
   $("fTags").querySelectorAll("[data-t]").forEach((b) => {
-    b.onclick = () => { editar(it.caminho, "tag", b.dataset.t); abrirPainel(caminho); desenhar(); };
+    b.onclick = () => {
+      editar(it.caminho, "tag", b.dataset.t === "" ? null : b.dataset.t);
+      abrirPainel(caminho); desenhar();
+    };
   });
   $("fCols").querySelectorAll("[data-c]").forEach((b) => {
     b.onclick = () => {
@@ -586,8 +601,21 @@ $("btTags").onclick = () => { desenharTags(); $("modalTags").classList.add("on")
 $("btFecharTags").onclick = () => $("modalTags").classList.remove("on");
 $("modalTags").onclick = (e) => { if (e.target === $("modalTags")) $("modalTags").classList.remove("on"); };
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") { fecharPainel(); $("modalTags").classList.remove("on"); }
+  const digitando = e.target && e.target.matches && e.target.matches("input, textarea");
+  if (e.key === "Escape") {
+    /* dentro de um campo, Esc so sai do campo. Fechar o painel inteiro
+       no primeiro Esc faria ela perder o lugar por reflexo. */
+    if (digitando) { e.target.blur(); return; }
+    fecharPainel(); $("modalTags").classList.remove("on");
+    return;
+  }
   if (!atual) return;
+  /* AS SETAS NAO PODEM ROUBAR O CURSOR.
+     Sem esta linha, apertar ← para voltar uma letra dentro do nome
+     pulava para a foto anterior e remontava o painel. Quem escreve
+     voltando dentro da palavra - que e o caso dela - perdia o texto
+     de vista a cada correcao. */
+  if (digitando) return;
   if (e.key === "ArrowRight" && !$("btProx").disabled) $("btProx").click();
   if (e.key === "ArrowLeft" && !$("btAnt").disabled) $("btAnt").click();
 });
