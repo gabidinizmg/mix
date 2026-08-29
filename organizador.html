@@ -514,9 +514,14 @@ async function carregar() {
         collection: it.collection || it.colecao || "",
       };
     });
-    /* tags novas entram no fim da ordem; as que sumiram saem */
+    /* A ORDEM DECLARADA NAO SE PERDE.
+       Antes esta linha descartava toda tag que nao estivesse em uso
+       naquele momento. Como no comeco so existia uma foto marcada, a
+       ordem inteira que ela tinha definido foi jogada fora e
+       reconstruida na ordem em que as tags apareceram nos dados.
+       Agora a lista dela e preservada; tag que ainda nao tem foto
+       aparece com contagem zero, e tag nova entra no fim. */
     const achadas = [...new Set(itens.map((x) => val(x, "tag")).filter(Boolean))];
-    ordemTags = ordemTags.filter((t) => achadas.includes(t));
     achadas.forEach((t) => { if (!ordemTags.includes(t)) ordemTags.push(t); });
     salvar(); desenhar();
   } catch (e) {
@@ -545,7 +550,10 @@ function desenhar() {
     f.push('<button class="chip alerta' + (filtro === "__sem" ? " on" : "")
       + '" data-f="__sem">Sem tag <span class="n">' + nSem + '</span></button>');
   }
+  /* chip so para tag que tem foto - filtro vazio seria botao morto.
+     A ORDEM vem da lista dela, nao dos dados. */
   ordemTags.forEach((t) => {
+    if (!contarTag(t)) return;
     f.push('<button class="chip' + (filtro === t ? " on" : "") + '" data-f="' + esc(t) + '">'
       + esc(t) + ' <span class="n">' + contarTag(t) + '</span></button>');
   });
