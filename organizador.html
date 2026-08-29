@@ -742,29 +742,57 @@ async function salvarNoGitHub() {
     "X-GitHub-Api-Version": "2022-11-28",
   };
   mostrarEstado("salvando…", "indo");
-  try {
-    /* O GitHub exige o `sha` do arquivo atual para substituir - e a
-       trava que impede duas gravacoes se atropelarem. 404 aqui e
-       normal: quer dizer que o arquivo ainda nao existe. */
-    let sha = null;
-    const atual = await fetch(api + "?ref=" + encodeURIComponent(alvo.branch), { headers: cab });
-    if (atual.status === 200) sha = (await atual.json()).sha;
-    else if (atual.status === 401) throw new Error("A chave não foi aceita. Refaça no botão Salvar.");
-    else if (atual.status === 403) throw new Error("A chave não tem permissão de escrita em Contents.");
-    else if (atual.status !== 404) throw new Error("HTTP " + atual.status);
 
+  /* Busca o `sha` atual do arquivo - a trava que o GitHub usa para
+     impedir que duas gravacoes se atropelem.
+
+     `cache: "no-store"` NAO e detalhe: a API responde com
+     `Cache-Control: private, max-age=60`, entao o navegador guarda a
+     resposta por um minuto. Salvando duas vezes seguidas, a segunda
+     recebia o sha VELHO do cache e o GitHub recusava com 409 - o erro
+     aparecia sem ela ter feito nada de errado. */
+  const pegarSha = async () => {
+    const r = await fetch(
+      api + "?ref=" + encodeURIComponent(alvo.branch) + "&t=" + Date.now(),
+      { headers: cab, cache: "no-store" }
+    );
+    if (r.status === 200) return (await r.json()).sha;
+    if (r.status === 404) return null;          /* ainda nao existe */
+    if (r.status === 401) throw new Error("A chave não foi aceita. Clique em Salvar e cole uma nova.");
+    if (r.status === 403) throw new Error("A chave não tem permissão de escrita em Contents.");
+    throw new Error("HTTP " + r.status);
+  };
+
+  const gravar = async (sha) => {
     const corpo = {
       message: "mix-info.json pelo organizador",
       content: paraBase64(textoDoArquivo()),
       branch: alvo.branch,
     };
     if (sha) corpo.sha = sha;
+    return fetch(api, { method: "PUT", headers: cab, cache: "no-store", body: JSON.stringify(corpo) });
+  };
 
-    const r = await fetch(api, { method: "PUT", headers: cab, body: JSON.stringify(corpo) });
+  try {
+    let r = await gravar(await pegarSha());
+
+    /* Uma segunda tentativa, automatica, com o sha buscado de novo.
+       Quem escreve o mix-info.json e so ela, por esta ferramenta - o
+       robo do repositorio nunca toca nele. Entao um conflito aqui e
+       quase sempre a propria gravacao anterior dela, e mandar "recarregue
+       a pagina" seria empurrar para a usuaria um problema que o codigo
+       resolve sozinho. */
+    if (r.status === 409 || r.status === 422) {
+      mostrarEstado("ajustando…", "indo");
+      r = await gravar(await pegarSha());
+    }
+
     if (!r.ok) {
       let msg = "HTTP " + r.status;
       try { msg = (await r.json()).message || msg; } catch (e2) {}
-      if (r.status === 409) msg = "O arquivo mudou no GitHub. Recarregue e salve de novo.";
+      if (r.status === 409 || r.status === 422) {
+        msg = "O arquivo mudou no GitHub. Recarregue a página e salve de novo.";
+      }
       throw new Error(msg);
     }
     ultimoSalvo = Date.now();
