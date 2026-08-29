@@ -1,8 +1,16 @@
 {
-  "_leia": "Ordem das tags na barra de filtros do site, e detalhes por foto. Este arquivo e da ferramenta (organizador.html) - exportar por la substitui ele inteiro.",
-
-  "tags": ["Design", "Motion", "Draw", "Photo", "3D"],
+  "tags": [
+    "3D",
+    "Draw",
+    "Motion",
+    "Photo",
+    "Design"
+  ],
   "tagsVisiveis": 2,
-
-  "items": {}
+  "items": {
+    "Photography/627a0c96f7611a4519143310e1e62e5b.jpg": {
+      "name": "TESTE",
+      "phrase": "ETETETETE"
+    }
+  }
 }
