@@ -56,7 +56,7 @@ if (fs.existsSync(caminhoConfig)) {
    Aceita duas formas, e a curta existe porque na maioria das vezes ela
    so vai querer a frase:
      "foto.jpg": "A frase que aparece grande"
-     "foto.jpg": { "name": "...", "phrase": "...", "link": "..." } */
+     "foto.jpg": { "name": "...", "phrase": "...", "year": "2024", "link": "..." } */
 const lerInfo = (dir) => {
   const caminho = path.join(dir, "_info.json");
   if (!fs.existsSync(caminho)) return {};
@@ -153,6 +153,15 @@ const montar = (arquivos, nomeColecao, info) => {
     const item = { name: String(d.name || d.nome || titulo(a)) };
     const frase = d.phrase || d.frase || d.description;
     if (frase) item.phrase = String(frase);
+    /* ANO. Vai como TEXTO, nao como numero: "2024" e "2024-2025" tem
+       que caber os dois, e um ano nunca entra em conta nenhuma.
+       A string vazia e testada separado: e o que a ferramenta grava
+       quando ela APAGA o ano, e "vazio de proposito" tem que sair do
+       JSON em vez de virar um ano em branco no card. */
+    const ano = d.year !== undefined ? d.year : d.ano;
+    if (ano !== undefined && ano !== null && String(ano).trim()) {
+      item.year = String(ano).trim();
+    }
     if (d.link) item.link = String(d.link);
     if (ehVid) {
       item.video = url(a);

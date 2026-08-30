@@ -387,7 +387,7 @@ svg{display:block}
 const CHAVE = "mix-organizador-v1";
 const CHAVE_TOKEN = "mix-organizador-token";   /* guardado separado do resto */
 let itens = [];            // vindos do images.json
-let edicoes = {};          // { "Pasta/foto.jpg": {name,phrase,link,tag,collection} }
+let edicoes = {};          // { "Pasta/foto.jpg": {name,phrase,year,link,tag,collection} }
 let ordemTags = [];
 let tagsVisiveis = 2;
 let selecao = new Set();
@@ -509,6 +509,10 @@ async function carregar() {
         caminho: caminhoDe(vid || img),
         name: it.name || it.nome || "",
         phrase: it.phrase || it.frase || "",
+        /* ano como TEXTO: "2024" e "2024 - 2025" tem que caber os dois */
+        year: it.year === undefined || it.year === null
+          ? (it.ano === undefined || it.ano === null ? "" : String(it.ano))
+          : String(it.year),
         link: it.link || "",
         tag: it.tag || "",
         collection: it.collection || it.colecao || "",
@@ -595,6 +599,7 @@ function desenhar() {
   } else {
     $("grade").innerHTML = lista.map((it) => {
       const t = val(it, "tag"), nome = val(it, "name"), fr = val(it, "phrase");
+      const ano = val(it, "year");
       const capa = it.image || it.video;
       return '<div class="card' + (selecao.has(it.caminho) ? " sel" : "") + '" data-c="'
         + esc(it.caminho) + '">'
@@ -604,7 +609,8 @@ function desenhar() {
         + (it.video ? '<div class="selo-video"><i><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></i></div>' : "")
         + '<span class="tag-card' + (t ? "" : " vazia") + '">' + esc(t || "sem tag") + '</span>'
         + '<span class="marca-sel"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>'
-        + '<div class="pe"><div class="nome">' + esc(nome || it.caminho.split("/").pop()) + '</div>'
+        + '<div class="pe"><div class="nome">' + esc(nome || it.caminho.split("/").pop())
+        + (ano ? ' <span style="opacity:.6;font-weight:500">· ' + esc(ano) + '</span>' : "") + '</div>'
         + (fr ? '<div class="frase">' + esc(fr) + '</div>' : "") + '</div>'
         + '<button class="lapis" data-editar="' + esc(it.caminho) + '" title="Detalhes">'
         + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>'
@@ -671,6 +677,7 @@ function abrirPainel(caminho) {
        nao quebrar o que ja esta gravado. */
     + '<div class="campo"><label>Título — o texto GRANDE</label><textarea id="fFrase" placeholder="aparece ao clicar no cantinho colorido">' + esc(val(it, "phrase")) + '</textarea></div>'
     + '<div class="campo"><label>Detalhe — o pequeno embaixo</label><input id="fNome" value="' + esc(val(it, "name")) + '" placeholder="' + esc(it.caminho.split("/").pop()) + '"></div>'
+    + '<div class="campo"><label>Ano</label><input id="fAno" value="' + esc(val(it, "year")) + '" placeholder="2024" inputmode="numeric"></div>'
     + '<div class="campo"><label>Link</label><input id="fLink" value="' + esc(val(it, "link")) + '" placeholder="https://instagram.com/p/…"></div>'
     + '<div class="campo"><label>Tag</label><div style="display:flex;gap:6px;flex-wrap:wrap" id="fTags">'
       + ordemTags.map((t) => '<button class="chip' + (val(it, "tag") === t ? " on" : "") + '" data-t="' + esc(t) + '">' + esc(t) + '</button>').join("")
@@ -686,6 +693,7 @@ function abrirPainel(caminho) {
     el.onchange = () => desenhar();
   };
   liga("fNome", "name"); liga("fFrase", "phrase"); liga("fLink", "link");
+  liga("fAno", "year");
   $("fTags").querySelectorAll("[data-t]").forEach((b) => {
     b.onclick = () => {
       editar(it.caminho, "tag", b.dataset.t === "" ? null : b.dataset.t);
