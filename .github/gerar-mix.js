@@ -180,7 +180,23 @@ const montar = (arquivos, nomeColecao, info) => {
        seguidoras: a capa ja e o `image` do proprio item, e quem monta a
        lista final e a pagina Mix, com a capa na frente. */
     if (Array.isArray(d.carrossel) && d.carrossel.length) {
-      const paginas = d.carrossel.map((c) => url(String(c))).filter(Boolean);
+      /* Cada pagina sai como OBJETO, com o texto dela junto. Antes ia so
+         a URL, e por isso as tres paginas de um carrossel mostravam o
+         mesmo texto - o do card. Cada foto ja tem entrada propria no
+         mix-info.json (e onde mora o `carrosselDe`), entao o lugar do
+         nome e da frase por pagina ja existia; faltava transportar.
+         `name`/`phrase` so entram quando existem: pagina sem texto
+         proprio herda o do card na hora de mostrar. */
+      const paginas = d.carrossel.map((c) => {
+        const chave = String(c);
+        const dp = ferramenta.items[chave] || {};
+        const pg = { src: url(chave) };
+        const nome = dp.name || dp.nome;
+        const frase = dp.phrase || dp.frase || dp.description;
+        if (nome) pg.name = String(nome);
+        if (frase) pg.phrase = String(frase);
+        return pg;
+      }).filter((x) => x.src);
       if (paginas.length) item.images = paginas;
     }
     if (d.link) item.link = String(d.link);

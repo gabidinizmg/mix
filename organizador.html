@@ -240,6 +240,7 @@ button{border:none;background:none;cursor:pointer}
 .pag img{width:100%;height:100%;object-fit:cover;display:block}
 .pag:hover{border-color:#C9BEEA}
 .pag.capa{border-color:#352270}
+.pag.sel{outline:2px solid #7B5CE6;outline-offset:2px}
 .pag .marca{position:absolute;left:0;right:0;bottom:0;background:#352270;color:#fff;
   font-size:9px;line-height:15px;letter-spacing:.03em}
 .selo-arq{position:absolute;top:8px;left:8px;background:#352270;color:#fff;
@@ -587,6 +588,12 @@ const ehArq = (it) => { const v = val(it, "archived"); return v === true || v ==
    propriedade do card, nao de cada foto solta. */
 const ehSeguidora = (it) => !!val(it, "carrosselDe");
 
+/* Qual PAGINA do carrossel esta sendo editada. Clicar na miniatura
+   seleciona para editar; virar capa e um botao a parte. Antes clicar
+   virava capa direto - e ai nao havia como escrever o texto de uma
+   pagina sem promove-la. */
+let paginaSel = null;
+
 /* Reconstroi a URL de um caminho, tomando o prefixo do CDN de uma URL
    que ja temos. Precisa disto porque a seguidora pode nao existir mais
    na lista de itens - ela deixou de ser um card no images.json. */
@@ -813,6 +820,7 @@ function aplicarTag(t) {
 function abrirPainel(caminho) {
   const it = itens.find((x) => x.caminho === caminho);
   if (!it) return;
+  if (atual && atual.caminho !== caminho) paginaSel = null;
   atual = it;
   const cols = [...new Set(itens.map((x) => val(x, "collection")).filter(Boolean))];
   $("corpoPainel").innerHTML =
@@ -839,15 +847,32 @@ function abrirPainel(caminho) {
            card - nem trocar a capa sem desagrupar tudo. */
         const seq = paginas(it);
         if (seq.length < 2) return "";
+        if (!paginaSel || !seq.some(function (x) { return x.caminho === paginaSel; })) {
+          paginaSel = seq[0].caminho;
+        }
+        const sel = itens.find(function (x) { return x.caminho === paginaSel; });
+        const vSel = function (campo) {
+          const e = edicoes[paginaSel] || {};
+          return e[campo] !== undefined ? (e[campo] || "") : (sel ? (sel[campo] || "") : "");
+        };
+        const iSel = seq.findIndex(function (x) { return x.caminho === paginaSel; });
         return '<div class="campo"><label>Carrossel — ' + seq.length
-          + ' fotos · clique numa para virar a capa</label><div class="tira" id="fTira">'
+          + ' fotos · clique numa para editar o texto dela</label><div class="tira" id="fTira">'
           + seq.map(function (pg, k) {
-              return '<button class="pag' + (k === 0 ? " capa" : "") + '" data-p="'
+              return '<button class="pag' + (k === 0 ? " capa" : "")
+                + (pg.caminho === paginaSel ? " sel" : "") + '" data-p="'
                 + esc(pg.caminho) + '" title="' + esc(pg.caminho) + '">'
                 + '<img src="' + esc(pg.url) + '" alt="" loading="lazy">'
                 + (k === 0 ? '<span class="marca">capa</span>' : "") + '</button>';
             }).join("")
-          + '</div></div>';
+          + '</div></div>'
+          + '<div class="campo"><label>Título da foto ' + (iSel + 1) + ' — vazio usa o do card</label>'
+          + '<textarea id="fPagFrase" placeholder="o texto GRANDE desta foto">' + esc(vSel("phrase")) + '</textarea></div>'
+          + '<div class="campo"><label>Detalhe da foto ' + (iSel + 1) + '</label>'
+          + '<input id="fPagNome" value="' + esc(vSel("name")) + '" placeholder="o pequeno embaixo"></div>'
+          + (iSel > 0
+              ? '<div class="campo"><button class="btn" id="btCapa" style="width:100%">Usar esta foto como capa</button></div>'
+              : '');
       })()
     + '<div class="campo"><button class="btn" id="btArq" style="width:100%">'
     + (ehArq(it) ? "Desarquivar" : "Arquivar") + '</button></div>'
@@ -867,8 +892,21 @@ function abrirPainel(caminho) {
      a chave quando ela e verdadeira. */
   if ($("fTira")) {
     $("fTira").querySelectorAll("[data-p]").forEach((b) => {
-      b.onclick = () => definirCapa(it.caminho, b.dataset.p);
+      b.onclick = () => { paginaSel = b.dataset.p; abrirPainel(caminho); };
     });
+    /* Os campos gravam na entrada da PAGINA, nao na do card. Cada foto
+       ja tinha entrada propria no mix-info.json (e onde mora o
+       `carrosselDe`), entao o lugar existia - faltava abrir. */
+    const ligaPag = (id, campo) => {
+      const el = $(id);
+      if (!el) return;
+      el.oninput = () => { editar(paginaSel, campo, el.value.trim()); };
+    };
+    ligaPag("fPagFrase", "phrase");
+    ligaPag("fPagNome", "name");
+    if ($("btCapa")) {
+      $("btCapa").onclick = () => definirCapa(it.caminho, paginaSel);
+    }
   }
   $("btArq").onclick = () => {
     editar(it.caminho, "archived", ehArq(it) ? false : true);
