@@ -15,17 +15,17 @@
     },
     {
       "name": "Social Media",
-      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Social%20Media/45064a2d95348bde596903e5e6805a4b.jpg",
+      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Social%20Media/a77f13a310147c55aedcd607693f6937.jpg",
       "link": ""
     },
     {
       "name": "Editing",
-      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Editing/baa98a6a98d22599c3a19a3303eb79c7.jpg",
+      "cover": "",
       "link": ""
     },
     {
       "name": "Motion",
-      "cover": "",
+      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/425dee78a01bc4ff60ee64c612df759a.jpg",
       "link": ""
     },
     {
@@ -60,17 +60,17 @@
       "tag": "Draw"
     },
     {
-      "name": "Baa98a6a98d22599c3a19a3303eb79c7",
+      "name": "425dee78a01bc4ff60ee64c612df759a",
       "images": [
         {
-          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/425dee78a01bc4ff60ee64c612df759a.jpg"
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Editing/baa98a6a98d22599c3a19a3303eb79c7.jpg"
         },
         {
           "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/493923dd84e2ee07534de0790c0a8e9b.jpg"
         }
       ],
-      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Editing/baa98a6a98d22599c3a19a3303eb79c7.jpg",
-      "collection": "Editing",
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/425dee78a01bc4ff60ee64c612df759a.jpg",
+      "collection": "Motion",
       "tag": "Motion"
     },
     {
@@ -87,13 +87,12 @@
       "tag": "Photo"
     },
     {
-      "name": "45064a2d95348bde596903e5e6805a4b",
-      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Social%20Media/45064a2d95348bde596903e5e6805a4b.jpg",
-      "collection": "Social Media",
-      "tag": "Design"
-    },
-    {
       "name": "A77f13a310147c55aedcd607693f6937",
+      "images": [
+        {
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Social%20Media/45064a2d95348bde596903e5e6805a4b.jpg"
+        }
+      ],
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Social%20Media/a77f13a310147c55aedcd607693f6937.jpg",
       "collection": "Social Media",
       "tag": "Design"
