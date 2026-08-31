@@ -147,6 +147,11 @@ const montar = (arquivos, nomeColecao, info) => {
     const dPasta = acharInfo(info || {}, a);
     const dFerr = ferramenta.items[a.split(path.sep).join("/")] || {};
     const d = Object.assign({}, dPasta, dFerr);
+    /* SEGUIDORA DE CARROSSEL nao vira card: ela e uma PAGINA de outro
+       card. Sair aqui e o que faz N fotos virarem 1 item no JSON - sem
+       isto o agrupamento nao tiraria nada da grade, so acrescentaria
+       uma lista repetida. */
+    if (d.carrosselDe) continue;
     /* o nome sai do ARQUIVO por padrao: renomear a foto ja resolve o
        titulo, sem abrir arquivo nenhum. O `_info.json` so entra quando
        ela quiser um nome diferente do nome do arquivo. */
@@ -170,6 +175,13 @@ const montar = (arquivos, nomeColecao, info) => {
     const arq = d.archived !== undefined ? d.archived : d.arquivado;
     if (arq === true || arq === 1 || arq === "true" || arq === "1") {
       item.archived = true;
+    }
+    /* AS PAGINAS do carrossel, na ordem que ela montou. So as
+       seguidoras: a capa ja e o `image` do proprio item, e quem monta a
+       lista final e a pagina Mix, com a capa na frente. */
+    if (Array.isArray(d.carrossel) && d.carrossel.length) {
+      const paginas = d.carrossel.map((c) => url(String(c))).filter(Boolean);
+      if (paginas.length) item.images = paginas;
     }
     if (d.link) item.link = String(d.link);
     if (ehVid) {
