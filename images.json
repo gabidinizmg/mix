@@ -62,8 +62,12 @@
     {
       "name": "Baa98a6a98d22599c3a19a3303eb79c7",
       "images": [
-        "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/425dee78a01bc4ff60ee64c612df759a.jpg",
-        "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/493923dd84e2ee07534de0790c0a8e9b.jpg"
+        {
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/425dee78a01bc4ff60ee64c612df759a.jpg"
+        },
+        {
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/493923dd84e2ee07534de0790c0a8e9b.jpg"
+        }
       ],
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Editing/baa98a6a98d22599c3a19a3303eb79c7.jpg",
       "collection": "Editing",
