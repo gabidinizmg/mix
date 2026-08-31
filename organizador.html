@@ -574,7 +574,7 @@ async function carregar() {
 function ativa(x) { return !ehArq(x) && !ehSeguidora(x); }
 function contarTag(t) { return itens.filter((x) => ativa(x) && val(x, "tag") === t).length; }
 function semTag() { return itens.filter((x) => ativa(x) && !val(x, "tag")).length; }
-function contarArq() { return itens.filter(ehArq).length; }
+function contarArq() { return itens.filter(ehArq).length + arquivadasOrfas().length; }
 function contarAtivas() { return itens.filter(ativa).length; }
 
 /* Arquivada. `val` devolve "" quando o campo nao existe, entao basta
@@ -642,10 +642,41 @@ function definirCapa(caminhoLider, novoCapa) {
 }
 const grupo = (it) => { const g = val(it, "carrossel"); return Array.isArray(g) ? g : []; };
 
+/* ORFAS. Marcadas como arquivadas mas que ja NAO existem no
+   images.json - o caso tipico e uma PAGINA de carrossel arquivada: ela
+   deixou de ser item quando o robo rodou, e a marca ficou sem porta de
+   volta (sumia da grade E de Arquivadas).
+   Reconstruo o item a partir da propria edicao para que ela sempre
+   apareca em algum lugar. Marca que nao se desfaz e armadilha. */
+function arquivadasOrfas() {
+  const ref = (itens[0] && (itens[0].image || itens[0].video)) || "";
+  const fora = [];
+  Object.keys(edicoes).forEach((c) => {
+    const e = edicoes[c] || {};
+    if (e.archived !== true && e.archived !== "true") return;
+    if (itens.some((x) => x.caminho === c)) return;
+    fora.push({
+      i: -1, caminho: c, image: urlDe(c, ref), video: "",
+      name: e.name || "", phrase: e.phrase || "", year: e.year || "",
+      link: e.link || "", tag: e.tag || "",
+      collection: e.collection || "", images: [], orfa: true,
+    });
+  });
+  return fora;
+}
+
+/* Procura tambem entre as orfas: sem isto o painel nao abriria para
+   elas, e desarquivar continuaria impossivel. */
+function acharItem(caminho) {
+  return itens.find((x) => x.caminho === caminho)
+    || arquivadasOrfas().find((x) => x.caminho === caminho)
+    || null;
+}
+
 function visiveis() {
   /* Arquivada sai do fluxo normal e so aparece no filtro dela. Sem isto,
      "arquivar" nao tiraria nada da frente - que e o motivo de existir. */
-  if (filtro === "__arq") return itens.filter(ehArq);
+  if (filtro === "__arq") return itens.filter(ehArq).concat(arquivadasOrfas());
   /* seguidora nao e um card: ela e uma PAGINA de outro card. Se
      aparecesse solta na grade, agrupar nao teria tirado nada da frente. */
   const base = itens.filter((x) => !ehArq(x) && !ehSeguidora(x));
@@ -818,7 +849,7 @@ function aplicarTag(t) {
 
 /* ---------- PAINEL ---------- */
 function abrirPainel(caminho) {
-  const it = itens.find((x) => x.caminho === caminho);
+  const it = acharItem(caminho);
   if (!it) return;
   if (atual && atual.caminho !== caminho) paginaSel = null;
   atual = it;
@@ -874,8 +905,12 @@ function abrirPainel(caminho) {
               ? '<div class="campo"><button class="btn" id="btCapa" style="width:100%">Usar esta foto como capa</button></div>'
               : '');
       })()
-    + '<div class="campo"><button class="btn" id="btArq" style="width:100%">'
-    + (ehArq(it) ? "Desarquivar" : "Arquivar") + '</button></div>'
+    + (ehSeguidora(it) && !ehArq(it)
+        ? '<div class="campo"><label>Esta foto e uma pagina de outro card</label>'
+          + '<div style="font-size:12px;opacity:.6">Para tirar do site, arquive o card'
+          + ' que a contem, ou desagrupe antes.</div></div>'
+        : '<div class="campo"><button class="btn" id="btArq" style="width:100%">'
+          + (ehArq(it) ? "Desarquivar" : "Arquivar") + '</button></div>')
     + '<div class="nav"><button class="btn" id="btAnt">← anterior</button><button class="btn" id="btProx">próxima →</button></div>';
 
   const liga = (id, campo) => {
@@ -908,7 +943,7 @@ function abrirPainel(caminho) {
       $("btCapa").onclick = () => definirCapa(it.caminho, paginaSel);
     }
   }
-  $("btArq").onclick = () => {
+  if ($("btArq")) $("btArq").onclick = () => {
     editar(it.caminho, "archived", ehArq(it) ? false : true);
     abrirPainel(caminho); desenhar();
   };
