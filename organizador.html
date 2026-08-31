@@ -234,6 +234,14 @@ button{border:none;background:none;cursor:pointer}
 .estado.ok{color:#0B7A4B;font-weight:500}
 .card.arq{opacity:.5}
 .card.arq:hover{opacity:.8}
+.tira{display:flex;gap:6px;flex-wrap:wrap}
+.pag{position:relative;width:58px;height:58px;padding:0;background:none;cursor:pointer;
+  border:2px solid transparent;border-radius:10px;overflow:hidden}
+.pag img{width:100%;height:100%;object-fit:cover;display:block}
+.pag:hover{border-color:#C9BEEA}
+.pag.capa{border-color:#352270}
+.pag .marca{position:absolute;left:0;right:0;bottom:0;background:#352270;color:#fff;
+  font-size:9px;line-height:15px;letter-spacing:.03em}
 .selo-arq{position:absolute;top:8px;left:8px;background:#352270;color:#fff;
   font-size:11px;font-weight:500;padding:3px 8px;border-radius:999px;letter-spacing:.02em}
 .estado.erro{color:#B3261E;font-weight:500}
@@ -525,6 +533,11 @@ async function carregar() {
         /* ARQUIVADA vinda do repositorio. Sem ler isto aqui, abrir a
            ferramenta noutro navegador mostraria tudo como nao-arquivado. */
         archived: it.archived === true || it.archived === "true",
+        /* As paginas do carrossel como o robo as publicou. Depois que o
+           robo roda, as seguidoras somem do images.json (viraram paginas
+           de outro card) - sem ler isto aqui, abrir a ferramenta depois
+           mostraria o carrossel como se fosse foto unica. */
+        images: Array.isArray(it.images) ? it.images.slice() : [],
         collection: it.collection || it.colecao || "",
       };
     });
@@ -573,6 +586,53 @@ const ehArq = (it) => { const v = val(it, "archived"); return v === true || v ==
    (`carrosselDe`). A lista fica na lider porque a ORDEM das fotos e uma
    propriedade do card, nao de cada foto solta. */
 const ehSeguidora = (it) => !!val(it, "carrosselDe");
+
+/* Reconstroi a URL de um caminho, tomando o prefixo do CDN de uma URL
+   que ja temos. Precisa disto porque a seguidora pode nao existir mais
+   na lista de itens - ela deixou de ser um card no images.json. */
+const prefixoCdn = (u) => {
+  const m = /^(https:\/\/cdn\.jsdelivr\.net\/gh\/[^/]+\/[^/]+@[^/]+\/)/.exec(u || "");
+  return m ? m[1] : "";
+};
+const urlDe = (c, ref) => prefixoCdn(ref) + String(c).split("/").map(encodeURIComponent).join("/");
+
+/* A SEQUENCIA do carrossel: capa primeiro, depois as paginas.
+   Duas fontes, nesta ordem: a edicao local (o que ela acabou de montar)
+   vence o que o robo publicou. */
+function paginas(it) {
+  const capa = { caminho: it.caminho, url: it.image || it.video };
+  const local = grupo(it);
+  if (local.length) {
+    return [capa].concat(local.map((c) => {
+      const f = itens.find((x) => x.caminho === c);
+      return { caminho: c, url: f ? (f.image || f.video) : urlDe(c, capa.url) };
+    }));
+  }
+  const pub = Array.isArray(it.images) ? it.images : [];
+  return [capa].concat(pub.map((u) => ({ caminho: caminhoDe(u), url: u })));
+}
+
+/* Troca a capa: a escolhida vai para a frente e passa a liderar. */
+function definirCapa(caminhoLider, novoCapa) {
+  const it = itens.find((x) => x.caminho === caminhoLider);
+  if (!it) return;
+  const seq = paginas(it).map((p) => p.caminho);
+  const i = seq.indexOf(novoCapa);
+  if (i < 0 || i === 0) return;
+  seq.splice(i, 1);
+  seq.unshift(novoCapa);
+  /* limpa TODAS antes de remontar: sem isto a lider antiga continuaria
+     com a lista velha e a foto apareceria em dois carrosseis. */
+  seq.forEach((c) => { editar(c, "carrossel", ""); editar(c, "carrosselDe", ""); });
+  editar(seq[0], "carrossel", seq.slice(1));
+  seq.slice(1).forEach((c) => editar(c, "carrosselDe", seq[0]));
+  salvar(); desenhar();
+  /* Depois que o robo publica, a seguidora some do images.json. Se a
+     nova capa for uma dessas, nao ha item para reabrir - o painel
+     ficaria sem dono. Melhor fechar de proposito. */
+  if (itens.find((x) => x.caminho === seq[0])) abrirPainel(seq[0]);
+  else fecharPainel();
+}
 const grupo = (it) => { const g = val(it, "carrossel"); return Array.isArray(g) ? g : []; };
 
 function visiveis() {
@@ -597,11 +657,12 @@ function desenhar() {
     f.push('<button class="chip alerta' + (filtro === "__sem" ? " on" : "")
       + '" data-f="__sem">Sem tag <span class="n">' + nSem + '</span></button>');
   }
-  const nArq = contarArq();
-  if (nArq) {
-    f.push('<button class="chip' + (filtro === "__arq" ? " on" : "")
-      + '" data-f="__arq">Arquivadas <span class="n">' + nArq + '</span></button>');
-  }
+  /* SEMPRE visivel, mesmo com zero. Antes eu so mostrava quando ja
+     havia arquivada - ou seja, a secao so aparecia depois que ela
+     descobrisse sozinha que existia. Secao que se esconde ate ser usada
+     nao e descoberta nunca. */
+  f.push('<button class="chip' + (filtro === "__arq" ? " on" : "")
+    + '" data-f="__arq">Arquivadas <span class="n">' + contarArq() + '</span></button>');
   /* chip so para tag que tem foto - filtro vazio seria botao morto.
      A ORDEM vem da lista dela, nao dos dados. */
   ordemTags.forEach((t) => {
@@ -772,6 +833,22 @@ function abrirPainel(caminho) {
     + '<div class="campo"><label>Coleção</label><div style="display:flex;gap:6px;flex-wrap:wrap" id="fCols">'
       + cols.map((c) => '<button class="chip' + (val(it, "collection") === c ? " on" : "") + '" data-c="' + esc(c) + '">' + esc(c) + '</button>').join("")
       + '</div></div>'
+    + (function () {
+        /* A TIRA DO CARROSSEL. Sem ela, agrupar era um ato cego: as
+           seguidoras somem da grade e nao havia onde ver o que entrou no
+           card - nem trocar a capa sem desagrupar tudo. */
+        const seq = paginas(it);
+        if (seq.length < 2) return "";
+        return '<div class="campo"><label>Carrossel — ' + seq.length
+          + ' fotos · clique numa para virar a capa</label><div class="tira" id="fTira">'
+          + seq.map(function (pg, k) {
+              return '<button class="pag' + (k === 0 ? " capa" : "") + '" data-p="'
+                + esc(pg.caminho) + '" title="' + esc(pg.caminho) + '">'
+                + '<img src="' + esc(pg.url) + '" alt="" loading="lazy">'
+                + (k === 0 ? '<span class="marca">capa</span>' : "") + '</button>';
+            }).join("")
+          + '</div></div>';
+      })()
     + '<div class="campo"><button class="btn" id="btArq" style="width:100%">'
     + (ehArq(it) ? "Desarquivar" : "Arquivar") + '</button></div>'
     + '<div class="nav"><button class="btn" id="btAnt">← anterior</button><button class="btn" id="btProx">próxima →</button></div>';
@@ -788,6 +865,11 @@ function abrirPainel(caminho) {
      e a foto voltaria a ficar arquivada sozinha. `val` devolve "" para
      false, entao `ehArq` le como nao-arquivada, e o gerador so escreve
      a chave quando ela e verdadeira. */
+  if ($("fTira")) {
+    $("fTira").querySelectorAll("[data-p]").forEach((b) => {
+      b.onclick = () => definirCapa(it.caminho, b.dataset.p);
+    });
+  }
   $("btArq").onclick = () => {
     editar(it.caminho, "archived", ehArq(it) ? false : true);
     abrirPainel(caminho); desenhar();
