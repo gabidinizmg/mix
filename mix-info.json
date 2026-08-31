@@ -14,20 +14,29 @@
       "year": "2024"
     },
     "Editing/baa98a6a98d22599c3a19a3303eb79c7.jpg": {
+      "carrosselDe": "Motion/425dee78a01bc4ff60ee64c612df759a.jpg"
+    },
+    "Motion/425dee78a01bc4ff60ee64c612df759a.jpg": {
       "carrossel": [
-        "Motion/425dee78a01bc4ff60ee64c612df759a.jpg",
+        "Editing/baa98a6a98d22599c3a19a3303eb79c7.jpg",
         "Motion/493923dd84e2ee07534de0790c0a8e9b.jpg"
       ]
     },
-    "Motion/425dee78a01bc4ff60ee64c612df759a.jpg": {
-      "carrosselDe": "Editing/baa98a6a98d22599c3a19a3303eb79c7.jpg"
-    },
     "Motion/493923dd84e2ee07534de0790c0a8e9b.jpg": {
-      "carrosselDe": "Editing/baa98a6a98d22599c3a19a3303eb79c7.jpg"
+      "carrosselDe": "Motion/425dee78a01bc4ff60ee64c612df759a.jpg"
     },
     "Photography/627a0c96f7611a4519143310e1e62e5b.jpg": {
       "name": "TESTE",
-      "phrase": "ETETETETE"
+      "phrase": "ETETETETE",
+      "archived": false
+    },
+    "Social Media/45064a2d95348bde596903e5e6805a4b.jpg": {
+      "carrosselDe": "Social Media/a77f13a310147c55aedcd607693f6937.jpg"
+    },
+    "Social Media/a77f13a310147c55aedcd607693f6937.jpg": {
+      "carrossel": [
+        "Social Media/45064a2d95348bde596903e5e6805a4b.jpg"
+      ]
     }
   }
 }
