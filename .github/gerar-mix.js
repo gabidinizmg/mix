@@ -56,7 +56,7 @@ if (fs.existsSync(caminhoConfig)) {
    Aceita duas formas, e a curta existe porque na maioria das vezes ela
    so vai querer a frase:
      "foto.jpg": "A frase que aparece grande"
-     "foto.jpg": { "name": "...", "phrase": "...", "year": "2024", "link": "..." } */
+     "foto.jpg": { "name": "...", "year": "2024", "archived": true, ... } */
 const lerInfo = (dir) => {
   const caminho = path.join(dir, "_info.json");
   if (!fs.existsSync(caminho)) return {};
@@ -161,6 +161,15 @@ const montar = (arquivos, nomeColecao, info) => {
     const ano = d.year !== undefined ? d.year : d.ano;
     if (ano !== undefined && ano !== null && String(ano).trim()) {
       item.year = String(ano).trim();
+    }
+    /* ARQUIVADA. So sai no JSON quando e verdadeira - "nao arquivada"
+       e a ausencia da chave, e nao `false`. Assim desarquivar limpa de
+       verdade em vez de deixar sujeira no arquivo.
+       Aceita texto tambem: um `_info.json` escrito na mao pode trazer
+       "true" em vez do booleano. */
+    const arq = d.archived !== undefined ? d.archived : d.arquivado;
+    if (arq === true || arq === 1 || arq === "true" || arq === "1") {
+      item.archived = true;
     }
     if (d.link) item.link = String(d.link);
     if (ehVid) {
