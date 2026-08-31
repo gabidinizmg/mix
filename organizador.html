@@ -232,6 +232,10 @@ button{border:none;background:none;cursor:pointer}
   padding:0 4px;
 }
 .estado.ok{color:#0B7A4B;font-weight:500}
+.card.arq{opacity:.5}
+.card.arq:hover{opacity:.8}
+.selo-arq{position:absolute;top:8px;left:8px;background:#352270;color:#fff;
+  font-size:11px;font-weight:500;padding:3px 8px;border-radius:999px;letter-spacing:.02em}
 .estado.erro{color:#B3261E;font-weight:500}
 .girando{width:13px;height:13px;border:2px solid var(--linha);
   border-top-color:var(--tinta);border-radius:50%;animation:gira .7s linear infinite}
@@ -296,6 +300,9 @@ svg{display:block}
 <div class="acoes vidro" id="acoes">
   <span class="quantos" id="quantos">0</span>
   <button class="btn" id="btLimpar">Limpar</button>
+  <span class="div"></span>
+  <button class="btn" id="btAgrupar">Agrupar como carrossel</button>
+  <button class="btn" id="btDesagrupar">Desagrupar</button>
   <span class="div"></span>
   <span style="font-size:12px;opacity:.55;padding-left:2px">marcar como</span>
   <span id="tagsAcao" style="display:flex;gap:6px;flex-wrap:wrap"></span>
@@ -515,6 +522,9 @@ async function carregar() {
           : String(it.year),
         link: it.link || "",
         tag: it.tag || "",
+        /* ARQUIVADA vinda do repositorio. Sem ler isto aqui, abrir a
+           ferramenta noutro navegador mostraria tudo como nao-arquivado. */
+        archived: it.archived === true || it.archived === "true",
         collection: it.collection || it.colecao || "",
       };
     });
@@ -547,24 +557,50 @@ async function carregar() {
 }
 
 /* ---------- DESENHAR ---------- */
-function contarTag(t) { return itens.filter((x) => val(x, "tag") === t).length; }
-function semTag() { return itens.filter((x) => !val(x, "tag")).length; }
+function ativa(x) { return !ehArq(x) && !ehSeguidora(x); }
+function contarTag(t) { return itens.filter((x) => ativa(x) && val(x, "tag") === t).length; }
+function semTag() { return itens.filter((x) => ativa(x) && !val(x, "tag")).length; }
+function contarArq() { return itens.filter(ehArq).length; }
+function contarAtivas() { return itens.filter(ativa).length; }
+
+/* Arquivada. `val` devolve "" quando o campo nao existe, entao basta
+   comparar com true - e aceito "true" em texto porque um _info.json
+   escrito na mao pode trazer assim. */
+const ehArq = (it) => { const v = val(it, "archived"); return v === true || v === "true"; };
+
+/* CARROSSEL. A lider guarda a lista ORDENADA das seguidoras
+   (`carrossel`); cada seguidora guarda o caminho da lider
+   (`carrosselDe`). A lista fica na lider porque a ORDEM das fotos e uma
+   propriedade do card, nao de cada foto solta. */
+const ehSeguidora = (it) => !!val(it, "carrosselDe");
+const grupo = (it) => { const g = val(it, "carrossel"); return Array.isArray(g) ? g : []; };
 
 function visiveis() {
-  if (filtro === "__sem") return itens.filter((x) => !val(x, "tag"));
-  if (filtro) return itens.filter((x) => val(x, "tag") === filtro);
-  return itens;
+  /* Arquivada sai do fluxo normal e so aparece no filtro dela. Sem isto,
+     "arquivar" nao tiraria nada da frente - que e o motivo de existir. */
+  if (filtro === "__arq") return itens.filter(ehArq);
+  /* seguidora nao e um card: ela e uma PAGINA de outro card. Se
+     aparecesse solta na grade, agrupar nao teria tirado nada da frente. */
+  const base = itens.filter((x) => !ehArq(x) && !ehSeguidora(x));
+  if (filtro === "__sem") return base.filter((x) => !val(x, "tag"));
+  if (filtro) return base.filter((x) => val(x, "tag") === filtro);
+  return base;
 }
 
 function desenhar() {
   /* --- filtros --- */
   const f = [];
   f.push('<button class="chip' + (filtro === "" ? " on" : "") + '" data-f="">Todas <span class="n">'
-    + itens.length + '</span></button>');
+    + contarAtivas() + '</span></button>');
   const nSem = semTag();
   if (nSem) {
     f.push('<button class="chip alerta' + (filtro === "__sem" ? " on" : "")
       + '" data-f="__sem">Sem tag <span class="n">' + nSem + '</span></button>');
+  }
+  const nArq = contarArq();
+  if (nArq) {
+    f.push('<button class="chip' + (filtro === "__arq" ? " on" : "")
+      + '" data-f="__arq">Arquivadas <span class="n">' + nArq + '</span></button>');
   }
   /* chip so para tag que tem foto - filtro vazio seria botao morto.
      A ORDEM vem da lista dela, nao dos dados. */
@@ -601,12 +637,17 @@ function desenhar() {
       const t = val(it, "tag"), nome = val(it, "name"), fr = val(it, "phrase");
       const ano = val(it, "year");
       const capa = it.image || it.video;
-      return '<div class="card' + (selecao.has(it.caminho) ? " sel" : "") + '" data-c="'
+      return '<div class="card' + (selecao.has(it.caminho) ? " sel" : "")
+        + (ehArq(it) ? " arq" : "") + '" data-c="'
         + esc(it.caminho) + '">'
         + (it.image
             ? '<img src="' + esc(it.image) + '" loading="lazy" alt="">'
             : '<video src="' + esc(it.video) + '" preload="metadata" muted></video>')
         + (it.video ? '<div class="selo-video"><i><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></i></div>' : "")
+        + (ehArq(it) ? '<span class="selo-arq">arquivada</span>' : "")
+        + (grupo(it).length
+            ? '<span class="selo-arq" style="background:#0B7A4B">'
+              + (grupo(it).length + 1) + ' fotos</span>' : "")
         + '<span class="tag-card' + (t ? "" : " vazia") + '">' + esc(t || "sem tag") + '</span>'
         + '<span class="marca-sel"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>'
         + '<div class="pe"><div class="nome">' + esc(nome || it.caminho.split("/").pop())
@@ -655,6 +696,52 @@ function desenhar() {
   };
 }
 
+/* A ORDEM vem da grade, nao do Set: `selecao` nao guarda ordem, e a
+   ordem aqui vira a ordem das fotos no carrossel. A primeira da grade
+   e a capa. */
+function selecionadasEmOrdem() {
+  return itens.filter((x) => selecao.has(x.caminho));
+}
+
+function agruparCarrossel() {
+  const sel = selecionadasEmOrdem();
+  if (sel.length < 2) {
+    mostrarEstado("selecione pelo menos duas fotos", "erro");
+    return;
+  }
+  const lider = sel[0];
+  const seguidoras = sel.slice(1);
+  /* desfaz grupos anteriores das envolvidas antes de montar o novo,
+     senao uma foto poderia ficar em dois carrosseis ao mesmo tempo */
+  sel.forEach((x) => soltarGrupo(x.caminho));
+  editar(lider.caminho, "carrossel", seguidoras.map((x) => x.caminho));
+  seguidoras.forEach((x) => editar(x.caminho, "carrosselDe", lider.caminho));
+  selecao.clear(); salvar(); desenhar();
+  mostrarEstado("carrossel de " + sel.length + " fotos", "ok");
+}
+
+/* Solta o caminho de qualquer grupo, seja ele lider ou seguidora. */
+function soltarGrupo(caminho) {
+  const it = itens.find((x) => x.caminho === caminho);
+  if (!it) return;
+  grupo(it).forEach((c) => editar(c, "carrosselDe", ""));
+  editar(caminho, "carrossel", "");
+  const dono = val(it, "carrosselDe");
+  if (dono) {
+    const pai = itens.find((x) => x.caminho === dono);
+    if (pai) editar(dono, "carrossel", grupo(pai).filter((c) => c !== caminho));
+    editar(caminho, "carrosselDe", "");
+  }
+}
+
+function desagrupar() {
+  const sel = selecionadasEmOrdem();
+  if (!sel.length) return;
+  sel.forEach((x) => soltarGrupo(x.caminho));
+  selecao.clear(); salvar(); desenhar();
+  mostrarEstado("desagrupado", "ok");
+}
+
 function aplicarTag(t) {
   selecao.forEach((c) => editar(c, "tag", t));
   if (t && !ordemTags.includes(t)) ordemTags.push(t);
@@ -685,6 +772,8 @@ function abrirPainel(caminho) {
     + '<div class="campo"><label>Coleção</label><div style="display:flex;gap:6px;flex-wrap:wrap" id="fCols">'
       + cols.map((c) => '<button class="chip' + (val(it, "collection") === c ? " on" : "") + '" data-c="' + esc(c) + '">' + esc(c) + '</button>').join("")
       + '</div></div>'
+    + '<div class="campo"><button class="btn" id="btArq" style="width:100%">'
+    + (ehArq(it) ? "Desarquivar" : "Arquivar") + '</button></div>'
     + '<div class="nav"><button class="btn" id="btAnt">← anterior</button><button class="btn" id="btProx">próxima →</button></div>';
 
   const liga = (id, campo) => {
@@ -694,6 +783,15 @@ function abrirPainel(caminho) {
   };
   liga("fNome", "name"); liga("fFrase", "phrase"); liga("fLink", "link");
   liga("fAno", "year");
+  /* Desarquivar grava FALSE, e nao apaga a chave. Apagar faria o valor
+     cair de volta no que veio do images.json - que e justamente `true` -
+     e a foto voltaria a ficar arquivada sozinha. `val` devolve "" para
+     false, entao `ehArq` le como nao-arquivada, e o gerador so escreve
+     a chave quando ela e verdadeira. */
+  $("btArq").onclick = () => {
+    editar(it.caminho, "archived", ehArq(it) ? false : true);
+    abrirPainel(caminho); desenhar();
+  };
   $("fTags").querySelectorAll("[data-t]").forEach((b) => {
     b.onclick = () => {
       editar(it.caminho, "tag", b.dataset.t === "" ? null : b.dataset.t);
@@ -877,6 +975,8 @@ $("modalChave").onclick = (e) => { if (e.target === $("modalChave")) $("modalCha
 $("btLimpar").onclick = () => { selecao.clear(); desenhar(); };
 $("btFechar").onclick = fecharPainel;
 $("fundoPainel").onclick = fecharPainel;
+$("btAgrupar").onclick = agruparCarrossel;
+$("btDesagrupar").onclick = desagrupar;
 $("btTags").onclick = () => { desenharTags(); $("modalTags").classList.add("on"); };
 $("btFecharTags").onclick = () => $("modalTags").classList.remove("on");
 $("modalTags").onclick = (e) => { if (e.target === $("modalTags")) $("modalTags").classList.remove("on"); };
