@@ -53,12 +53,19 @@
       "archived": false
     },
     "Social Media/45064a2d95348bde596903e5e6805a4b.jpg": {
-      "carrosselDe": "Social Media/a77f13a310147c55aedcd607693f6937.jpg"
+      "carrosselDe": "Social Media/a77f13a310147c55aedcd607693f6937.jpg",
+      "phrase": "teste 6",
+      "name": "teste 6"
     },
     "Social Media/a77f13a310147c55aedcd607693f6937.jpg": {
       "carrossel": [
         "Social Media/45064a2d95348bde596903e5e6805a4b.jpg"
-      ]
+      ],
+      "grupo": {
+        "phrase": "teste carrossel"
+      },
+      "phrase": "testem4",
+      "name": "teste 4"
     }
   }
 }
