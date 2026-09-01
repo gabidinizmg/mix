@@ -60,13 +60,18 @@
       "tag": "Draw"
     },
     {
-      "name": "425dee78a01bc4ff60ee64c612df759a",
+      "name": "Nome cara adesivo",
+      "phrase": "Legal",
       "images": [
         {
-          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Editing/baa98a6a98d22599c3a19a3303eb79c7.jpg"
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Editing/baa98a6a98d22599c3a19a3303eb79c7.jpg",
+          "name": "Teste texto",
+          "phrase": "Imagem 2"
         },
         {
-          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/493923dd84e2ee07534de0790c0a8e9b.jpg"
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/493923dd84e2ee07534de0790c0a8e9b.jpg",
+          "name": "Teste texto",
+          "phrase": "teste 3"
         }
       ],
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/425dee78a01bc4ff60ee64c612df759a.jpg",
