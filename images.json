@@ -62,11 +62,17 @@
     {
       "name": "Detalhe 2",
       "phrase": "CArrossel",
+      "pt": {
+        "phrase": "PT - Carrossel"
+      },
       "images": [
         {
           "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/425dee78a01bc4ff60ee64c612df759a.jpg",
           "name": "Nome cara adesivo",
-          "phrase": "Legal"
+          "phrase": "Legal",
+          "pt": {
+            "phrase": "PT legenda"
+          }
         },
         {
           "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Editing/baa98a6a98d22599c3a19a3303eb79c7.jpg",
@@ -84,7 +90,10 @@
       "grupo": {
         "name": "Detalhe 2",
         "phrase": "CArrossel",
-        "year": "2023"
+        "year": "2023",
+        "pt": {
+          "phrase": "PT - Carrossel"
+        }
       },
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/425dee78a01bc4ff60ee64c612df759a.jpg",
       "collection": "Motion",
