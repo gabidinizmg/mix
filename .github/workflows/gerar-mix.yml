@@ -32,3 +32,25 @@ jobs:
           git add images.json
           git diff --staged --quiet || git commit -m "images.json atualizado automaticamente"
           git push
+
+      # LIMPAR A BORDA DO CDN.
+      # O jsDelivr guarda `@main` por horas, e por POP: ja aconteceu
+      # QUATRO vezes de ela editar, o robo gravar certo, e o site
+      # continuar mostrando a versao velha sem nenhum sinal de erro -
+      # a ultima custou uma rodada inteira de "o idioma nao funciona".
+      # Um `?t=` na URL nao resolve: engana o cache do NAVEGADOR, e a
+      # borda responde o que tem guardado. So o purge limpa.
+      # `|| true` de proposito: se o purge falhar, o pior caso e o
+      # cache velho de sempre - nao vale derrubar a publicacao por isso.
+      - name: Limpar o cache do CDN
+        if: always()
+        run: |
+          # espera o commit aparecer no GitHub antes de mandar limpar:
+          # purgar cedo demais faz a borda buscar e guardar o arquivo
+          # VELHO de novo, e o cache voltaria a mentir por horas.
+          sleep 15
+          for f in images.json mix-info.json; do
+            echo "purge $f"
+            curl -s "https://purge.jsdelivr.net/gh/${{ github.repository }}@${{ github.ref_name }}/$f" || true
+            echo
+          done
