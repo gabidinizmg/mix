@@ -609,6 +609,15 @@ const val = (it, campo) => {
    A do grupo mora numa chave separada da lider (`grupo`), e enquanto ela
    estiver vazia o card continua herdando o texto da capa - que e como
    sempre foi, entao nada muda de aparencia sozinho. */
+/* Interruptor da info. LIGADO e o padrao, entao a pergunta e sempre "foi
+   desligado?" - e desligar so vale quando esta escrito. Vazio, `false` e
+   ausente sao a mesma coisa: ligado. */
+const desligada = (v) => v === true || v === "true";
+/* Ligar de volta grava FALSE, e nao apaga a chave - mesma armadilha do
+   arquivar: apagar faria o valor cair de volta no `true` que veio do
+   images.json, e a info se esconderia sozinha de novo. */
+const marcaInfo = (ligada) => (ligada ? false : true);
+
 const valGrupo = (it, campo) => {
   const e = (edicoes[it.caminho] || {}).grupo || {};
   if (e[campo] !== undefined) return e[campo] || "";
@@ -794,7 +803,15 @@ function paginas(it) {
      que ela tinha clicado.
      As duas formas seguem valendo: um images.json antigo ainda abre. */
   const pub = Array.isArray(it.images) ? it.images : [];
-  return [capa].concat(pub.map((u) => {
+  /* A CAPA JA VEM NA LISTA quando o robo e novo. Sem esta conta ela
+     entrava duas vezes - a tira mostrava 4 fotos num carrossel de 3, e a
+     primeira aparecia repetida. So entra na frente quando nao veio, que
+     e o caso do images.json antigo. */
+  const primeiro = pub.length ? pub[0] : null;
+  const srcPrimeiro = (primeiro && typeof primeiro === "object" && !Array.isArray(primeiro))
+    ? String(primeiro.src || "") : String(primeiro || "");
+  const capaJaNaLista = !!(srcPrimeiro && caminhoDe(srcPrimeiro) === capa.caminho);
+  return (capaJaNaLista ? [] : [capa]).concat(pub.map((u) => {
     const obj = u && typeof u === "object" && !Array.isArray(u);
     const src = obj ? String(u.src || "") : String(u || "");
     return {
@@ -1072,6 +1089,20 @@ function abrirPainel(caminho) {
     pares.forEach(function (par) { if (fonte(par[0])) out.push(par[1]); });
     return out;
   };
+  /* UM control so para os dois lugares: o do card e o de cada foto.
+     Diz o que ESTA acontecendo, nao o que o clique faz - "Aparece" e o
+     estado, e a linha de baixo conta a consequencia. */
+  const chaveInfo = function (id, ligada, oQue) {
+    return '<div class="campo"><label>Botão de info</label>'
+      + '<button class="chip' + (ligada ? " on" : "") + '" id="' + id + '">'
+      + (ligada ? "Aparece" : "Escondido") + '</button>'
+      + '<div style="font-size:11.5px;opacity:.55;margin-top:7px;line-height:1.5">'
+      + (ligada
+          ? "Desligado, " + oQue + " mostra só a imagem."
+          : "Só a imagem. Nada de cantinho colorido em " + oQue + ".")
+      + '</div></div>';
+  };
+
   const secao = function (id, nome, resumo, corpo, falta) {
     return '<details class="secao"' + (abertas.has(id) ? " open" : "")
       + ' data-s="' + id + '"><summary>'
@@ -1098,6 +1129,7 @@ function abrirPainel(caminho) {
   const preenchidos = cheios(leCard, [
     ["phrase", "título"], ["name", "detalhe"], ["year", "ano"], ["link", "link"],
   ]);
+  const infoCardLigada = !desligada(ehGrupo ? valGrupo(it, "noInfo") : val(it, "noInfo"));
   const corpoTextos =
     (ehGrupo
       ? '<div style="font-size:12px;opacity:.55;margin:-2px 0 12px;line-height:1.5">'
@@ -1109,7 +1141,8 @@ function abrirPainel(caminho) {
     + '<div class="dupla">'
       + '<div class="campo"><label>Ano</label><input id="' + idCard.a + '" value="' + esc(leCard("year")) + '" placeholder="' + esc(ehGrupo ? (val(it, "year") || "2024") : "2024") + '"></div>'
       + '<div class="campo"><label>Link</label><input id="' + idCard.l + '" value="' + esc(leCard("link")) + '" placeholder="' + esc(ehGrupo ? (val(it, "link") || "https://…") : "https://instagram.com/p/…") + '"></div>'
-    + '</div>';
+    + '</div>'
+    + chaveInfo("fInfoCard", infoCardLigada, "o card");
 
   /* ---- 2. classificacao ---- */
   const corpoClass =
@@ -1157,6 +1190,7 @@ function abrirPainel(caminho) {
         + '<div class="campo"><label>Ano</label><input id="fPagAno" value="' + esc(vSel("year")) + '" placeholder="' + esc(valGrupo(it, "year") || val(it, "year") || "2024") + '"></div>'
         + '<div class="campo"><label>Link</label><input id="fPagLink" value="' + esc(vSel("link")) + '" placeholder="' + esc(valGrupo(it, "link") || val(it, "link") || "https://…") + '"></div>'
       + '</div>'
+      + chaveInfo("fInfoPag", !desligada(vSel("noInfo")), "esta foto")
       + (iSel > 0
           ? '<div class="campo"><button class="btn" id="btCapa" style="width:100%">Usar esta foto como capa</button></div>'
           : '')
@@ -1170,8 +1204,9 @@ function abrirPainel(caminho) {
               : '<video class="previa" src="' + esc(it.video) + '" controls preload="metadata"></video>')
     + '<div class="caminho">' + esc(it.caminho) + '</div>'
     + secao("textos", ehGrupo ? "Info do grupo" : "Textos",
-            preenchidos.length ? preenchidos.join(" · ") : "vazio",
-            corpoTextos, !preenchidos.length)
+            !infoCardLigada ? "escondida"
+              : (preenchidos.length ? preenchidos.join(" · ") : "vazio"),
+            corpoTextos, !infoCardLigada || !preenchidos.length)
     + secao("classe", "Classificação",
             (val(it, "tag") || "sem tag") + (val(it, "collection") ? " · " + val(it, "collection") : ""),
             corpoClass, !val(it, "tag"))
@@ -1213,6 +1248,12 @@ function abrirPainel(caminho) {
   };
   ligaGrupo("fGrpNome", "name"); ligaGrupo("fGrpFrase", "phrase");
   ligaGrupo("fGrpLink", "link"); ligaGrupo("fGrpAno", "year");
+  if ($("fInfoCard")) $("fInfoCard").onclick = () => {
+    const marca = marcaInfo(!infoCardLigada);
+    if (ehGrupo) editarGrupo(it.caminho, "noInfo", marca);
+    else editar(it.caminho, "noInfo", marca);
+    abrirPainel(caminho); desenhar();
+  };
   /* Desarquivar grava FALSE, e nao apaga a chave. Apagar faria o valor
      cair de volta no que veio do images.json - que e justamente `true` -
      e a foto voltaria a ficar arquivada sozinha. `val` devolve "" para
@@ -1238,6 +1279,10 @@ function abrirPainel(caminho) {
        grupo, que e o que o marcador cinza do campo mostra. */
     ligaPag("fPagAno", "year");
     ligaPag("fPagLink", "link");
+    if ($("fInfoPag")) $("fInfoPag").onclick = () => {
+      editar(paginaSel, "noInfo", marcaInfo(desligada(vSel("noInfo"))));
+      abrirPainel(caminho); desenhar();
+    };
     if ($("btCapa")) {
       $("btCapa").onclick = () => definirCapa(it.caminho, paginaSel);
     }

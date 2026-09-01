@@ -71,6 +71,13 @@ const lerInfo = (dir) => {
 
 /* Procura pelo nome do arquivo, COM e SEM extensao: escrever
    "ouro-preto" ou "ouro-preto.jpg" tem que dar no mesmo. */
+/* Interruptor da info: desligado so quando esta escrito. Aceita texto
+   porque um `_info.json` escrito na mao pode trazer "true". */
+const semInfo = (o) => {
+  const v = (o && o.noInfo !== undefined) ? o.noInfo : (o ? o.semInfo : undefined);
+  return v === true || v === 1 || v === "true" || v === "1";
+};
+
 const acharInfo = (info, arquivo) => {
   const nome = path.basename(arquivo);
   const semExt = path.basename(arquivo, path.extname(arquivo));
@@ -176,6 +183,12 @@ const montar = (arquivos, nomeColecao, info) => {
     if (arq === true || arq === 1 || arq === "true" || arq === "1") {
       item.archived = true;
     }
+    /* O INTERRUPTOR DA INFO. Mesma convencao de `archived`: so sai no
+       JSON quando esta DESLIGADO, porque ligado e o padrao. Duas razoes
+       diferentes levam ao mesmo resultado na tela - a foto sem texto e a
+       foto com texto que ela preferiu nao mostrar - e so a segunda
+       precisa ser dita no arquivo. */
+    if (semInfo(d)) item.noInfo = true;
     /* AS PAGINAS do carrossel, na ordem que ela montou - COM A CAPA
        DENTRO, na frente.
        Sao TRES coisas diferentes, e antes eu tinha juntado duas:
@@ -203,6 +216,7 @@ const montar = (arquivos, nomeColecao, info) => {
           pg.year = String(ano).trim();
         }
         if (fonte.link) pg.link = String(fonte.link);
+        if (semInfo(fonte)) pg.noInfo = true;
         return pg;
       };
       /* a capa entra so quando ela e imagem: card de video usa o proprio
@@ -237,6 +251,9 @@ const montar = (arquivos, nomeColecao, info) => {
         cru.year = String(gAno).trim();
       }
       if (g.link) cru.link = String(g.link);
+      /* o interruptor do GRUPO manda no card, e o da capa fica para a
+         primeira pagina - sao dois botoes em lugares diferentes */
+      if (semInfo(g)) cru.noInfo = true; else delete item.noInfo;
       /* o que estiver escrito no grupo VENCE no card; o que estiver
          vazio deixa passar o da capa, que e como o card sempre foi */
       Object.keys(cru).forEach((k) => { item[k] = cru[k]; });
