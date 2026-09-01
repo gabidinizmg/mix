@@ -598,6 +598,33 @@ const val = (it, campo) => {
   const e = edicoes[it.caminho] || {};
   return e[campo] !== undefined ? (e[campo] || "") : (it[campo] || "");
 };
+/* ---------- A INFO DO GRUPO ----------
+   Sao TRES coisas diferentes, e eu tinha juntado duas:
+     1. a info do GRUPO     -> aparece no CARD, junto da tag e do icone
+     2. a info da CAPA      -> aparece na 1a pagina do carrossel
+     3. a info de cada foto -> aparece na pagina dela
+   A capa e uma foto como as outras. Antes o organizador usava o texto
+   dela como se fosse o do grupo, e ai nao havia como dizer uma coisa no
+   card e outra na primeira foto.
+   A do grupo mora numa chave separada da lider (`grupo`), e enquanto ela
+   estiver vazia o card continua herdando o texto da capa - que e como
+   sempre foi, entao nada muda de aparencia sozinho. */
+const valGrupo = (it, campo) => {
+  const e = (edicoes[it.caminho] || {}).grupo || {};
+  if (e[campo] !== undefined) return e[campo] || "";
+  const pub = it.grupo || {};
+  return pub[campo] || "";
+};
+const editarGrupo = (caminho, campo, valor) => {
+  if (!edicoes[caminho]) edicoes[caminho] = {};
+  const g = Object.assign({}, edicoes[caminho].grupo || {});
+  if (valor === "") delete g[campo]; else g[campo] = valor;
+  if (Object.keys(g).length) edicoes[caminho].grupo = g;
+  else delete edicoes[caminho].grupo;
+  if (!Object.keys(edicoes[caminho]).length) delete edicoes[caminho];
+  salvar();
+};
+
 const editar = (caminho, campo, valor) => {
   if (!edicoes[caminho]) edicoes[caminho] = {};
   /* "" vindo de um campo de texto = "volta ao padrao" (o nome do
@@ -669,6 +696,10 @@ async function carregar() {
            de outro card) - sem ler isto aqui, abrir a ferramenta depois
            mostraria o carrossel como se fosse foto unica. */
         images: Array.isArray(it.images) ? it.images.slice() : [],
+        /* A INFO DO GRUPO como o robo a publicou. Sem ler isto aqui,
+           abrir a ferramenta noutro navegador mostraria os campos do
+           grupo em branco enquanto o site mostra o texto. */
+        grupo: (it.grupo && typeof it.grupo === "object") ? it.grupo : {},
         collection: it.collection || it.colecao || "",
       };
     });
@@ -727,9 +758,10 @@ let paginaSel = null;
 
 /* Quais secoes do painel estao abertas. O painel se reconstroi inteiro a
    cada clique numa foto do carrossel: sem guardar isto, tudo fecharia e
-   ela reabriria a mesma secao a cada foto. Comeca com textos e carrossel
-   abertos - sao os dois que ela usa em toda visita. */
-const abertas = new Set(["textos", "carrossel"]);
+   ela reabriria a mesma secao a cada foto.
+   Comeca VAZIO: todas fechadas. O painel abre mostrando a foto e a lista
+   do que existe, e ela abre so o que vai mexer. */
+const abertas = new Set();
 
 /* Reconstroi a URL de um caminho, tomando o prefixo do CDN de uma URL
    que ja temos. Precisa disto porque a seguidora pode nao existir mais
@@ -1051,20 +1083,32 @@ function abrirPainel(caminho) {
       + '</summary><div class="secao-corpo">' + corpo + '</div></details>';
   };
 
-  /* ---- 1. textos do card (= do GRUPO, quando ha carrossel) ---- */
-  const preenchidos = cheios(function (c) { return val(it, c); }, [
+  /* ---- 1. a info que aparece NO CARD ----
+     Num carrossel ela e do GRUPO e mora em chave propria; numa foto
+     solta ela e da propria foto. Os rotulos falam pelo TAMANHO na tela,
+     nao pelo nome do campo no arquivo: ela descreveu assim, "grande e o
+     titulo, pequeno embaixo e o detalhe". As chaves do JSON continuam
+     `phrase` e `name` para nao quebrar o que ja esta gravado. */
+  const leGrupo = function (c) { return valGrupo(it, c); };
+  const leFoto = function (c) { return val(it, c); };
+  const leCard = ehGrupo ? leGrupo : leFoto;
+  const idCard = ehGrupo
+    ? { f: "fGrpFrase", n: "fGrpNome", a: "fGrpAno", l: "fGrpLink" }
+    : { f: "fFrase", n: "fNome", a: "fAno", l: "fLink" };
+  const preenchidos = cheios(leCard, [
     ["phrase", "título"], ["name", "detalhe"], ["year", "ano"], ["link", "link"],
   ]);
   const corpoTextos =
-    /* Os rotulos falam pelo TAMANHO na tela, nao pelo nome do campo no
-       arquivo. Ela descreveu assim: "grande e o titulo, pequeno embaixo
-       e o detalhe". As chaves do JSON continuam `phrase` e `name` para
-       nao quebrar o que ja esta gravado. */
-    '<div class="campo"><label>Título — o texto GRANDE</label><textarea id="fFrase" placeholder="aparece ao clicar no cantinho colorido">' + esc(val(it, "phrase")) + '</textarea></div>'
-    + '<div class="campo"><label>Detalhe — o pequeno embaixo</label><input id="fNome" value="' + esc(val(it, "name")) + '" placeholder="' + esc(it.caminho.split("/").pop()) + '"></div>'
+    (ehGrupo
+      ? '<div style="font-size:12px;opacity:.55;margin:-2px 0 12px;line-height:1.5">'
+        + 'É o que aparece no card da grade, junto da tag e do ícone de carrossel. '
+        + 'Vazio usa o texto da capa.</div>'
+      : "")
+    + '<div class="campo"><label>Título — o texto GRANDE</label><textarea id="' + idCard.f + '" placeholder="' + esc(ehGrupo ? (val(it, "phrase") || "o texto do grupo") : "aparece ao clicar no cantinho colorido") + '">' + esc(leCard("phrase")) + '</textarea></div>'
+    + '<div class="campo"><label>Detalhe — o pequeno embaixo</label><input id="' + idCard.n + '" value="' + esc(leCard("name")) + '" placeholder="' + esc(ehGrupo ? (val(it, "name") || "o detalhe do grupo") : it.caminho.split("/").pop()) + '"></div>'
     + '<div class="dupla">'
-      + '<div class="campo"><label>Ano</label><input id="fAno" value="' + esc(val(it, "year")) + '" placeholder="2024"></div>'
-      + '<div class="campo"><label>Link</label><input id="fLink" value="' + esc(val(it, "link")) + '" placeholder="https://instagram.com/p/…"></div>'
+      + '<div class="campo"><label>Ano</label><input id="' + idCard.a + '" value="' + esc(leCard("year")) + '" placeholder="' + esc(ehGrupo ? (val(it, "year") || "2024") : "2024") + '"></div>'
+      + '<div class="campo"><label>Link</label><input id="' + idCard.l + '" value="' + esc(leCard("link")) + '" placeholder="' + esc(ehGrupo ? (val(it, "link") || "https://…") : "https://instagram.com/p/…") + '"></div>'
     + '</div>';
 
   /* ---- 2. classificacao ---- */
@@ -1084,10 +1128,9 @@ function abrirPainel(caminho) {
   let corpoCarrossel = "";
   let resumoCarrossel = "";
   if (ehGrupo) {
-    const comTexto = seq.filter(function (pg, k) {
-      if (k === 0) return false;                 /* a capa usa os do card */
+    const comTexto = seq.filter(function (pg) {
       const e = edicoes[pg.caminho] || {};
-      return !!(e.phrase || e.name || e.year || e.link || pg.phrase || pg.name);
+      return !!(e.phrase || e.name || pg.phrase || pg.name);
     }).length;
     resumoCarrossel = seq.length + " fotos · " + comTexto + " com texto";
     const tira = '<div class="tira" id="fTira">'
@@ -1099,27 +1142,25 @@ function abrirPainel(caminho) {
             + (k === 0 ? '<span class="marca">capa</span>' : "") + '</button>';
         }).join("")
       + '</div>';
-    /* A CAPA NAO GANHA CAMPOS PROPRIOS: ela E o card. Dois campos na
-       mesma tela gravando a mesma chave e a receita da pergunta "por que
-       digitei aqui e mudou ali". A capa manda para onde o dono mora. */
-    const caixa = iSel === 0
-      ? '<div class="caixa-pag"><div class="cabeca"><strong>Foto 1 · capa</strong>'
-        + '<span>é o card</span></div>'
-        + '<div class="campo" style="margin-bottom:12px"><div style="font-size:12px;opacity:.6;line-height:1.5">'
-        + 'A capa mostra os textos do card — os mesmos que valem para o grupo inteiro. '
-        + 'Edite em <strong>Textos do grupo</strong>, aqui em cima.</div></div></div>'
-      : '<div class="caixa-pag"><div class="cabeca">'
-        + '<strong>Foto ' + (iSel + 1) + ' de ' + seq.length + '</strong>'
-        + '<span>vazio herda o do grupo</span></div>'
-        + '<div class="campo"><label>Título — o texto GRANDE</label>'
-        + '<textarea id="fPagFrase" placeholder="o texto GRANDE desta foto">' + esc(vSel("phrase")) + '</textarea></div>'
-        + '<div class="campo"><label>Detalhe — o pequeno embaixo</label>'
-        + '<input id="fPagNome" value="' + esc(vSel("name")) + '" placeholder="o pequeno embaixo"></div>'
-        + '<div class="dupla">'
-          + '<div class="campo"><label>Ano</label><input id="fPagAno" value="' + esc(vSel("year")) + '" placeholder="' + esc(val(it, "year") || "2024") + '"></div>'
-          + '<div class="campo"><label>Link</label><input id="fPagLink" value="' + esc(vSel("link")) + '" placeholder="' + esc(val(it, "link") || "https://…") + '"></div>'
-        + '</div>'
-        + '<div class="campo"><button class="btn" id="btCapa" style="width:100%">Usar esta foto como capa</button></div></div>';
+    /* A CAPA E UMA FOTO COMO AS OUTRAS e tem os campos dela. O texto da
+       capa aparece na 1a pagina do carrossel; o do card vem da secao de
+       cima. Eram a mesma coisa ate agora, e por isso nao havia como
+       dizer uma coisa no card e outra na primeira foto. */
+    const caixa = '<div class="caixa-pag"><div class="cabeca">'
+      + '<strong>Foto ' + (iSel + 1) + ' de ' + seq.length + (iSel === 0 ? " · capa" : "") + '</strong>'
+      + '<span>' + (iSel === 0 ? "aparece na 1ª página" : "aparece nesta página") + '</span></div>'
+      + '<div class="campo"><label>Título — o texto GRANDE</label>'
+      + '<textarea id="fPagFrase" placeholder="o texto GRANDE desta foto">' + esc(vSel("phrase")) + '</textarea></div>'
+      + '<div class="campo"><label>Detalhe — o pequeno embaixo</label>'
+      + '<input id="fPagNome" value="' + esc(vSel("name")) + '" placeholder="o pequeno embaixo"></div>'
+      + '<div class="dupla">'
+        + '<div class="campo"><label>Ano</label><input id="fPagAno" value="' + esc(vSel("year")) + '" placeholder="' + esc(valGrupo(it, "year") || val(it, "year") || "2024") + '"></div>'
+        + '<div class="campo"><label>Link</label><input id="fPagLink" value="' + esc(vSel("link")) + '" placeholder="' + esc(valGrupo(it, "link") || val(it, "link") || "https://…") + '"></div>'
+      + '</div>'
+      + (iSel > 0
+          ? '<div class="campo"><button class="btn" id="btCapa" style="width:100%">Usar esta foto como capa</button></div>'
+          : '')
+      + '</div>';
     corpoCarrossel = '<div style="font-size:12px;opacity:.55;margin-bottom:2px">'
       + 'Clique numa foto para editar o texto dela.</div>' + tira + caixa;
   }
@@ -1128,7 +1169,7 @@ function abrirPainel(caminho) {
     (it.image ? '<img class="previa" src="' + esc(it.image) + '" alt="">'
               : '<video class="previa" src="' + esc(it.video) + '" controls preload="metadata"></video>')
     + '<div class="caminho">' + esc(it.caminho) + '</div>'
-    + secao("textos", ehGrupo ? "Textos do grupo" : "Textos do card",
+    + secao("textos", ehGrupo ? "Info do grupo" : "Textos",
             preenchidos.length ? preenchidos.join(" · ") : "vazio",
             corpoTextos, !preenchidos.length)
     + secao("classe", "Classificação",
@@ -1152,13 +1193,26 @@ function abrirPainel(caminho) {
     });
   });
 
+  /* Os campos da secao de cima gravam em lugares diferentes conforme o
+     que esta aberto: num carrossel, na info do GRUPO; numa foto solta,
+     na propria foto. So um dos dois conjuntos existe na tela, entao os
+     dois `liga` saem sem alvo quando nao e a vez deles. */
   const liga = (id, campo) => {
     const el = $(id);
+    if (!el) return;
     el.oninput = () => { editar(it.caminho, campo, el.value.trim()); };
     el.onchange = () => desenhar();
   };
   liga("fNome", "name"); liga("fFrase", "phrase"); liga("fLink", "link");
   liga("fAno", "year");
+  const ligaGrupo = (id, campo) => {
+    const el = $(id);
+    if (!el) return;
+    el.oninput = () => { editarGrupo(it.caminho, campo, el.value.trim()); };
+    el.onchange = () => desenhar();
+  };
+  ligaGrupo("fGrpNome", "name"); ligaGrupo("fGrpFrase", "phrase");
+  ligaGrupo("fGrpLink", "link"); ligaGrupo("fGrpAno", "year");
   /* Desarquivar grava FALSE, e nao apaga a chave. Apagar faria o valor
      cair de volta no que veio do images.json - que e justamente `true` -
      e a foto voltaria a ficar arquivada sozinha. `val` devolve "" para

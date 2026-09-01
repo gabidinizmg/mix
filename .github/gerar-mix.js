@@ -176,40 +176,72 @@ const montar = (arquivos, nomeColecao, info) => {
     if (arq === true || arq === 1 || arq === "true" || arq === "1") {
       item.archived = true;
     }
-    /* AS PAGINAS do carrossel, na ordem que ela montou. So as
-       seguidoras: a capa ja e o `image` do proprio item, e quem monta a
-       lista final e a pagina Mix, com a capa na frente. */
+    /* AS PAGINAS do carrossel, na ordem que ela montou - COM A CAPA
+       DENTRO, na frente.
+       Sao TRES coisas diferentes, e antes eu tinha juntado duas:
+         1. a info do GRUPO   -> aparece no card da grade, com a tag e o icone
+         2. a info da CAPA    -> aparece na 1a pagina do carrossel
+         3. a info de cada foto -> aparece na pagina dela
+       A capa e uma foto como as outras: ela tem o texto DELA. O que o
+       card mostra e a info do grupo, que mora numa chave separada da
+       lider (`grupo`). Enquanto essa chave estiver vazia, o card herda o
+       texto da capa - que e exatamente como estava antes, entao nada
+       muda de aparencia sozinho. */
     if (Array.isArray(d.carrossel) && d.carrossel.length) {
-      /* Cada pagina sai como OBJETO, com o texto dela junto. Antes ia so
-         a URL, e por isso as tres paginas de um carrossel mostravam o
-         mesmo texto - o do card. Cada foto ja tem entrada propria no
-         mix-info.json (e onde mora o `carrosselDe`), entao o lugar do
-         nome e da frase por pagina ja existia; faltava transportar.
-         `name`/`phrase` so entram quando existem: pagina sem texto
-         proprio herda o do card na hora de mostrar. */
-      const paginas = d.carrossel.map((c) => {
-        const chave = String(c);
-        const dp = ferramenta.items[chave] || {};
-        const pg = { src: url(chave) };
-        const nome = dp.name || dp.nome;
-        const frase = dp.phrase || dp.frase || dp.description;
+      const infoDe = (fonte, alvoSrc) => {
+        const pg = { src: alvoSrc };
+        const nome = fonte.name || fonte.nome;
+        const frase = fonte.phrase || fonte.frase || fonte.description;
         if (nome) pg.name = String(nome);
         if (frase) pg.phrase = String(frase);
-        /* ANO E LINK POR PAGINA. Nao substituem os do card: sao a
-           excecao. Um carrossel costuma ser UM trabalho - um ano, um
-           link - e por isso o card continua sendo o dono. Mas quando
-           uma foto do meio tem ano proprio ou vai para outro lugar,
-           tem onde dizer. Ausente = herda o do card. */
-        const anoPg = dp.year !== undefined ? dp.year : dp.ano;
-        if (anoPg !== undefined && anoPg !== null && String(anoPg).trim()) {
-          pg.year = String(anoPg).trim();
+        /* ANO E LINK POR FOTO. Ausente herda o do grupo na hora de
+           mostrar - ano e link sao dados do TRABALHO, e um carrossel
+           costuma ser um trabalho so. O texto, nao: texto vazio fica
+           vazio, senao as paginas voltariam a repetir a mesma frase. */
+        const ano = fonte.year !== undefined ? fonte.year : fonte.ano;
+        if (ano !== undefined && ano !== null && String(ano).trim()) {
+          pg.year = String(ano).trim();
         }
-        if (dp.link) pg.link = String(dp.link);
+        if (fonte.link) pg.link = String(fonte.link);
         return pg;
-      }).filter((x) => x.src);
+      };
+      /* a capa entra so quando ela e imagem: card de video usa o proprio
+         video como capa, e ai nao ha foto para virar pagina */
+      const paginas = (ehVid ? [] : [infoDe(d, url(a))])
+        .concat(d.carrossel.map((c) => {
+          const chave = String(c);
+          return infoDe(ferramenta.items[chave] || {}, url(chave));
+        }))
+        .filter((x) => x.src);
       if (paginas.length) item.images = paginas;
+
+
     }
     if (d.link) item.link = String(d.link);
+    /* DEPOIS do link, de proposito: a linha acima grava o link da FOTO
+       da capa, e num carrossel quem manda no card e o GRUPO. Posto
+       antes, o link do grupo era desfeito na linha seguinte.
+       Sai tambem cru em `grupo` para a ferramenta ler de volta o que ela
+       escreveu: sem isso, abrir o organizador noutro navegador mostraria
+       os campos do grupo em branco enquanto o site mostra o texto -
+       campo que so funciona uma vez. */
+    if (Array.isArray(d.carrossel) && d.carrossel.length) {
+      const g = (d.grupo && typeof d.grupo === "object") ? d.grupo : {};
+      const cru = {};
+      const gNome = g.name || g.nome;
+      const gFrase = g.phrase || g.frase || g.description;
+      const gAno = g.year !== undefined ? g.year : g.ano;
+      if (gNome) cru.name = String(gNome);
+      if (gFrase) cru.phrase = String(gFrase);
+      if (gAno !== undefined && gAno !== null && String(gAno).trim()) {
+        cru.year = String(gAno).trim();
+      }
+      if (g.link) cru.link = String(g.link);
+      /* o que estiver escrito no grupo VENCE no card; o que estiver
+         vazio deixa passar o da capa, que e como o card sempre foi */
+      Object.keys(cru).forEach((k) => { item[k] = cru[k]; });
+      if (Object.keys(cru).length) item.grupo = cru;
+    }
     if (ehVid) {
       item.video = url(a);
       const semExt = a.slice(0, a.length - path.extname(a).length);
