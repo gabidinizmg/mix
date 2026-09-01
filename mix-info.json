@@ -30,7 +30,8 @@
         "name": "Detalhe 2",
         "year": "2023",
         "pt": {
-          "phrase": "PT - Carrossel"
+          "phrase": "PT - Carrossel",
+          "name": "PT em portugues"
         }
       },
       "noInfo": false,
