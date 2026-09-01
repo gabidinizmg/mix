@@ -118,15 +118,23 @@
       "tag": "Photo"
     },
     {
-      "name": "A77f13a310147c55aedcd607693f6937",
+      "name": "teste 4",
+      "phrase": "teste carrossel",
       "images": [
         {
-          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Social%20Media/a77f13a310147c55aedcd607693f6937.jpg"
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Social%20Media/a77f13a310147c55aedcd607693f6937.jpg",
+          "name": "teste 4",
+          "phrase": "testem4"
         },
         {
-          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Social%20Media/45064a2d95348bde596903e5e6805a4b.jpg"
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Social%20Media/45064a2d95348bde596903e5e6805a4b.jpg",
+          "name": "teste 6",
+          "phrase": "teste 6"
         }
       ],
+      "grupo": {
+        "phrase": "teste carrossel"
+      },
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Social%20Media/a77f13a310147c55aedcd607693f6937.jpg",
       "collection": "Social Media",
       "tag": "Design"
