@@ -71,6 +71,28 @@ const lerInfo = (dir) => {
 
 /* Procura pelo nome do arquivo, COM e SEM extensao: escrever
    "ouro-preto" ou "ouro-preto.jpg" tem que dar no mesmo. */
+/* IDIOMAS. O ingles e o padrao e mora nos campos de sempre (`name`,
+   `phrase`) - assim tudo o que ja existe continua valendo e nada precisa
+   ser migrado. As traducoes entram em blocos ao lado, e so quando
+   escritas: `pt:{name,phrase}`, `es:{name,phrase}`.
+   Traducao vazia cai no ingles na hora de mostrar; sem isso, trocar o
+   idioma esvaziaria metade do site. */
+const IDIOMAS = ["pt", "es"];
+const traducoes = (fonte) => {
+  const saida = {};
+  for (const lg of IDIOMAS) {
+    const t = fonte && fonte[lg];
+    if (!t || typeof t !== "object") continue;
+    const bloco = {};
+    const nome = t.name || t.nome;
+    const frase = t.phrase || t.frase || t.description;
+    if (nome) bloco.name = String(nome);
+    if (frase) bloco.phrase = String(frase);
+    if (Object.keys(bloco).length) saida[lg] = bloco;
+  }
+  return saida;
+};
+
 /* Interruptor da info: desligado so quando esta escrito. Aceita texto
    porque um `_info.json` escrito na mao pode trazer "true". */
 const semInfo = (o) => {
@@ -189,6 +211,7 @@ const montar = (arquivos, nomeColecao, info) => {
        foto com texto que ela preferiu nao mostrar - e so a segunda
        precisa ser dita no arquivo. */
     if (semInfo(d)) item.noInfo = true;
+    Object.assign(item, traducoes(d));
     /* AS PAGINAS do carrossel, na ordem que ela montou - COM A CAPA
        DENTRO, na frente.
        Sao TRES coisas diferentes, e antes eu tinha juntado duas:
@@ -217,6 +240,7 @@ const montar = (arquivos, nomeColecao, info) => {
         }
         if (fonte.link) pg.link = String(fonte.link);
         if (semInfo(fonte)) pg.noInfo = true;
+        Object.assign(pg, traducoes(fonte));
         return pg;
       };
       /* a capa entra so quando ela e imagem: card de video usa o proprio
@@ -254,6 +278,12 @@ const montar = (arquivos, nomeColecao, info) => {
       /* o interruptor do GRUPO manda no card, e o da capa fica para a
          primeira pagina - sao dois botoes em lugares diferentes */
       if (semInfo(g)) cru.noInfo = true; else delete item.noInfo;
+      /* as traducoes do GRUPO tambem vencem no card; sem esta linha o
+         card mostraria o ingles do grupo e o portugues da capa */
+      const trG = traducoes(g);
+      for (const lg of IDIOMAS) {
+        if (trG[lg]) cru[lg] = trG[lg]; else delete item[lg];
+      }
       /* o que estiver escrito no grupo VENCE no card; o que estiver
          vazio deixa passar o da capa, que e como o card sempre foi */
       Object.keys(cru).forEach((k) => { item[k] = cru[k]; });

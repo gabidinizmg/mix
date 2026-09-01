@@ -273,6 +273,11 @@ button{border:none;background:none;cursor:pointer}
 .caixa-pag .cabeca strong{font-size:11px; font-weight:600; letter-spacing:.06em;
   text-transform:uppercase}
 .caixa-pag .cabeca span{font-size:11px; opacity:.5}
+/* a chave de idioma: alta o suficiente para nao virar decoracao, baixa
+   o suficiente para nao competir com os nomes das secoes */
+.idiomas{display:flex; align-items:center; gap:6px; margin-bottom:16px}
+.idiomas .chip{height:28px; padding:0 13px; font-size:12px; font-weight:600; letter-spacing:.04em}
+.idiomas .nota{font-size:11.5px; opacity:.5; margin-left:2px}
 /* dois campos curtos lado a lado: ano e link nao merecem uma linha cada */
 .dupla{display:grid; grid-template-columns:minmax(0,88px) minmax(0,1fr); gap:10px}
 
@@ -609,6 +614,35 @@ const val = (it, campo) => {
    A do grupo mora numa chave separada da lider (`grupo`), e enquanto ela
    estiver vazia o card continua herdando o texto da capa - que e como
    sempre foi, entao nada muda de aparencia sozinho. */
+/* ---------- IDIOMA ----------
+   O INGLES E O PADRAO e mora nos campos de sempre (`name`, `phrase`):
+   assim tudo o que ja esta escrito continua valendo e nada precisa ser
+   migrado. Portugues e espanhol entram em blocos ao lado, e so quando
+   escritos.
+   So o TEXTO tem idioma. Ano, link, tag e colecao sao os mesmos nos
+   tres - um ano nao se traduz, e uma tag que mudasse de nome por idioma
+   quebraria o filtro em duas listas diferentes. */
+const IDIOMAS = [["en", "EN"], ["pt", "PT"], ["es", "ES"]];
+let idioma = "en";
+
+const valLingua = (it, campo) => {
+  if (idioma === "en") return val(it, campo);
+  const e = (edicoes[it.caminho] || {})[idioma] || {};
+  if (e[campo] !== undefined) return e[campo] || "";
+  const pub = (it[idioma] && typeof it[idioma] === "object") ? it[idioma] : {};
+  return pub[campo] || "";
+};
+const editarLingua = (caminho, campo, valor) => {
+  if (idioma === "en") { editar(caminho, campo, valor); return; }
+  if (!edicoes[caminho]) edicoes[caminho] = {};
+  const b = Object.assign({}, edicoes[caminho][idioma] || {});
+  if (valor === "") delete b[campo]; else b[campo] = valor;
+  if (Object.keys(b).length) edicoes[caminho][idioma] = b;
+  else delete edicoes[caminho][idioma];
+  if (!Object.keys(edicoes[caminho]).length) delete edicoes[caminho];
+  salvar();
+};
+
 /* Interruptor da info. LIGADO e o padrao, entao a pergunta e sempre "foi
    desligado?" - e desligar so vale quando esta escrito. Vazio, `false` e
    ausente sao a mesma coisa: ligado. */
@@ -624,6 +658,26 @@ const valGrupo = (it, campo) => {
   const pub = it.grupo || {};
   return pub[campo] || "";
 };
+const valGrupoLingua = (it, campo) => {
+  if (idioma === "en") return valGrupo(it, campo);
+  const g = ((edicoes[it.caminho] || {}).grupo || {})[idioma] || {};
+  if (g[campo] !== undefined) return g[campo] || "";
+  const pub = ((it.grupo || {})[idioma]) || {};
+  return pub[campo] || "";
+};
+const editarGrupoLingua = (caminho, campo, valor) => {
+  if (idioma === "en") { editarGrupo(caminho, campo, valor); return; }
+  if (!edicoes[caminho]) edicoes[caminho] = {};
+  const g = Object.assign({}, edicoes[caminho].grupo || {});
+  const b = Object.assign({}, g[idioma] || {});
+  if (valor === "") delete b[campo]; else b[campo] = valor;
+  if (Object.keys(b).length) g[idioma] = b; else delete g[idioma];
+  if (Object.keys(g).length) edicoes[caminho].grupo = g;
+  else delete edicoes[caminho].grupo;
+  if (!Object.keys(edicoes[caminho]).length) delete edicoes[caminho];
+  salvar();
+};
+
 const editarGrupo = (caminho, campo, valor) => {
   if (!edicoes[caminho]) edicoes[caminho] = {};
   const g = Object.assign({}, edicoes[caminho].grupo || {});
@@ -709,6 +763,9 @@ async function carregar() {
            abrir a ferramenta noutro navegador mostraria os campos do
            grupo em branco enquanto o site mostra o texto. */
         grupo: (it.grupo && typeof it.grupo === "object") ? it.grupo : {},
+        /* as traducoes como o robo as publicou */
+        pt: (it.pt && typeof it.pt === "object") ? it.pt : {},
+        es: (it.es && typeof it.es === "object") ? it.es : {},
         collection: it.collection || it.colecao || "",
       };
     });
@@ -820,6 +877,10 @@ function paginas(it) {
          enquanto ela nao escrever nada por cima */
       name: obj ? (u.name || u.nome || "") : "",
       phrase: obj ? (u.phrase || u.frase || "") : "",
+      /* as traducoes publicadas desta pagina, para o campo abrir com o
+         que ja esta no ar em vez de em branco */
+      pt: (obj && u.pt && typeof u.pt === "object") ? u.pt : {},
+      es: (obj && u.es && typeof u.es === "object") ? u.es : {},
     };
   }));
 }
@@ -1073,7 +1134,28 @@ function abrirPainel(caminho) {
   }
   const selPag = itens.find(function (x) { return x.caminho === paginaSel; });
   const pgSel = seq.find(function (x) { return x.caminho === paginaSel; }) || {};
+  /* So o TEXTO tem idioma; ano, link e o interruptor sao os mesmos nos
+     tres. Tres fontes, da mais forte para a mais fraca: o que ela editou
+     agora, a propria pagina do images.json, e - so quando a pagina ainda
+     e um card solto - o item. */
   const vSel = function (campo) {
+    if (idioma !== "en" && (campo === "phrase" || campo === "name")) {
+      const e = (edicoes[paginaSel] || {})[idioma] || {};
+      if (e[campo] !== undefined) return e[campo] || "";
+      const pubPg = (pgSel[idioma] && typeof pgSel[idioma] === "object") ? pgSel[idioma] : {};
+      if (pubPg[campo]) return pubPg[campo];
+      const pubIt = (selPag && selPag[idioma] && typeof selPag[idioma] === "object")
+        ? selPag[idioma] : {};
+      return pubIt[campo] || "";
+    }
+    const e = edicoes[paginaSel] || {};
+    if (e[campo] !== undefined) return e[campo] || "";
+    if (pgSel[campo]) return pgSel[campo];
+    return selPag ? (selPag[campo] || "") : "";
+  };
+  /* o ingles da mesma foto: e o que aparece de marcador cinza quando ela
+     esta traduzindo, para ter o original a vista */
+  const vSelEn = function (campo) {
     const e = edicoes[paginaSel] || {};
     if (e[campo] !== undefined) return e[campo] || "";
     if (pgSel[campo]) return pgSel[campo];
@@ -1120,9 +1202,13 @@ function abrirPainel(caminho) {
      nao pelo nome do campo no arquivo: ela descreveu assim, "grande e o
      titulo, pequeno embaixo e o detalhe". As chaves do JSON continuam
      `phrase` e `name` para nao quebrar o que ja esta gravado. */
-  const leGrupo = function (c) { return valGrupo(it, c); };
-  const leFoto = function (c) { return val(it, c); };
-  const leCard = ehGrupo ? leGrupo : leFoto;
+  const ehTexto = function (c) { return c === "phrase" || c === "name"; };
+  const leCard = function (c) {
+    if (ehGrupo) return ehTexto(c) ? valGrupoLingua(it, c) : valGrupo(it, c);
+    return ehTexto(c) ? valLingua(it, c) : val(it, c);
+  };
+  /* o ingles do mesmo campo, para servir de marcador cinza ao traduzir */
+  const leCardEn = function (c) { return ehGrupo ? valGrupo(it, c) : val(it, c); };
   const idCard = ehGrupo
     ? { f: "fGrpFrase", n: "fGrpNome", a: "fGrpAno", l: "fGrpLink" }
     : { f: "fFrase", n: "fNome", a: "fAno", l: "fLink" };
@@ -1136,8 +1222,8 @@ function abrirPainel(caminho) {
         + 'É o que aparece no card da grade, junto da tag e do ícone de carrossel. '
         + 'Vazio usa o texto da capa.</div>'
       : "")
-    + '<div class="campo"><label>Título — o texto GRANDE</label><textarea id="' + idCard.f + '" placeholder="' + esc(ehGrupo ? (val(it, "phrase") || "o texto do grupo") : "aparece ao clicar no cantinho colorido") + '">' + esc(leCard("phrase")) + '</textarea></div>'
-    + '<div class="campo"><label>Detalhe — o pequeno embaixo</label><input id="' + idCard.n + '" value="' + esc(leCard("name")) + '" placeholder="' + esc(ehGrupo ? (val(it, "name") || "o detalhe do grupo") : it.caminho.split("/").pop()) + '"></div>'
+    + '<div class="campo"><label>Título — o texto GRANDE</label><textarea id="' + idCard.f + '" placeholder="' + esc(idioma !== "en" ? (leCardEn("phrase") || "o texto em inglês") : (ehGrupo ? (val(it, "phrase") || "o texto do grupo") : "aparece ao clicar no cantinho colorido")) + '">' + esc(leCard("phrase")) + '</textarea></div>'
+    + '<div class="campo"><label>Detalhe — o pequeno embaixo</label><input id="' + idCard.n + '" value="' + esc(leCard("name")) + '" placeholder="' + esc(idioma !== "en" ? (leCardEn("name") || "o detalhe em inglês") : (ehGrupo ? (val(it, "name") || "o detalhe do grupo") : it.caminho.split("/").pop())) + '"></div>'
     + '<div class="dupla">'
       + '<div class="campo"><label>Ano</label><input id="' + idCard.a + '" value="' + esc(leCard("year")) + '" placeholder="' + esc(ehGrupo ? (val(it, "year") || "2024") : "2024") + '"></div>'
       + '<div class="campo"><label>Link</label><input id="' + idCard.l + '" value="' + esc(leCard("link")) + '" placeholder="' + esc(ehGrupo ? (val(it, "link") || "https://…") : "https://instagram.com/p/…") + '"></div>'
@@ -1183,9 +1269,9 @@ function abrirPainel(caminho) {
       + '<strong>Foto ' + (iSel + 1) + ' de ' + seq.length + (iSel === 0 ? " · capa" : "") + '</strong>'
       + '<span>' + (iSel === 0 ? "aparece na 1ª página" : "aparece nesta página") + '</span></div>'
       + '<div class="campo"><label>Título — o texto GRANDE</label>'
-      + '<textarea id="fPagFrase" placeholder="o texto GRANDE desta foto">' + esc(vSel("phrase")) + '</textarea></div>'
+      + '<textarea id="fPagFrase" placeholder="' + esc(idioma !== "en" ? (vSelEn("phrase") || "o texto em inglês") : "o texto GRANDE desta foto") + '">' + esc(vSel("phrase")) + '</textarea></div>'
       + '<div class="campo"><label>Detalhe — o pequeno embaixo</label>'
-      + '<input id="fPagNome" value="' + esc(vSel("name")) + '" placeholder="o pequeno embaixo"></div>'
+      + '<input id="fPagNome" value="' + esc(vSel("name")) + '" placeholder="' + esc(idioma !== "en" ? (vSelEn("name") || "o detalhe em inglês") : "o pequeno embaixo") + '"></div>'
       + '<div class="dupla">'
         + '<div class="campo"><label>Ano</label><input id="fPagAno" value="' + esc(vSel("year")) + '" placeholder="' + esc(valGrupo(it, "year") || val(it, "year") || "2024") + '"></div>'
         + '<div class="campo"><label>Link</label><input id="fPagLink" value="' + esc(vSel("link")) + '" placeholder="' + esc(valGrupo(it, "link") || val(it, "link") || "https://…") + '"></div>'
@@ -1203,6 +1289,19 @@ function abrirPainel(caminho) {
     (it.image ? '<img class="previa" src="' + esc(it.image) + '" alt="">'
               : '<video class="previa" src="' + esc(it.video) + '" controls preload="metadata"></video>')
     + '<div class="caminho">' + esc(it.caminho) + '</div>'
+    /* A CHAVE DE IDIOMA vale para o painel inteiro: os textos do card e
+       os de cada foto do carrossel seguem ela. Fica aqui em cima, antes
+       de tudo, porque decide o que os campos de baixo QUEREM DIZER - se
+       aparecesse dentro de uma secao, ela poderia editar portugues
+       achando que era ingles. */
+    + '<div class="idiomas" id="fIdiomas">'
+      + IDIOMAS.map(function (lg) {
+          return '<button class="chip' + (idioma === lg[0] ? " on" : "")
+            + '" data-lg="' + lg[0] + '">' + lg[1] + '</button>';
+        }).join("")
+      + '<span class="nota">'
+      + (idioma === "en" ? "o padrão do site" : "vazio usa o inglês")
+      + '</span></div>'
     + secao("textos", ehGrupo ? "Info do grupo" : "Textos",
             !infoCardLigada ? "escondida"
               : (preenchidos.length ? preenchidos.join(" · ") : "vazio"),
@@ -1238,16 +1337,28 @@ function abrirPainel(caminho) {
     el.oninput = () => { editar(it.caminho, campo, el.value.trim()); };
     el.onchange = () => desenhar();
   };
-  liga("fNome", "name"); liga("fFrase", "phrase"); liga("fLink", "link");
-  liga("fAno", "year");
+  /* TEXTO vai pelo idioma da vez; ano e link sao os mesmos nos tres. */
+  const ligaTexto = (id, campo, dono) => {
+    const el = $(id);
+    if (!el) return;
+    el.oninput = () => { dono(it.caminho, campo, el.value.trim()); };
+    el.onchange = () => desenhar();
+  };
+  ligaTexto("fNome", "name", editarLingua);
+  ligaTexto("fFrase", "phrase", editarLingua);
+  liga("fLink", "link"); liga("fAno", "year");
   const ligaGrupo = (id, campo) => {
     const el = $(id);
     if (!el) return;
     el.oninput = () => { editarGrupo(it.caminho, campo, el.value.trim()); };
     el.onchange = () => desenhar();
   };
-  ligaGrupo("fGrpNome", "name"); ligaGrupo("fGrpFrase", "phrase");
+  ligaTexto("fGrpNome", "name", editarGrupoLingua);
+  ligaTexto("fGrpFrase", "phrase", editarGrupoLingua);
   ligaGrupo("fGrpLink", "link"); ligaGrupo("fGrpAno", "year");
+  $("fIdiomas").querySelectorAll("[data-lg]").forEach((b) => {
+    b.onclick = () => { idioma = b.dataset.lg; abrirPainel(caminho); };
+  });
   if ($("fInfoCard")) $("fInfoCard").onclick = () => {
     const marca = marcaInfo(!infoCardLigada);
     if (ehGrupo) editarGrupo(it.caminho, "noInfo", marca);
@@ -1271,8 +1382,13 @@ function abrirPainel(caminho) {
       if (!el) return;
       el.oninput = () => { editar(paginaSel, campo, el.value.trim()); };
     };
-    ligaPag("fPagFrase", "phrase");
-    ligaPag("fPagNome", "name");
+    const ligaPagTexto = (id, campo) => {
+      const el = $(id);
+      if (!el) return;
+      el.oninput = () => { editarLingua(paginaSel, campo, el.value.trim()); };
+    };
+    ligaPagTexto("fPagFrase", "phrase");
+    ligaPagTexto("fPagNome", "name");
     /* ANO E LINK DA FOTO tambem. Sem eles a pagina do meio nao tinha
        onde dizer que e de outro ano ou que vai para outro lugar - e o
        generico do grupo era a unica resposta possivel. Vazio herda o do
