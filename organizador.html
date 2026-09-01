@@ -235,6 +235,47 @@ button{border:none;background:none;cursor:pointer}
 }
 .campo input:focus,.campo textarea:focus{border-color:var(--tinta)}
 .campo textarea{resize:vertical; min-height:74px; line-height:1.45}
+/* ---------- SECOES DO PAINEL ----------
+   O painel era uma coluna unica de nove blocos de mesmo peso: nada dizia
+   onde ela estava, e a parte que ela mais usa - o carrossel - ficava no
+   fim de uma rolagem longa. `<details>` nativo: abre pelo teclado, nao
+   precisa de estado em JS, e o navegador ja sabe o papel dele.
+   Nome `secao-corpo`, e nao `corpo`: `.painel .corpo` ja existe com a
+   mesma especificidade, e a ultima do arquivo ganharia em silencio. */
+.secao{border-top:1px solid var(--linha)}
+.secao:first-of-type{border-top:none}
+.secao > summary{
+  display:flex; align-items:center; gap:9px; cursor:pointer;
+  padding:15px 0; list-style:none; user-select:none;
+}
+.secao > summary::-webkit-details-marker{display:none}
+.secao > summary:focus-visible{outline:2px solid var(--tinta); outline-offset:3px; border-radius:6px}
+.secao .seta{flex-shrink:0; opacity:.45; transition:transform .2s var(--mola)}
+.secao[open] .seta{transform:rotate(90deg)}
+.secao .nome-secao{font-size:11px; font-weight:600; letter-spacing:.09em;
+  text-transform:uppercase; opacity:.75}
+/* O RESUMO E INFORMACAO, nao enfeite: com a secao fechada ele responde
+   "o que ja esta preenchido aqui dentro" - que e a pergunta que ela faz
+   ao abrir a ferramenta. Com a secao aberta some, porque a resposta
+   passa a estar na tela. */
+.secao .resumo{margin-left:auto; font-size:11.5px; opacity:.5;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:56%;
+  transition:opacity .18s}
+.secao[open] .resumo{opacity:0}
+.secao .resumo.falta{opacity:.75; color:var(--aviso)}
+.secao-corpo{padding-bottom:4px}
+
+/* A FOTO SELECIONADA GANHA UMA CAIXA. Sem ela os campos ficavam soltos
+   depois da tira, e nada dizia que pertenciam a miniatura clicada. */
+.caixa-pag{border:1px solid var(--linha); border-radius:14px;
+  padding:13px 13px 1px; margin-top:12px; background:var(--campo)}
+.caixa-pag .cabeca{display:flex; align-items:baseline; gap:8px; margin-bottom:10px}
+.caixa-pag .cabeca strong{font-size:11px; font-weight:600; letter-spacing:.06em;
+  text-transform:uppercase}
+.caixa-pag .cabeca span{font-size:11px; opacity:.5}
+/* dois campos curtos lado a lado: ano e link nao merecem uma linha cada */
+.dupla{display:grid; grid-template-columns:minmax(0,88px) minmax(0,1fr); gap:10px}
+
 .nav{display:flex;gap:8px}
 .nav .btn{flex:1;justify-content:center;display:flex;align-items:center}
 
@@ -684,6 +725,12 @@ const ehSeguidora = (it) => !!val(it, "carrosselDe");
    pagina sem promove-la. */
 let paginaSel = null;
 
+/* Quais secoes do painel estao abertas. O painel se reconstroi inteiro a
+   cada clique numa foto do carrossel: sem guardar isto, tudo fecharia e
+   ela reabriria a mesma secao a cada foto. Comeca com textos e carrossel
+   abertos - sao os dois que ela usa em toda visita. */
+const abertas = new Set(["textos", "carrossel"]);
+
 /* Reconstroi a URL de um caminho, tomando o prefixo do CDN de uma URL
    que ja temos. Precisa disto porque a seguidora pode nao existir mais
    na lista de itens - ela deixou de ser um card no images.json. */
@@ -963,72 +1010,147 @@ function abrirPainel(caminho) {
   if (atual && atual.caminho !== caminho) paginaSel = null;
   atual = it;
   const cols = [...new Set(itens.map((x) => val(x, "collection")).filter(Boolean))];
-  $("corpoPainel").innerHTML =
-    (it.image ? '<img class="previa" src="' + esc(it.image) + '" alt="">'
-              : '<video class="previa" src="' + esc(it.video) + '" controls preload="metadata"></video>')
-    + '<div class="caminho">' + esc(it.caminho) + '</div>'
+  const seq = paginas(it);
+  const ehGrupo = seq.length > 1;
+
+  /* A PAGINA EM EDICAO e o texto dela.
+     TRES fontes, da mais forte para a mais fraca: o que ela editou
+     agora, a propria pagina do images.json, e - so quando a pagina
+     ainda e um card solto - o item. Faltava a do meio: depois que o
+     robo roda a seguidora deixa de ser item, e o campo abria em branco
+     mesmo com texto publicado. */
+  if (ehGrupo && (!paginaSel || !seq.some(function (x) { return x.caminho === paginaSel; }))) {
+    paginaSel = seq[0].caminho;
+  }
+  const selPag = itens.find(function (x) { return x.caminho === paginaSel; });
+  const pgSel = seq.find(function (x) { return x.caminho === paginaSel; }) || {};
+  const vSel = function (campo) {
+    const e = edicoes[paginaSel] || {};
+    if (e[campo] !== undefined) return e[campo] || "";
+    if (pgSel[campo]) return pgSel[campo];
+    return selPag ? (selPag[campo] || "") : "";
+  };
+  const iSel = seq.findIndex(function (x) { return x.caminho === paginaSel; });
+
+  /* lista o que JA esta preenchido - e o resumo que aparece na secao
+     fechada. Nomear os campos vazios seria a lista longa; nomear os
+     cheios responde em duas palavras. */
+  const cheios = function (fonte, pares) {
+    const out = [];
+    pares.forEach(function (par) { if (fonte(par[0])) out.push(par[1]); });
+    return out;
+  };
+  const secao = function (id, nome, resumo, corpo, falta) {
+    return '<details class="secao"' + (abertas.has(id) ? " open" : "")
+      + ' data-s="' + id + '"><summary>'
+      + '<svg class="seta" width="12" height="12" viewBox="0 0 24 24" fill="none"'
+      + ' stroke="currentColor" stroke-width="2.5" stroke-linecap="round"'
+      + ' stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>'
+      + '<span class="nome-secao">' + esc(nome) + '</span>'
+      + '<span class="resumo' + (falta ? " falta" : "") + '">' + esc(resumo) + '</span>'
+      + '</summary><div class="secao-corpo">' + corpo + '</div></details>';
+  };
+
+  /* ---- 1. textos do card (= do GRUPO, quando ha carrossel) ---- */
+  const preenchidos = cheios(function (c) { return val(it, c); }, [
+    ["phrase", "título"], ["name", "detalhe"], ["year", "ano"], ["link", "link"],
+  ]);
+  const corpoTextos =
     /* Os rotulos falam pelo TAMANHO na tela, nao pelo nome do campo no
        arquivo. Ela descreveu assim: "grande e o titulo, pequeno embaixo
        e o detalhe". As chaves do JSON continuam `phrase` e `name` para
        nao quebrar o que ja esta gravado. */
-    + '<div class="campo"><label>Título — o texto GRANDE</label><textarea id="fFrase" placeholder="aparece ao clicar no cantinho colorido">' + esc(val(it, "phrase")) + '</textarea></div>'
+    '<div class="campo"><label>Título — o texto GRANDE</label><textarea id="fFrase" placeholder="aparece ao clicar no cantinho colorido">' + esc(val(it, "phrase")) + '</textarea></div>'
     + '<div class="campo"><label>Detalhe — o pequeno embaixo</label><input id="fNome" value="' + esc(val(it, "name")) + '" placeholder="' + esc(it.caminho.split("/").pop()) + '"></div>'
-    + '<div class="campo"><label>Ano</label><input id="fAno" value="' + esc(val(it, "year")) + '" placeholder="2024" inputmode="numeric"></div>'
-    + '<div class="campo"><label>Link</label><input id="fLink" value="' + esc(val(it, "link")) + '" placeholder="https://instagram.com/p/…"></div>'
-    + '<div class="campo"><label>Tag</label><div style="display:flex;gap:6px;flex-wrap:wrap" id="fTags">'
-      + ordemTags.map((t) => '<button class="chip' + (val(it, "tag") === t ? " on" : "") + '" data-t="' + esc(t) + '">' + esc(t) + '</button>').join("")
+    + '<div class="dupla">'
+      + '<div class="campo"><label>Ano</label><input id="fAno" value="' + esc(val(it, "year")) + '" placeholder="2024"></div>'
+      + '<div class="campo"><label>Link</label><input id="fLink" value="' + esc(val(it, "link")) + '" placeholder="https://instagram.com/p/…"></div>'
+    + '</div>';
+
+  /* ---- 2. classificacao ---- */
+  const corpoClass =
+    '<div class="campo"><label>Tag</label><div style="display:flex;gap:6px;flex-wrap:wrap" id="fTags">'
+      + ordemTags.map(function (t) { return '<button class="chip' + (val(it, "tag") === t ? " on" : "") + '" data-t="' + esc(t) + '">' + esc(t) + '</button>'; }).join("")
       + '<button class="chip' + (!val(it, "tag") ? " on" : "") + '" data-t="">nenhuma</button></div></div>'
     + '<div class="campo"><label>Coleção</label><div style="display:flex;gap:6px;flex-wrap:wrap" id="fCols">'
-      + cols.map((c) => '<button class="chip' + (val(it, "collection") === c ? " on" : "") + '" data-c="' + esc(c) + '">' + esc(c) + '</button>').join("")
-      + '</div></div>'
-    + (function () {
-        /* A TIRA DO CARROSSEL. Sem ela, agrupar era um ato cego: as
-           seguidoras somem da grade e nao havia onde ver o que entrou no
-           card - nem trocar a capa sem desagrupar tudo. */
-        const seq = paginas(it);
-        if (seq.length < 2) return "";
-        if (!paginaSel || !seq.some(function (x) { return x.caminho === paginaSel; })) {
-          paginaSel = seq[0].caminho;
-        }
-        /* TRES fontes para o campo da pagina, da mais forte para a mais
-           fraca: o que ela editou agora, a propria pagina do images.json,
-           e - so quando a pagina ainda e um card solto - o item.
-           Faltava a do meio: depois que o robo roda, a seguidora deixa de
-           ser item, e o campo abria em branco mesmo com texto publicado. */
-        const sel = itens.find(function (x) { return x.caminho === paginaSel; });
-        const pgSel = seq.find(function (x) { return x.caminho === paginaSel; }) || {};
-        const vSel = function (campo) {
-          const e = edicoes[paginaSel] || {};
-          if (e[campo] !== undefined) return e[campo] || "";
-          if (pgSel[campo]) return pgSel[campo];
-          return sel ? (sel[campo] || "") : "";
-        };
-        const iSel = seq.findIndex(function (x) { return x.caminho === paginaSel; });
-        return '<div class="campo"><label>Carrossel — ' + seq.length
-          + ' fotos · clique numa para editar o texto dela</label><div class="tira" id="fTira">'
-          + seq.map(function (pg, k) {
-              return '<button class="pag' + (k === 0 ? " capa" : "")
-                + (pg.caminho === paginaSel ? " sel" : "") + '" data-p="'
-                + esc(pg.caminho) + '" title="' + esc(pg.caminho) + '">'
-                + '<img src="' + esc(pg.url) + '" alt="" loading="lazy">'
-                + (k === 0 ? '<span class="marca">capa</span>' : "") + '</button>';
-            }).join("")
-          + '</div></div>'
-          + '<div class="campo"><label>Título da foto ' + (iSel + 1) + ' — vazio usa o do card</label>'
-          + '<textarea id="fPagFrase" placeholder="o texto GRANDE desta foto">' + esc(vSel("phrase")) + '</textarea></div>'
-          + '<div class="campo"><label>Detalhe da foto ' + (iSel + 1) + '</label>'
-          + '<input id="fPagNome" value="' + esc(vSel("name")) + '" placeholder="o pequeno embaixo"></div>'
-          + (iSel > 0
-              ? '<div class="campo"><button class="btn" id="btCapa" style="width:100%">Usar esta foto como capa</button></div>'
-              : '');
-      })()
+      + cols.map(function (c) { return '<button class="chip' + (val(it, "collection") === c ? " on" : "") + '" data-c="' + esc(c) + '">' + esc(c) + '</button>'; }).join("")
+      + '</div></div>';
+
+  /* ---- 3. carrossel ----
+     A TIRA e a caixa da foto selecionada. Sem a tira, agrupar era um ato
+     cego: as seguidoras somem da grade e nao havia onde ver o que entrou
+     no card. Sem a caixa, os campos ficavam soltos embaixo da tira e nada
+     dizia de qual foto eles eram. */
+  let corpoCarrossel = "";
+  let resumoCarrossel = "";
+  if (ehGrupo) {
+    const comTexto = seq.filter(function (pg, k) {
+      if (k === 0) return false;                 /* a capa usa os do card */
+      const e = edicoes[pg.caminho] || {};
+      return !!(e.phrase || e.name || e.year || e.link || pg.phrase || pg.name);
+    }).length;
+    resumoCarrossel = seq.length + " fotos · " + comTexto + " com texto";
+    const tira = '<div class="tira" id="fTira">'
+      + seq.map(function (pg, k) {
+          return '<button class="pag' + (k === 0 ? " capa" : "")
+            + (pg.caminho === paginaSel ? " sel" : "") + '" data-p="'
+            + esc(pg.caminho) + '" title="' + esc(pg.caminho) + '">'
+            + '<img src="' + esc(pg.url) + '" alt="" loading="lazy">'
+            + (k === 0 ? '<span class="marca">capa</span>' : "") + '</button>';
+        }).join("")
+      + '</div>';
+    /* A CAPA NAO GANHA CAMPOS PROPRIOS: ela E o card. Dois campos na
+       mesma tela gravando a mesma chave e a receita da pergunta "por que
+       digitei aqui e mudou ali". A capa manda para onde o dono mora. */
+    const caixa = iSel === 0
+      ? '<div class="caixa-pag"><div class="cabeca"><strong>Foto 1 · capa</strong>'
+        + '<span>é o card</span></div>'
+        + '<div class="campo" style="margin-bottom:12px"><div style="font-size:12px;opacity:.6;line-height:1.5">'
+        + 'A capa mostra os textos do card — os mesmos que valem para o grupo inteiro. '
+        + 'Edite em <strong>Textos do grupo</strong>, aqui em cima.</div></div></div>'
+      : '<div class="caixa-pag"><div class="cabeca">'
+        + '<strong>Foto ' + (iSel + 1) + ' de ' + seq.length + '</strong>'
+        + '<span>vazio herda o do grupo</span></div>'
+        + '<div class="campo"><label>Título — o texto GRANDE</label>'
+        + '<textarea id="fPagFrase" placeholder="o texto GRANDE desta foto">' + esc(vSel("phrase")) + '</textarea></div>'
+        + '<div class="campo"><label>Detalhe — o pequeno embaixo</label>'
+        + '<input id="fPagNome" value="' + esc(vSel("name")) + '" placeholder="o pequeno embaixo"></div>'
+        + '<div class="dupla">'
+          + '<div class="campo"><label>Ano</label><input id="fPagAno" value="' + esc(vSel("year")) + '" placeholder="' + esc(val(it, "year") || "2024") + '"></div>'
+          + '<div class="campo"><label>Link</label><input id="fPagLink" value="' + esc(vSel("link")) + '" placeholder="' + esc(val(it, "link") || "https://…") + '"></div>'
+        + '</div>'
+        + '<div class="campo"><button class="btn" id="btCapa" style="width:100%">Usar esta foto como capa</button></div></div>';
+    corpoCarrossel = '<div style="font-size:12px;opacity:.55;margin-bottom:2px">'
+      + 'Clique numa foto para editar o texto dela.</div>' + tira + caixa;
+  }
+
+  $("corpoPainel").innerHTML =
+    (it.image ? '<img class="previa" src="' + esc(it.image) + '" alt="">'
+              : '<video class="previa" src="' + esc(it.video) + '" controls preload="metadata"></video>')
+    + '<div class="caminho">' + esc(it.caminho) + '</div>'
+    + secao("textos", ehGrupo ? "Textos do grupo" : "Textos do card",
+            preenchidos.length ? preenchidos.join(" · ") : "vazio",
+            corpoTextos, !preenchidos.length)
+    + secao("classe", "Classificação",
+            (val(it, "tag") || "sem tag") + (val(it, "collection") ? " · " + val(it, "collection") : ""),
+            corpoClass, !val(it, "tag"))
+    + (ehGrupo ? secao("carrossel", "Carrossel", resumoCarrossel, corpoCarrossel, false) : "")
     + (ehSeguidora(it) && !ehArq(it)
-        ? '<div class="campo"><label>Esta foto e uma pagina de outro card</label>'
+        ? '<div class="campo" style="margin-top:16px"><label>Esta foto é uma página de outro card</label>'
           + '<div style="font-size:12px;opacity:.6">Para tirar do site, arquive o card'
-          + ' que a contem, ou desagrupe antes.</div></div>'
-        : '<div class="campo"><button class="btn" id="btArq" style="width:100%">'
+          + ' que a contém, ou desagrupe antes.</div></div>'
+        : '<div class="campo" style="margin-top:16px"><button class="btn" id="btArq" style="width:100%">'
           + (ehArq(it) ? "Desarquivar" : "Arquivar") + '</button></div>')
     + '<div class="nav"><button class="btn" id="btAnt">← anterior</button><button class="btn" id="btProx">próxima →</button></div>';
+
+  /* A SECAO ABERTA SOBREVIVE AO REDESENHO. O painel se reconstroi
+     inteiro a cada clique numa foto do carrossel; sem guardar isto,
+     tudo se fechava e ela reabria a mesma secao a cada foto. */
+  $("corpoPainel").querySelectorAll("details.secao").forEach(function (d) {
+    d.addEventListener("toggle", function () {
+      if (d.open) abertas.add(d.dataset.s); else abertas.delete(d.dataset.s);
+    });
+  });
 
   const liga = (id, campo) => {
     const el = $(id);
@@ -1056,6 +1178,12 @@ function abrirPainel(caminho) {
     };
     ligaPag("fPagFrase", "phrase");
     ligaPag("fPagNome", "name");
+    /* ANO E LINK DA FOTO tambem. Sem eles a pagina do meio nao tinha
+       onde dizer que e de outro ano ou que vai para outro lugar - e o
+       generico do grupo era a unica resposta possivel. Vazio herda o do
+       grupo, que e o que o marcador cinza do campo mostra. */
+    ligaPag("fPagAno", "year");
+    ligaPag("fPagLink", "link");
     if ($("btCapa")) {
       $("btCapa").onclick = () => definirCapa(it.caminho, paginaSel);
     }

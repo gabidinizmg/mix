@@ -195,6 +195,16 @@ const montar = (arquivos, nomeColecao, info) => {
         const frase = dp.phrase || dp.frase || dp.description;
         if (nome) pg.name = String(nome);
         if (frase) pg.phrase = String(frase);
+        /* ANO E LINK POR PAGINA. Nao substituem os do card: sao a
+           excecao. Um carrossel costuma ser UM trabalho - um ano, um
+           link - e por isso o card continua sendo o dono. Mas quando
+           uma foto do meio tem ano proprio ou vai para outro lugar,
+           tem onde dizer. Ausente = herda o do card. */
+        const anoPg = dp.year !== undefined ? dp.year : dp.ano;
+        if (anoPg !== undefined && anoPg !== null && String(anoPg).trim()) {
+          pg.year = String(anoPg).trim();
+        }
+        if (dp.link) pg.link = String(dp.link);
         return pg;
       }).filter((x) => x.src);
       if (paginas.length) item.images = paginas;
