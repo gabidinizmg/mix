@@ -76,7 +76,8 @@
         {
           "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/493923dd84e2ee07534de0790c0a8e9b.jpg",
           "name": "Teste texto",
-          "phrase": "teste 3"
+          "phrase": "teste 3",
+          "noInfo": true
         }
       ],
       "year": "2023",
