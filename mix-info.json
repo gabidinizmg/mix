@@ -14,13 +14,17 @@
       "year": "2024"
     },
     "Editing/baa98a6a98d22599c3a19a3303eb79c7.jpg": {
-      "carrosselDe": "Motion/425dee78a01bc4ff60ee64c612df759a.jpg"
+      "carrosselDe": "Motion/425dee78a01bc4ff60ee64c612df759a.jpg",
+      "phrase": "Imagem 2",
+      "name": "Teste texto"
     },
     "Motion/425dee78a01bc4ff60ee64c612df759a.jpg": {
       "carrossel": [
         "Editing/baa98a6a98d22599c3a19a3303eb79c7.jpg",
         "Motion/493923dd84e2ee07534de0790c0a8e9b.jpg"
-      ]
+      ],
+      "name": "Nome cara adesivo",
+      "phrase": "Legal"
     },
     "Motion/493923dd84e2ee07534de0790c0a8e9b.jpg": {
       "carrosselDe": "Motion/425dee78a01bc4ff60ee64c612df759a.jpg"
