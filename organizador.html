@@ -13,11 +13,52 @@
    aleatorio e a causa mais comum de um layout parecer amador.
    ============================================================ */
 :root{
+  color-scheme:light;
   --tinta:#352270; --ativo:#EDE7FB; --campo:#F4F1FC; --fundo:#F2F0FC;
   --branco:#fff; --amarelo:#FFF20B; --verde:#24FB99;
   --linha:rgba(53,34,112,.10);
+  /* SUPERFICIES, e nao cores soltas. Cada uma existe porque o modo
+     escuro precisa VIRAR essa superficie inteira - vidro, cartao,
+     painel, aviso. Cor escrita na regra nao tem como virar. */
+  --vidro:rgba(255,255,255,.72);
+  --vidro-borda:rgba(255,255,255,.55);
+  --chip:rgba(255,255,255,.7);
+  --chip-hover:#fff;
+  --painel:#fff;
+  --alerta:#FFF6C4;
+  --sobre:#fff;                    /* o que se escreve EM CIMA da tinta */
+  --sombra-fraca:rgba(53,34,112,.07);
+  --sombra-media:rgba(53,34,112,.15);
+  --sombra-forte:rgba(53,34,112,.5);
+  --ok:#0B7A4B; --erro:#B3261E; --aviso:#8A6100;
   --mola:cubic-bezier(.22,1,.36,1);
   --r:16px; --r-g:22px;
+}
+
+/* MODO ESCURO.
+   A tinta e o fundo trocam de lado: `--tinta` deixa de ser a cor da
+   letra roxa e passa a ser a cor da letra clara. Como toda regra ja
+   lia o token, a inversao acontece num lugar so.
+   `--sobre` existe por causa disso: o que se escreve em cima da tinta
+   nao pode ser branco nos dois modos - no escuro a tinta E clara. */
+:root[data-tema="escuro"]{
+  color-scheme:dark;
+  --tinta:#EDE9FB; --ativo:#3B2C72; --campo:#241B48; --fundo:#140E2B;
+  --branco:#1D1540; --amarelo:#FFF20B; --verde:#24FB99;
+  --linha:rgba(237,233,251,.14);
+  --vidro:rgba(35,25,72,.72);
+  --vidro-borda:rgba(255,255,255,.10);
+  --chip:rgba(255,255,255,.06);
+  --chip-hover:rgba(255,255,255,.13);
+  --painel:#1D1540;
+  --alerta:#4A3A12;
+  --sobre:#140E2B;
+  --sombra-fraca:rgba(0,0,0,.35);
+  --sombra-media:rgba(0,0,0,.5);
+  --sombra-forte:rgba(0,0,0,.7);
+  /* verde e vermelho escuros somem no fundo escuro: no escuro eles
+     clareiam, e nao e a mesma cor com opacidade - e outra cor. */
+  --ok:#3BD98F; --erro:#FF9A8F; --aviso:#F0C24A;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
@@ -32,10 +73,10 @@ button{border:none;background:none;cursor:pointer}
 
 /* vidro - o mesmo da barra do site */
 .vidro{
-  background:rgba(255,255,255,.72);
+  background:var(--vidro);
   backdrop-filter:blur(20px) saturate(180%);
   -webkit-backdrop-filter:blur(20px) saturate(180%);
-  border:1px solid rgba(255,255,255,.55);
+  border:1px solid var(--vidro-borda);
 }
 
 /* ---------- BARRA DE CIMA ---------- */
@@ -43,7 +84,7 @@ button{border:none;background:none;cursor:pointer}
   position:sticky; top:0; z-index:40;
   display:flex; align-items:center; gap:12px;
   padding:12px 20px; flex-wrap:wrap;
-  box-shadow:0 1px 0 var(--linha), 0 8px 24px -20px rgba(53,34,112,.4);
+  box-shadow:0 1px 0 var(--linha), 0 8px 24px -20px var(--sombra-forte);
 }
 .marca{font-weight:700; font-size:15px; letter-spacing:-.01em; flex-shrink:0}
 .marca small{display:block;font-weight:400;font-size:11px;opacity:.5;letter-spacing:0}
@@ -61,8 +102,8 @@ button{border:none;background:none;cursor:pointer}
 }
 .btn:hover{background:var(--ativo)}
 .btn:active{transform:scale(.96)}
-.btn.forte{background:var(--tinta); color:#fff}
-.btn.forte:hover{background:#432b8c}
+.btn.forte{background:var(--tinta); color:var(--sobre)}
+.btn.forte:hover{filter:brightness(1.15)}
 .btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
 .btn.icone{width:38px;padding:0;display:grid;place-items:center}
 
@@ -73,14 +114,16 @@ button{border:none;background:none;cursor:pointer}
 }
 .chip{
   height:34px; padding:0 15px; border-radius:999px; font-size:13px;
-  background:rgba(255,255,255,.7); transition:all .18s var(--mola);
+  background:var(--chip); transition:all .18s var(--mola);
   display:inline-flex; align-items:center; gap:7px;
 }
-.chip:hover{background:#fff}
+.chip:hover{background:var(--chip-hover)}
 .chip.on{background:var(--ativo); font-weight:600}
 .chip .n{opacity:.45; font-size:12px}
-.chip.alerta{background:#FFF6C4}
-.chip.alerta.on{background:var(--amarelo)}
+.chip.alerta{background:var(--alerta)}
+/* amarelo pede letra escura nos DOIS modos - nao e o tema que decide,
+   e o contraste do proprio amarelo */
+.chip.alerta.on{background:var(--amarelo); color:#211540}
 .esp{flex:1}
 
 /* ---------- GRADE ----------
@@ -94,11 +137,11 @@ button{border:none;background:none;cursor:pointer}
 .card{
   position:relative; aspect-ratio:3/4; border-radius:var(--r);
   overflow:hidden; background:var(--ativo); cursor:pointer;
-  box-shadow:0 2px 10px rgba(53,34,112,.07);
+  box-shadow:0 2px 10px var(--sombra-fraca);
   transition:transform .22s var(--mola), box-shadow .22s var(--mola);
   outline:0 solid transparent;
 }
-.card:hover{transform:translateY(-3px); box-shadow:0 12px 26px rgba(53,34,112,.15)}
+.card:hover{transform:translateY(-3px); box-shadow:0 12px 26px var(--sombra-media)}
 .card.sel{outline:3px solid var(--tinta); outline-offset:2px}
 .card img,.card video{width:100%;height:100%;object-fit:cover;display:block}
 
@@ -110,7 +153,7 @@ button{border:none;background:none;cursor:pointer}
   border:1.5px solid rgba(255,255,255,.85); color:transparent;
   transition:all .2s var(--mola);
 }
-.card.sel .marca-sel{background:var(--tinta); border-color:var(--tinta); color:#fff}
+.card.sel .marca-sel{background:var(--tinta); border-color:var(--tinta); color:var(--sobre)}
 
 .tag-card{
   position:absolute; top:8px; left:8px; max-width:calc(100% - 44px);
@@ -154,7 +197,7 @@ button{border:none;background:none;cursor:pointer}
   transform:translate(-50%,140%); transition:transform .34s var(--mola);
   display:flex; align-items:center; gap:10px; flex-wrap:wrap;
   padding:10px 12px; border-radius:var(--r-g); max-width:calc(100vw - 32px);
-  box-shadow:0 18px 48px -18px rgba(53,34,112,.5);
+  box-shadow:0 18px 48px -18px var(--sombra-forte);
 }
 .acoes.on{transform:translate(-50%,0)}
 .acoes .quantos{font-size:13px;font-weight:600;padding-left:6px;white-space:nowrap}
@@ -168,7 +211,7 @@ button{border:none;background:none;cursor:pointer}
 .fundo-painel.on{opacity:1;pointer-events:auto}
 .painel{
   position:fixed; top:0; right:0; bottom:0; z-index:71; width:min(400px,100vw);
-  background:var(--branco); box-shadow:-20px 0 60px -30px rgba(53,34,112,.5);
+  background:var(--branco); box-shadow:-20px 0 60px -30px var(--sombra-forte);
   transform:translateX(101%); transition:transform .34s var(--mola);
   display:flex; flex-direction:column;
 }
@@ -203,9 +246,9 @@ button{border:none;background:none;cursor:pointer}
 }
 .modal.on{opacity:1;pointer-events:auto}
 .caixa{
-  background:#fff; border-radius:var(--r-g); width:min(440px,100%);
+  background:var(--painel); border-radius:var(--r-g); width:min(440px,100%);
   max-height:86vh; overflow-y:auto; padding:22px;
-  box-shadow:0 30px 80px -30px rgba(53,34,112,.6);
+  box-shadow:0 30px 80px -30px var(--sombra-forte);
 }
 .caixa h2{font-size:16px;font-weight:600;margin-bottom:4px}
 .caixa p.sub{font-size:12.5px;opacity:.6;line-height:1.5;margin-bottom:18px}
@@ -215,10 +258,10 @@ button{border:none;background:none;cursor:pointer}
 }
 .linha-tag .nome{flex:1;font-size:14px;font-weight:500}
 .linha-tag .n{font-size:12px;opacity:.45}
-.linha-tag button{width:26px;height:26px;border-radius:8px;background:#fff;
+.linha-tag button{width:26px;height:26px;border-radius:8px;background:var(--campo);
   display:grid;place-items:center;transition:background .15s}
 .linha-tag button:hover{background:var(--ativo)}
-.linha-tag button:disabled{opacity:.25;cursor:default;background:#fff}
+.linha-tag button:disabled{opacity:.25;cursor:default;background:var(--campo)}
 .corte{
   display:flex;align-items:center;gap:10px;margin:12px 0;
   font-size:11px;text-transform:uppercase;letter-spacing:.09em;
@@ -231,7 +274,8 @@ button{border:none;background:none;cursor:pointer}
   display:flex;align-items:center;gap:7px;font-size:12.5px;white-space:nowrap;
   padding:0 4px;
 }
-.estado.ok{color:#0B7A4B;font-weight:500}
+.estado.ok{color:var(--ok);font-weight:500}
+.estado.aviso{color:var(--aviso);font-weight:500}
 .card.arq{opacity:.5}
 .card.arq:hover{opacity:.8}
 .tira{display:flex;gap:6px;flex-wrap:wrap}
@@ -245,7 +289,7 @@ button{border:none;background:none;cursor:pointer}
   font-size:9px;line-height:15px;letter-spacing:.03em}
 .selo-arq{position:absolute;top:8px;left:8px;background:#352270;color:#fff;
   font-size:11px;font-weight:500;padding:3px 8px;border-radius:999px;letter-spacing:.02em}
-.estado.erro{color:#B3261E;font-weight:500}
+.estado.erro{color:var(--erro);font-weight:500}
 .girando{width:13px;height:13px;border:2px solid var(--linha);
   border-top-color:var(--tinta);border-radius:50%;animation:gira .7s linear infinite}
 @keyframes gira{to{transform:rotate(360deg)}}
@@ -265,16 +309,27 @@ button{border:none;background:none;cursor:pointer}
 .passo .obs{display:block;margin-top:5px;opacity:.62;font-size:12.5px;line-height:1.5}
 .passo .alerta{
   display:block;margin-top:6px;padding:8px 11px;border-radius:9px;
-  background:#FFF6C4;font-size:12.5px;line-height:1.5;
+  background:var(--alerta);font-size:12.5px;line-height:1.5;
 }
 .passo code{background:var(--campo);padding:1px 6px;border-radius:5px;font-size:12.5px}
 .aviso{
-  padding:14px 16px; border-radius:14px; background:#FFF6C4;
+  padding:14px 16px; border-radius:14px; background:var(--alerta);
   font-size:13px; line-height:1.5; margin:16px auto; max-width:900px;
 }
 .vazio{text-align:center;padding:80px 20px;opacity:.5;font-size:14px;line-height:1.6}
 svg{display:block}
 </style>
+
+<script>
+/* TEMA ANTES DE PINTAR. Se isto rodasse junto com o resto do script, la
+   embaixo, a pagina abriria clara e viraria escura na frente dela. */
+(function () {
+  var t = "";
+  try { t = localStorage.getItem("mix-tema") || ""; } catch (e) {}
+  var esc = t ? t === "escuro" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.dataset.tema = esc ? "escuro" : "claro";
+})();
+</script>
 </head>
 <body>
 
@@ -293,6 +348,11 @@ svg{display:block}
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
       <path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/>
     </svg>
+  </button>
+
+  <button class="btn icone" id="btTema" title="Claro / escuro">
+    <svg id="icTema" width="16" height="16" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round"></svg>
   </button>
 
   <span class="contador" id="contador"></span>
@@ -507,13 +567,42 @@ const editar = (caminho, campo, valor) => {
   salvar();
 };
 
+/* cdn.jsdelivr.net/gh/DONO/REPO@RAMO/arquivo -> raw.githubusercontent
+   O `raw` revalida a cada poucos minutos e responde o commit de agora.
+   Repo publico manda CORS liberado - por isso da para ler daqui. */
+const semCdn = (u) => {
+  const m = /^https:\/\/cdn\.jsdelivr\.net\/gh\/([^/]+)\/([^/@]+)@([^/]+)\/(.+)$/.exec(u);
+  return m ? "https://raw.githubusercontent.com/" + m[1] + "/" + m[2] + "/" + m[3] + "/" + m[4] : "";
+};
+
 /* ---------- CARREGAR ---------- */
 async function carregar() {
   const url = $("url").value.trim();
   if (!url) return;
   $("grade").innerHTML = '<div class="vazio">carregando…</div>';
   try {
-    const r = await fetch(url + (url.includes("?") ? "&" : "?") + "t=" + Date.now());
+    /* A FONTE DA VERDADE E O REPOSITORIO, NAO O CDN.
+       MEDIDO em 31/08/2026: a MESMA url do jsDelivr devolveu 8 itens no
+       navegador e 7 no terminal, no mesmo minuto. O `?t=` engana o cache
+       do NAVEGADOR; a borda do jsDelivr guarda `@main` por horas e
+       responde o que tem guardado. Foi por isso que o carrossel de
+       Motion existia no repositorio e nao existia aqui - e sem o item,
+       "Arquivadas" nunca teria o que mostrar.
+       O SITE continua lendo o CDN, que e para isso que ele serve. A
+       ferramenta nao pode: aqui ela precisa ver o AGORA. */
+    let r = null, fonte = "";
+    const direto = semCdn(url);
+    if (direto) {
+      try {
+        const t = await fetch(direto, { cache: "no-store" });
+        if (t.ok) { r = t; fonte = "repositorio"; }
+      } catch (e) { /* repo privado, sem rede: cai no CDN abaixo */ }
+    }
+    if (!r) {
+      r = await fetch(url + (url.includes("?") ? "&" : "?") + "t=" + Date.now(),
+                      { cache: "no-store" });
+      fonte = "CDN (pode estar atrasado)";
+    }
     if (!r.ok) throw new Error("HTTP " + r.status);
     const d = await r.json();
     const lista = Array.isArray(d) ? d : (d.items || d.itens || []);
@@ -564,6 +653,7 @@ async function carregar() {
     const achadas = [...new Set(itens.map((x) => val(x, "tag")).filter(Boolean))];
     achadas.forEach((t) => { if (!ordemTags.includes(t)) ordemTags.push(t); });
     salvar(); desenhar();
+    mostrarEstado("lido do " + fonte, fonte === "repositorio" ? "" : "aviso");
   } catch (e) {
     $("grade").innerHTML = '<div class="vazio">Não consegui ler.<br><br>' + esc(e.message)
       + '<br><br>Confira o link, e se o repositório é <strong>público</strong>.</div>';
@@ -615,8 +705,27 @@ function paginas(it) {
       return { caminho: c, url: f ? (f.image || f.video) : urlDe(c, capa.url) };
     }));
   }
+  /* CADA PAGINA VEM COMO OBJETO, e nao mais como URL solta.
+     O robo passou a escrever `{src,name,phrase}` para levar o texto de
+     cada foto junto, e aqui continuava lendo como texto: `caminhoDe` de
+     um objeto dava vazio, a miniatura ficava com src "[object Object]",
+     e - o pior - o caminho nao batia com nenhum da lista, entao clicar
+     numa pagina caia sempre na capa. Era esta a razao de "a info de
+     cada imagem nao funciona": o campo existia e nunca era o da foto
+     que ela tinha clicado.
+     As duas formas seguem valendo: um images.json antigo ainda abre. */
   const pub = Array.isArray(it.images) ? it.images : [];
-  return [capa].concat(pub.map((u) => ({ caminho: caminhoDe(u), url: u })));
+  return [capa].concat(pub.map((u) => {
+    const obj = u && typeof u === "object" && !Array.isArray(u);
+    const src = obj ? String(u.src || "") : String(u || "");
+    return {
+      caminho: caminhoDe(src), url: src,
+      /* o texto JA PUBLICADO da pagina: e o que aparece no campo
+         enquanto ela nao escrever nada por cima */
+      name: obj ? (u.name || u.nome || "") : "",
+      phrase: obj ? (u.phrase || u.frase || "") : "",
+    };
+  }));
 }
 
 /* Troca a capa: a escolhida vai para a frente e passa a liderar. */
@@ -881,10 +990,18 @@ function abrirPainel(caminho) {
         if (!paginaSel || !seq.some(function (x) { return x.caminho === paginaSel; })) {
           paginaSel = seq[0].caminho;
         }
+        /* TRES fontes para o campo da pagina, da mais forte para a mais
+           fraca: o que ela editou agora, a propria pagina do images.json,
+           e - so quando a pagina ainda e um card solto - o item.
+           Faltava a do meio: depois que o robo roda, a seguidora deixa de
+           ser item, e o campo abria em branco mesmo com texto publicado. */
         const sel = itens.find(function (x) { return x.caminho === paginaSel; });
+        const pgSel = seq.find(function (x) { return x.caminho === paginaSel; }) || {};
         const vSel = function (campo) {
           const e = edicoes[paginaSel] || {};
-          return e[campo] !== undefined ? (e[campo] || "") : (sel ? (sel[campo] || "") : "");
+          if (e[campo] !== undefined) return e[campo] || "";
+          if (pgSel[campo]) return pgSel[campo];
+          return sel ? (sel[campo] || "") : "";
         };
         const iSel = seq.findIndex(function (x) { return x.caminho === paginaSel; });
         return '<div class="campo"><label>Carrossel — ' + seq.length
@@ -1106,6 +1223,32 @@ function exportar() {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+
+/* ---------- CLARO / ESCURO ---------- */
+const SOL = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4'
+  + 'M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+const LUA = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
+/* O padrao segue o SISTEMA; a escolha dela so passa a mandar depois que
+   ela clica. Assim um clique de teste nao apaga o tema do computador
+   para sempre. */
+function pintarIconeTema() {
+  const escuro = document.documentElement.dataset.tema === "escuro";
+  $("icTema").innerHTML = escuro ? SOL : LUA;   /* mostra PARA ONDE vai */
+}
+$("btTema").onclick = () => {
+  const escuro = document.documentElement.dataset.tema !== "escuro";
+  document.documentElement.dataset.tema = escuro ? "escuro" : "claro";
+  try { localStorage.setItem("mix-tema", escuro ? "escuro" : "claro"); } catch (e) {}
+  pintarIconeTema();
+};
+pintarIconeTema();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (ev) => {
+  let escolhido = "";
+  try { escolhido = localStorage.getItem("mix-tema") || ""; } catch (e) {}
+  if (escolhido) return;                        /* ela ja decidiu */
+  document.documentElement.dataset.tema = ev.matches ? "escuro" : "claro";
+  pintarIconeTema();
+});
 
 /* ---------- LIGAR ---------- */
 $("btRecarregar").onclick = carregar;
