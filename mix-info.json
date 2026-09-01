@@ -17,7 +17,7 @@
       "carrosselDe": "Motion/425dee78a01bc4ff60ee64c612df759a.jpg",
       "phrase": "Imagem 2",
       "name": "Teste texto",
-      "link": "https://bigadiniz.com/mix"
+      "link": "https://bigadiniz.com/info"
     },
     "Motion/425dee78a01bc4ff60ee64c612df759a.jpg": {
       "carrossel": [
@@ -34,7 +34,7 @@
           "phrase": "PT - Carrossel",
           "name": "PT em portugues"
         },
-        "link": "https://bigadiniz.com/mix"
+        "link": "https://bigadiniz.com/info"
       },
       "noInfo": false,
       "pt": {
