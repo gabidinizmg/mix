@@ -24,7 +24,12 @@
         "Motion/493923dd84e2ee07534de0790c0a8e9b.jpg"
       ],
       "name": "Nome cara adesivo",
-      "phrase": "Legal"
+      "phrase": "Legal",
+      "grupo": {
+        "phrase": "CArrossel",
+        "name": "Detalhe 2",
+        "year": "2023"
+      }
     },
     "Motion/493923dd84e2ee07534de0790c0a8e9b.jpg": {
       "carrosselDe": "Motion/425dee78a01bc4ff60ee64c612df759a.jpg",
