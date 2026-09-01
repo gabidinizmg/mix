@@ -78,7 +78,8 @@
         {
           "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Editing/baa98a6a98d22599c3a19a3303eb79c7.jpg",
           "name": "Teste texto",
-          "phrase": "Imagem 2"
+          "phrase": "Imagem 2",
+          "link": "https://bigadiniz.com/mix"
         },
         {
           "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/493923dd84e2ee07534de0790c0a8e9b.jpg",
@@ -88,10 +89,12 @@
         }
       ],
       "year": "2023",
+      "link": "https://bigadiniz.com/mix",
       "grupo": {
         "name": "Detalhe 2",
         "phrase": "CArrossel",
         "year": "2023",
+        "link": "https://bigadiniz.com/mix",
         "pt": {
           "name": "PT em portugues",
           "phrase": "PT - Carrossel"
