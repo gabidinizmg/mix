@@ -63,6 +63,7 @@
       "name": "Detalhe 2",
       "phrase": "CArrossel",
       "pt": {
+        "name": "PT em portugues",
         "phrase": "PT - Carrossel"
       },
       "images": [
@@ -92,6 +93,7 @@
         "phrase": "CArrossel",
         "year": "2023",
         "pt": {
+          "name": "PT em portugues",
           "phrase": "PT - Carrossel"
         }
       },
