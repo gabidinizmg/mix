@@ -64,6 +64,11 @@
       "phrase": "Legal",
       "images": [
         {
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/425dee78a01bc4ff60ee64c612df759a.jpg",
+          "name": "Nome cara adesivo",
+          "phrase": "Legal"
+        },
+        {
           "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Editing/baa98a6a98d22599c3a19a3303eb79c7.jpg",
           "name": "Teste texto",
           "phrase": "Imagem 2"
@@ -94,6 +99,9 @@
     {
       "name": "A77f13a310147c55aedcd607693f6937",
       "images": [
+        {
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Social%20Media/a77f13a310147c55aedcd607693f6937.jpg"
+        },
         {
           "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Social%20Media/45064a2d95348bde596903e5e6805a4b.jpg"
         }
