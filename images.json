@@ -60,8 +60,8 @@
       "tag": "Draw"
     },
     {
-      "name": "Nome cara adesivo",
-      "phrase": "Legal",
+      "name": "Detalhe 2",
+      "phrase": "CArrossel",
       "images": [
         {
           "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/425dee78a01bc4ff60ee64c612df759a.jpg",
@@ -79,6 +79,12 @@
           "phrase": "teste 3"
         }
       ],
+      "year": "2023",
+      "grupo": {
+        "name": "Detalhe 2",
+        "phrase": "CArrossel",
+        "year": "2023"
+      },
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/425dee78a01bc4ff60ee64c612df759a.jpg",
       "collection": "Motion",
       "tag": "Motion"
