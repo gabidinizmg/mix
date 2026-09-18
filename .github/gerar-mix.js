@@ -115,7 +115,7 @@ const acharInfo = (info, arquivo) => {
    briga toda vez que ela subisse uma foto.
    Chave aqui e o caminho INTEIRO ("Photography/foto.jpg"), porque a
    ferramenta conhece o caminho e nao precisa digitar nada. */
-let ferramenta = { tags: [], tagsVisiveis: 2, items: {} };
+let ferramenta = { tags: [], tagsVisiveis: 2, items: {}, collections: {} };
 const caminhoFerr = path.join(RAIZ, "mix-info.json");
 if (fs.existsSync(caminhoFerr)) {
   try {
@@ -125,6 +125,13 @@ if (fs.existsSync(caminhoFerr)) {
         tags: Array.isArray(lido.tags) ? lido.tags : [],
         tagsVisiveis: lido.tagsVisiveis === undefined ? 2 : lido.tagsVisiveis,
         items: (lido.items && typeof lido.items === "object") ? lido.items : {},
+        /* AS COLECOES CRIADAS NO ORGANIZADOR (17/09/2026).
+           Ate aqui colecao era so PASTA. Agora ela tambem pode nascer na
+           ferramenta: { "Favoritos": { "order": 8 } }. Nao existe pasta
+           nenhuma para ela - as fotos continuam onde estao, e cada uma
+           diz a que colecoes pertence (`collections` no item). */
+        collections: (lido.collections && typeof lido.collections === "object"
+          && !Array.isArray(lido.collections)) ? lido.collections : {},
       };
     }
   } catch (e) {
@@ -299,7 +306,25 @@ const montar = (arquivos, nomeColecao, info) => {
     } else {
       item.image = url(a);
     }
-    if (nomeColecao) item.collection = conf.name || nomeColecao;
+    /* A QUE COLECOES A FOTO PERTENCE (17/09/2026).
+       Sem nada escrito: a da PASTA, como sempre foi. Com a lista escrita
+       pelo organizador (`collections`), vale a lista - inclusive vazia,
+       que quer dizer "so no All". O campo antigo `collection` (texto) e
+       o que o seletor do organizador gravava antes, e que este robo
+       ignorava em silencio: vale como uma lista de um.
+       `collection` continua saindo (a PRIMEIRA da lista) para o site
+       antigo nao perder nada; `collections` sai quando ela mexeu. */
+    const daPasta = nomeColecao ? [conf.name || nomeColecao] : [];
+    let membros = daPasta;
+    let mexeu = false;
+    if (Array.isArray(d.collections)) {
+      membros = d.collections; mexeu = true;
+    } else if (typeof d.collection === "string" && d.collection.trim()) {
+      membros = [d.collection]; mexeu = true;
+    }
+    membros = [...new Set(membros.map((x) => String(x || "").trim()).filter(Boolean))];
+    if (membros.length) item.collection = membros[0];
+    if (mexeu) item.collections = membros;
     /* tag: a da foto manda; senao a da colecao; senao o nome da pasta.
        Assim os filtros ja nascem funcionando e ela ajusta so o que quiser. */
     const tag = d.tag !== undefined ? d.tag
@@ -320,12 +345,15 @@ for (const pasta of pastas) {
   const antes = itens.length;
   montar(arquivos, pasta, lerInfo(path.join(RAIZ, pasta)));
   const conf = config.collections[pasta] || {};
-  const primeira = itens.slice(antes).find((i) => i.image);
   colecoes.push({
     name: conf.name || pasta,
-    cover: conf.cover ? url(path.join(pasta, conf.cover)) : (primeira ? primeira.image : ""),
+    /* a capa sai la embaixo, depois que TODOS os itens existem: com
+       colecao criada no organizador, os membros de uma colecao podem
+       estar em qualquer pasta */
+    cover: conf.cover ? url(path.join(pasta, conf.cover)) : "",
     link: conf.link || "",
     _ordem: conf.order === undefined ? 999 : conf.order,
+    _pasta: itens.slice(antes).find((i) => i.image),
   });
 }
 
@@ -336,8 +364,44 @@ const soltos = fs.readdirSync(RAIZ)
   .sort();
 if (soltos.length) montar(soltos, "", lerInfo(RAIZ));
 
+/* AS COLECOES DA FERRAMENTA entram na mesma lista. As que tem nome de
+   pasta so emprestam a ORDEM (se ela escreveu uma); as outras nascem
+   aqui, marcadas `criada` - e e essa marca que deixa o organizador
+   saber, noutro navegador, quais ele pode apagar. Uma pasta ele nao
+   apaga: ela existe no repositorio. */
+for (const nome of Object.keys(ferramenta.collections)) {
+  const def = ferramenta.collections[nome] || {};
+  const limpo = String(nome || "").trim();
+  if (!limpo) continue;
+  const ja = colecoes.find((c) => c.name === limpo);
+  const ordem = typeof def.order === "number" ? def.order : undefined;
+  if (ja) { if (ordem !== undefined) ja._ordem = ordem; continue; }
+  colecoes.push({ name: limpo, cover: "", link: String(def.link || ""),
+                  criada: true, _ordem: ordem === undefined ? 999 : ordem });
+}
+/* colecao que so existe dentro de um item (escrita a mao no _info.json)
+   tambem entra - senao a foto apontaria para um lugar que nao existe */
+for (const it of itens) {
+  for (const n of (it.collections || [])) {
+    if (!colecoes.find((c) => c.name === n)) {
+      colecoes.push({ name: n, cover: "", link: "", _ordem: 999 });
+    }
+  }
+}
+/* A CAPA: a declarada no mix.config.json vence; senao a primeira foto
+   que PERTENCE a colecao e nao esta arquivada; senao, como antes, a
+   primeira da pasta. Arquivada nao serve de capa: o site ja pulava ela
+   na contagem, e uma capa que nao aparece dentro da colecao engana. */
+const pertence = (it, nome) => (it.collections || (it.collection ? [it.collection] : []))
+  .indexOf(nome) >= 0;
+for (const c of colecoes) {
+  if (!c.cover) {
+    const membro = itens.find((i) => i.image && !i.archived && pertence(i, c.name));
+    c.cover = membro ? membro.image : (c._pasta ? c._pasta.image : "");
+  }
+}
 colecoes.sort((a, b) => (a._ordem - b._ordem) || a.name.localeCompare(b.name));
-for (const c of colecoes) delete c._ordem;
+for (const c of colecoes) { delete c._ordem; delete c._pasta; }
 
 /* ORDEM DAS TAGS.
    O componente mostra as primeiras na barra e esconde o resto atras do
@@ -356,5 +420,6 @@ console.log("images.json: " + itens.length + " itens em " + colecoes.length + " 
 console.log("  tags (" + tags.length + "): " + (tags.join(", ") || "nenhuma")
   + "   -> " + ferramenta.tagsVisiveis + " a vista");
 for (const c of colecoes) {
-  console.log("  - " + c.name + ": " + itens.filter((i) => i.collection === c.name).length);
+  console.log("  - " + c.name + ": " + itens.filter((i) => pertence(i, c.name)).length
+    + (c.criada ? "   (criada no organizador)" : ""));
 }

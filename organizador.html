@@ -363,6 +363,58 @@ button{border:none;background:none;cursor:pointer}
   font-size:13px; line-height:1.5; margin:16px auto; max-width:900px;
 }
 .vazio{text-align:center;padding:80px 20px;opacity:.5;font-size:14px;line-height:1.6}
+
+/* ---------- COLECOES (17/09/2026) ----------
+   Pedido dela: "um botao que mostre as colecoes | criar colecoes | qual
+   foto adicionar nas colecoes". Tres lugares, a mesma lista:
+     - o botao "Colecoes" da barra de cima abre a lista inteira
+     - a barra de baixo (com fotos selecionadas) poe e tira em lote
+     - o painel de uma foto mostra e muda as colecoes dela
+   A mesma foto pode estar em MAIS DE UMA - e o jeito dos albuns do iOS,
+   e o jeito de um trabalho de Motion tambem aparecer em "Clientes". */
+.linha-col{
+  display:flex; align-items:center; gap:12px; padding:8px 10px 8px 8px;
+  background:var(--campo); border-radius:14px; margin-bottom:6px;
+}
+.linha-col .capa{width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;
+  background:var(--ativo)}
+.linha-col .txt{flex:1;min-width:0}
+.linha-col .nome{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.linha-col .sub{font-size:12px;opacity:.55;margin-top:1px}
+.linha-col .sub.falta{opacity:.8;color:var(--aviso)}
+.linha-col .origem{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  opacity:.45;padding:3px 8px;border:1px solid var(--linha);border-radius:999px;white-space:nowrap}
+.linha-col .apagar{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+  transition:background .15s}
+.linha-col .apagar:hover{background:#FFE3E0;color:var(--erro)}
+.criar-col{display:flex;gap:8px;margin-top:14px}
+.criar-col input{flex:1;min-width:0;height:38px;background:var(--campo);border:1px solid transparent;
+  border-radius:999px;padding:0 16px;font-size:14px;outline:none;transition:border-color .18s}
+.criar-col input:focus{border-color:var(--tinta)}
+/* o botao da barra de baixo e a lista que abre em cima dela */
+.pop-col{
+  position:fixed; z-index:65; left:50%; bottom:92px; transform:translate(-50%,8px);
+  width:min(340px,calc(100vw - 32px)); max-height:min(420px,60vh); overflow-y:auto;
+  padding:10px; border-radius:var(--r-g); background:var(--painel);
+  box-shadow:0 24px 60px -24px var(--sombra-forte), 0 0 0 1px var(--linha);
+  opacity:0; pointer-events:none; transition:opacity .2s, transform .28s var(--mola);
+}
+.pop-col.on{opacity:1; pointer-events:auto; transform:translate(-50%,0)}
+.pop-col .titulo{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  opacity:.55;padding:4px 6px 8px}
+.opcao-col{display:flex;align-items:center;gap:10px;width:100%;padding:8px;border-radius:12px;
+  text-align:left;font-size:14px;transition:background .15s}
+.opcao-col:hover{background:var(--campo)}
+.opcao-col img,.opcao-col .sem-capa{width:32px;height:32px;border-radius:8px;object-fit:cover;
+  flex-shrink:0;background:var(--ativo)}
+.opcao-col .nome{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* a marca de tres estados: todas as selecionadas estao nela / algumas / nenhuma */
+.marca3{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
+  border:1.5px solid var(--linha);color:transparent;transition:all .18s var(--mola)}
+.marca3.todas{background:var(--tinta);border-color:var(--tinta);color:var(--sobre)}
+.marca3.algumas{background:var(--ativo);border-color:var(--tinta);color:var(--tinta)}
+.pop-col .criar-col{margin-top:8px;padding:6px 2px 2px;border-top:1px solid var(--linha)}
+.chip .fechar{opacity:.6;margin-left:2px;font-size:15px;line-height:1}
 svg{display:block}
 </style>
 
@@ -404,6 +456,7 @@ svg{display:block}
   <span class="contador" id="contador"></span>
   <span class="estado" id="estado"></span>
   <button class="btn" id="btTags">Tags e ordem</button>
+  <button class="btn" id="btColecoes">Coleções</button>
   <button class="btn" id="btExportar" title="Baixar o arquivo em vez de salvar">Baixar</button>
   <button class="btn forte" id="btSalvar">Salvar no GitHub</button>
 </header>
@@ -421,7 +474,11 @@ svg{display:block}
   <span class="div"></span>
   <span style="font-size:12px;opacity:.55;padding-left:2px">marcar como</span>
   <span id="tagsAcao" style="display:flex;gap:6px;flex-wrap:wrap"></span>
+  <span class="div"></span>
+  <button class="btn" id="btColAcao" aria-haspopup="true" aria-expanded="false">Coleções…</button>
 </div>
+
+<div class="pop-col" id="popColecoes" role="dialog" aria-label="Pôr nas coleções"></div>
 
 <div class="fundo-painel" id="fundoPainel"></div>
 <aside class="painel" id="painel">
@@ -486,6 +543,24 @@ svg{display:block}
   </div>
 </div>
 
+<div class="modal" id="modalColecoes">
+  <div class="caixa">
+    <h2>Coleções</h2>
+    <p class="sub">Cada coleção vira um card na página Mix. A mesma foto pode estar em
+      mais de uma. Coleção sem foto não aparece no site até ganhar a primeira.</p>
+    <div id="listaColecoes"></div>
+    <div class="criar-col">
+      <input id="fNovaCol" placeholder="Nome da coleção nova" autocomplete="off" maxlength="60">
+      <button class="btn forte" id="btCriarCol">Criar</button>
+    </div>
+    <p class="sub" style="margin:14px 0 0">Para pôr fotos numa coleção: selecione as
+      fotos na grade e use <strong>Coleções…</strong> na barra de baixo.</p>
+    <div style="display:flex;gap:8px;margin-top:18px">
+      <button class="btn" id="btFecharCol" style="flex:1">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="modalTags">
   <div class="caixa">
     <h2>Tags e ordem</h2>
@@ -517,6 +592,16 @@ let filtro = "";           // "" = todas | "__sem" = sem tag | nome da tag
 let atual = null;          // item aberto no painel
 let ultimaEdicao = 0;      // para saber se ha trabalho nao salvo
 let ultimoSalvo = 0;
+/* COLECOES (17/09/2026).
+   `colecoesDef`: as criadas AQUI - e o que vai para o mix-info.json.
+     `null` = este navegador nunca teve a lista; na primeira leitura ela
+     e reconstruida do que o robo publicou (as marcadas `criada`). Mesma
+     regra das edicoes: o navegador dela manda, o repositorio so semeia.
+   `colecoesPub`: a lista como o robo publicou no images.json.
+   `filtroCol`: a coleção que a grade esta mostrando ("" = todas). */
+let colecoesDef = null;
+let colecoesPub = [];
+let filtroCol = "";
 
 /* A chave vive numa gaveta propria: assim exportar, importar ou limpar
    as edicoes nunca arrasta o token junto por descuido. */
@@ -556,7 +641,7 @@ const salvar = () => {
   ultimaEdicao = Date.now();
   try {
     localStorage.setItem(CHAVE, JSON.stringify({
-      url: $("url").value, edicoes, ordemTags, tagsVisiveis
+      url: $("url").value, edicoes, ordemTags, tagsVisiveis, colecoesDef
     }));
   } catch (e) {
     /* NAO PODE FALHAR CALADO.
@@ -574,7 +659,7 @@ const salvar = () => {
 /* Aviso ao fechar com trabalho nao salvo. O navegador mostra o texto
    dele, nao o meu - o que importa e a pergunta existir. */
 window.addEventListener("beforeunload", (e) => {
-  if (Object.keys(edicoes).length && ultimaEdicao > ultimoSalvo) {
+  if (temTrabalho() && ultimaEdicao > ultimoSalvo) {
     e.preventDefault(); e.returnValue = "";
   }
 });
@@ -767,8 +852,21 @@ async function carregar() {
         pt: (it.pt && typeof it.pt === "object") ? it.pt : {},
         es: (it.es && typeof it.es === "object") ? it.es : {},
         collection: it.collection || it.colecao || "",
+        /* a LISTA, quando o robo a escreveu (so sai quando ela mexeu) */
+        collections: Array.isArray(it.collections) ? it.collections.map(String) : null,
       };
     });
+    /* AS COLECOES como o robo publicou. As `criada` semeiam a lista deste
+       navegador SO se ele nunca teve uma - senao uma colecao que ela
+       acabou de apagar voltaria sozinha ate o robo rodar. */
+    colecoesPub = (Array.isArray(d.collections) ? d.collections : [])
+      .map((c) => ({ name: String((c && (c.name || c.nome)) || "").trim(),
+                     cover: (c && c.cover) || "", criada: !!(c && c.criada) }))
+      .filter((c) => c.name);
+    if (colecoesDef === null) {
+      colecoesDef = {};
+      colecoesPub.forEach((c, i) => { if (c.criada) colecoesDef[c.name] = { order: 100 + i }; });
+    }
     /* A ORDEM VEM DO REPOSITORIO, nao do navegador dela.
        Este era o ciclo: eu corrigia a ordem no mix-info.json, ela
        clicava em Salvar, e a ferramenta escrevia por cima com a ordem
@@ -877,6 +975,8 @@ function paginas(it) {
          enquanto ela nao escrever nada por cima */
       name: obj ? (u.name || u.nome || "") : "",
       phrase: obj ? (u.phrase || u.frase || "") : "",
+      /* o ano PROPRIO da pagina, para a faixa "2022–2026" */
+      year: obj && u.year !== undefined && u.year !== null ? String(u.year) : "",
       /* as traducoes publicadas desta pagina, para o campo abrir com o
          que ja esta no ar em vez de em branco */
       pt: (obj && u.pt && typeof u.pt === "object") ? u.pt : {},
@@ -939,13 +1039,111 @@ function acharItem(caminho) {
     || null;
 }
 
+/* ---------- COLECOES: a que colecoes cada foto pertence ----------
+   (17/09/2026) Quatro fontes, da mais forte para a mais fraca:
+     1. a lista que ela montou aqui (`collections` na edicao)
+     2. o campo ANTIGO que este organizador gravava (`collection`, texto)
+        - e que o robo ignorava em silencio. Vale como lista de um.
+     3. a lista que o robo publicou
+     4. a pasta onde a foto mora
+   Lista vazia e escolha, nao falta: a foto fica so no All. */
+const colecoesDe = (it) => {
+  const e = edicoes[it.caminho] || {};
+  if (Array.isArray(e.collections)) return e.collections.slice();
+  if (typeof e.collection === "string" && e.collection) return [e.collection];
+  if (Array.isArray(it.collections)) return it.collections.slice();
+  return it.collection ? [it.collection] : [];
+};
+const mesmaLista = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+function definirColecoes(caminho, lista) {
+  const it = acharItem(caminho);
+  const limpa = [...new Set(lista.map((x) => String(x || "").trim()).filter(Boolean))];
+  if (!edicoes[caminho]) edicoes[caminho] = {};
+  delete edicoes[caminho].collection;
+  /* Voltou a ser exatamente a pasta? Entao nao ha edicao nenhuma a
+     guardar - o arquivo fica limpo, como se ela nunca tivesse mexido. */
+  const padrao = it && !Array.isArray(it.collections) ? (it.collection ? [it.collection] : []) : null;
+  if (padrao && mesmaLista(padrao, limpa)) delete edicoes[caminho].collections;
+  else edicoes[caminho].collections = limpa;
+  if (!Object.keys(edicoes[caminho]).length) delete edicoes[caminho];
+  salvar();
+}
+
+/* TODAS as colecoes que existem: as do robo, as criadas aqui, e qualquer
+   nome que alguma foto carregue. Uma criada aqui e depois APAGADA
+   continua no images.json ate o robo rodar - ela sai da lista mesmo
+   assim, senao apagar pareceria nao funcionar. */
+function todasColecoes() {
+  const def = colecoesDef || {};
+  const pastas = new Set(colecoesPub.filter((c) => !c.criada).map((c) => c.name));
+  const nomes = [];
+  const add = (n) => { n = String(n || "").trim(); if (n && !nomes.includes(n)) nomes.push(n); };
+  colecoesPub.forEach((c) => { if (!c.criada || def[c.name]) add(c.name); });
+  Object.keys(def).sort((a, b) => ((def[a].order || 0) - (def[b].order || 0))).forEach(add);
+  itens.forEach((x) => { if (ativa(x)) colecoesDe(x).forEach(add); });
+  return nomes.map((n) => {
+    const membros = itens.filter((x) => ativa(x) && colecoesDe(x).includes(n));
+    const capa = membros.find((x) => x.image);
+    return { nome: n, n: membros.length, capa: capa ? capa.image : "",
+             pasta: pastas.has(n), criada: !!def[n] };
+  });
+}
+function criarColecao(nome) {
+  nome = String(nome || "").trim().replace(/\s+/g, " ");
+  if (!nome) return "";
+  /* nome repetido, com maiuscula diferente, seria outra colecao no site
+     e a mesma na cabeca dela: devolve a que ja existe */
+  const ja = todasColecoes().find((c) => c.nome.toLowerCase() === nome.toLowerCase());
+  if (ja) return ja.nome;
+  if (!colecoesDef) colecoesDef = {};
+  const ordens = Object.keys(colecoesDef).map((k) => colecoesDef[k].order || 0);
+  colecoesDef[nome] = { order: Math.max(100, ...ordens) + 1 };
+  salvar();
+  return nome;
+}
+function apagarColecao(nome) {
+  if (!colecoesDef || !colecoesDef[nome]) return;
+  delete colecoesDef[nome];
+  /* as fotos saem dela; as fotos em si nao sao tocadas */
+  itens.forEach((x) => {
+    const l = colecoesDe(x);
+    if (l.includes(nome)) definirColecoes(x.caminho, l.filter((c) => c !== nome));
+  });
+  if (filtroCol === nome) filtroCol = "";
+  salvar();
+}
+const temTrabalho = () => Object.keys(edicoes).length > 0
+  || !!(colecoesDef && Object.keys(colecoesDef).length);
+
+/* ---------- ANOS DE UM CARROSSEL ----------  (17/09/2026)
+   O site passou a mostrar o intervalo das fotos: "2022–2026". Aqui o
+   organizador faz a MESMA conta, para ela ver no card e no painel o que
+   o site vai mostrar - antes de salvar. */
+const ANO_RE = /\b(1[89]\d{2}|2\d{3})\b/g;
+function faixaDeAnos(it) {
+  const seq = paginas(it);
+  if (seq.length < 2) return "";
+  const textos = [valGrupo(it, "year")];
+  seq.forEach((pg) => {
+    const e = edicoes[pg.caminho] || {};
+    const solta = itens.find((x) => x.caminho === pg.caminho);
+    textos.push(e.year !== undefined ? e.year
+      : (pg.year || (solta && pg.caminho !== it.caminho ? solta.year : "")));
+  });
+  const anos = [...new Set(textos.join(" ").match(ANO_RE) || [])].sort();
+  if (!anos.length) return "";
+  return anos[0] === anos[anos.length - 1] ? anos[0] : anos[0] + "–" + anos[anos.length - 1];
+}
+
 function visiveis() {
   /* Arquivada sai do fluxo normal e so aparece no filtro dela. Sem isto,
      "arquivar" nao tiraria nada da frente - que e o motivo de existir. */
   if (filtro === "__arq") return itens.filter(ehArq).concat(arquivadasOrfas());
   /* seguidora nao e um card: ela e uma PAGINA de outro card. Se
      aparecesse solta na grade, agrupar nao teria tirado nada da frente. */
-  const base = itens.filter((x) => !ehArq(x) && !ehSeguidora(x));
+  const todasBase = itens.filter((x) => !ehArq(x) && !ehSeguidora(x));
+  /* a colecao escolhida no botao "Colecoes" filtra por cima da tag */
+  const base = filtroCol ? todasBase.filter((x) => colecoesDe(x).includes(filtroCol)) : todasBase;
   if (filtro === "__sem") return base.filter((x) => !val(x, "tag"));
   if (filtro) return base.filter((x) => val(x, "tag") === filtro);
   return base;
@@ -954,6 +1152,12 @@ function visiveis() {
 function desenhar() {
   /* --- filtros --- */
   const f = [];
+  /* a colecao aberta pelo botao "Colecoes" fica a vista, com o X para
+     sair dela - filtro escondido e grade "faltando foto" sem explicacao */
+  if (filtroCol) {
+    f.push('<button class="chip on" id="btSairCol" title="Mostrar todas as coleções">'
+      + 'Coleção: ' + esc(filtroCol) + ' <span class="fechar" aria-hidden="true">×</span></button>');
+  }
   f.push('<button class="chip' + (filtro === "" ? " on" : "") + '" data-f="">Todas <span class="n">'
     + contarAtivas() + '</span></button>');
   const nSem = semTag();
@@ -982,6 +1186,8 @@ function desenhar() {
   });
   const bt = $("btTudo");
   if (bt) bt.onclick = () => { visiveis().forEach((x) => selecao.add(x.caminho)); desenhar(); };
+  const sc = $("btSairCol");
+  if (sc) sc.onclick = () => { filtroCol = ""; desenhar(); };
 
   /* --- aviso do "sem tag": o que falta e mais util que o que ja esta feito --- */
   const avisoArmazena = armazenaOk ? "" :
@@ -1000,7 +1206,9 @@ function desenhar() {
   } else {
     $("grade").innerHTML = lista.map((it) => {
       const t = val(it, "tag"), nome = val(it, "name"), fr = val(it, "phrase");
-      const ano = val(it, "year");
+      /* carrossel mostra a FAIXA das fotos, como o site ("2022–2026") */
+      const ano = (grupo(it).length || (it.images && it.images.length > 1))
+        ? (faixaDeAnos(it) || val(it, "year")) : val(it, "year");
       const capa = it.image || it.video;
       return '<div class="card' + (selecao.has(it.caminho) ? " sel" : "")
         + (ehArq(it) ? " arq" : "") + '" data-c="'
@@ -1042,8 +1250,10 @@ function desenhar() {
   $("contador").textContent = itens.length
     ? itens.length + " fotos" + (editados ? " · " + editados + " editadas" : "") : "";
   $("btSalvar").textContent = lerToken() ? "Salvar no GitHub" : "Conectar ao GitHub";
-  $("btExportar").disabled = !Object.keys(edicoes).length;
-  $("btSalvar").disabled = !Object.keys(edicoes).length && !!lerToken();
+  $("btExportar").disabled = !temTrabalho();
+  $("btSalvar").disabled = !temTrabalho() && !!lerToken();
+  if ($("popColecoes").classList.contains("on")) desenharPopColecoes();
+  if (!selecao.size) fecharPopColecoes();
   $("quantos").textContent = selecao.size + (selecao.size === 1 ? " foto" : " fotos");
   $("acoes").classList.toggle("on", selecao.size > 0);
   $("tagsAcao").innerHTML = ordemTags.map((t) =>
@@ -1113,13 +1323,117 @@ function aplicarTag(t) {
   selecao.clear(); salvar(); desenhar();
 }
 
+/* ---------- COLECOES: a lista inteira (o botao da barra de cima) ---------- */
+function desenharColecoes() {
+  const lista = todasColecoes();
+  $("listaColecoes").innerHTML = lista.length ? lista.map((c) =>
+    '<div class="linha-col">'
+    + (c.capa ? '<img class="capa" src="' + esc(c.capa) + '" alt="" loading="lazy">'
+              : '<span class="capa" aria-hidden="true"></span>')
+    + '<div class="txt"><div class="nome">' + esc(c.nome) + '</div>'
+    + '<div class="sub' + (c.n ? '' : ' falta') + '">'
+    + (c.n ? c.n + (c.n === 1 ? " foto" : " fotos") : "vazia — não aparece no site") + '</div></div>'
+    + (c.pasta && !c.criada ? '<span class="origem" title="Esta coleção é uma pasta no GitHub">pasta</span>' : '')
+    + (c.n ? '<button class="btn" data-ver="' + esc(c.nome) + '">Ver</button>' : '')
+    + (c.criada && !c.pasta ? '<button class="apagar" data-apagar="' + esc(c.nome)
+        + '" title="Apagar a coleção (as fotos continuam no Mix)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>' : '')
+    + '</div>').join("")
+    : '<div class="vazio" style="padding:24px">Nenhuma coleção ainda.</div>';
+  $("listaColecoes").querySelectorAll("[data-ver]").forEach((b) => {
+    b.onclick = () => {
+      filtroCol = b.dataset.ver; filtro = "";
+      $("modalColecoes").classList.remove("on");
+      desenhar();
+    };
+  });
+  $("listaColecoes").querySelectorAll("[data-apagar]").forEach((b) => {
+    b.onclick = () => {
+      const nome = b.dataset.apagar;
+      const n = todasColecoes().find((c) => c.nome === nome);
+      const q = n && n.n
+        ? "Apagar a coleção “" + nome + "”? As " + n.n + " fotos continuam no Mix, só saem dela."
+        : "Apagar a coleção “" + nome + "”?";
+      if (!confirm(q)) return;
+      apagarColecao(nome); desenharColecoes(); desenhar();
+    };
+  });
+}
+function criarDoCampo(campo, depois) {
+  const nome = criarColecao($(campo).value);
+  if (!nome) { $(campo).focus(); return; }
+  $(campo).value = "";
+  if (depois) depois(nome);
+  desenhar();
+}
+
+/* ---------- COLECOES: por e tirar em LOTE (a barra de baixo) ----------
+   Cada linha diz o estado das fotos selecionadas naquela colecao:
+   todas (cheia), algumas (meia) ou nenhuma (vazia). Um clique numa
+   linha "algumas" poe todas - e o gesto dos albuns do iOS. */
+function estadoNaSelecao(nome) {
+  const sel = [...selecao].map(acharItem).filter(Boolean);
+  const n = sel.filter((x) => colecoesDe(x).includes(nome)).length;
+  return !n ? "nenhuma" : (n === sel.length ? "todas" : "algumas");
+}
+function alternarNaSelecao(nome) {
+  const sel = [...selecao].map(acharItem).filter(Boolean);
+  const tirar = estadoNaSelecao(nome) === "todas";
+  sel.forEach((x) => {
+    const l = colecoesDe(x);
+    definirColecoes(x.caminho, tirar ? l.filter((c) => c !== nome)
+      : (l.includes(nome) ? l : l.concat([nome])));
+  });
+  mostrarEstado((tirar ? "tirado de " : "posto em ") + nome, "ok");
+}
+function desenharPopColecoes() {
+  const lista = todasColecoes();
+  $("popColecoes").innerHTML = '<div class="titulo">'
+    + selecao.size + (selecao.size === 1 ? " foto" : " fotos") + ' · coleções</div>'
+    + lista.map((c) => {
+        const st = estadoNaSelecao(c.nome);
+        return '<button class="opcao-col" data-col="' + esc(c.nome) + '" role="menuitemcheckbox"'
+          + ' aria-checked="' + (st === "todas" ? "true" : st === "algumas" ? "mixed" : "false") + '">'
+          + (c.capa ? '<img src="' + esc(c.capa) + '" alt="" loading="lazy">' : '<span class="sem-capa"></span>')
+          + '<span class="nome">' + esc(c.nome) + '</span>'
+          + '<span class="marca3 ' + st + '">' + (st === "todas" ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'
+              : st === "algumas" ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M5 12h14"/></svg>' : '')
+          + '</span></button>';
+      }).join("")
+    + '<div class="criar-col"><input id="fNovaColPop" placeholder="Coleção nova" autocomplete="off" maxlength="60">'
+    + '<button class="btn forte" id="btCriarColPop">Criar e pôr</button></div>';
+  $("popColecoes").querySelectorAll("[data-col]").forEach((b) => {
+    b.onclick = () => { alternarNaSelecao(b.dataset.col); desenharPopColecoes(); desenhar(); };
+  });
+  const criar = () => criarDoCampo("fNovaColPop", (nome) => { alternarNaSelecao(nome); desenharPopColecoes(); });
+  $("btCriarColPop").onclick = criar;
+  $("fNovaColPop").onkeydown = (e) => { if (e.key === "Enter") criar(); };
+}
+function abrirPopColecoes() {
+  desenharPopColecoes();
+  /* LOGO ACIMA DA BARRA, medida na hora. A barra quebra em duas ou tres
+     linhas numa janela estreita (MEDIDO: ~170px de altura em 800px de
+     largura), e um `bottom` fixo abria a lista por cima dela. */
+  /* `offsetTop` e nao o retangulo: a barra ENTRA deslizando, e o
+     retangulo inclui o deslize. Aberta no meio dele, a lista nasceria
+     no lugar errado (MEDIDO no teste: 75px acima da barra). */
+  const topoBarra = $("acoes").offsetTop;
+  $("popColecoes").style.bottom = Math.max(16, innerHeight - topoBarra + 10) + "px";
+  $("popColecoes").classList.add("on");
+  $("btColAcao").setAttribute("aria-expanded", "true");
+}
+function fecharPopColecoes() {
+  $("popColecoes").classList.remove("on");
+  $("btColAcao").setAttribute("aria-expanded", "false");
+}
+
 /* ---------- PAINEL ---------- */
 function abrirPainel(caminho) {
   const it = acharItem(caminho);
   if (!it) return;
   if (atual && atual.caminho !== caminho) paginaSel = null;
   atual = it;
-  const cols = [...new Set(itens.map((x) => val(x, "collection")).filter(Boolean))];
+  const cols = todasColecoes().map((c) => c.nome);
+  const minhas = colecoesDe(it);
   const seq = paginas(it);
   const ehGrupo = seq.length > 1;
 
@@ -1228,6 +1542,11 @@ function abrirPainel(caminho) {
       + '<div class="campo"><label>Ano</label><input id="' + idCard.a + '" value="' + esc(leCard("year")) + '" placeholder="' + esc(ehGrupo ? (val(it, "year") || "2024") : "2024") + '"></div>'
       + '<div class="campo"><label>Link</label><input id="' + idCard.l + '" value="' + esc(leCard("link")) + '" placeholder="' + esc(ehGrupo ? (val(it, "link") || "https://…") : "https://instagram.com/p/…") + '"></div>'
     + '</div>'
+    /* A FAIXA que o site vai mostrar no card do carrossel (17/09/2026):
+       sai do ano de cada foto, entao ela ve aqui antes de salvar */
+    + (ehGrupo && faixaDeAnos(it) ? '<div style="font-size:11.5px;opacity:.6;margin:-6px 0 14px;line-height:1.5">'
+        + 'No site o card mostra <strong>' + esc(faixaDeAnos(it)) + '</strong> — da foto mais antiga à mais nova. '
+        + 'A busca acha o carrossel por qualquer um desses anos.</div>' : "")
     + chaveInfo("fInfoCard", infoCardLigada, "o card");
 
   /* ---- 2. classificacao ---- */
@@ -1235,9 +1554,15 @@ function abrirPainel(caminho) {
     '<div class="campo"><label>Tag</label><div style="display:flex;gap:6px;flex-wrap:wrap" id="fTags">'
       + ordemTags.map(function (t) { return '<button class="chip' + (val(it, "tag") === t ? " on" : "") + '" data-t="' + esc(t) + '">' + esc(t) + '</button>'; }).join("")
       + '<button class="chip' + (!val(it, "tag") ? " on" : "") + '" data-t="">nenhuma</button></div></div>'
-    + '<div class="campo"><label>Coleção</label><div style="display:flex;gap:6px;flex-wrap:wrap" id="fCols">'
-      + cols.map(function (c) { return '<button class="chip' + (val(it, "collection") === c ? " on" : "") + '" data-c="' + esc(c) + '">' + esc(c) + '</button>'; }).join("")
-      + '</div></div>';
+    /* COLECOES: mais de uma ao mesmo tempo (17/09/2026). Antes era uma
+       so, e o robo ignorava a escolha - o botao existia e nao fazia nada
+       no site. */
+    + '<div class="campo"><label>Coleções — pode ser mais de uma</label><div style="display:flex;gap:6px;flex-wrap:wrap" id="fCols">'
+      + cols.map(function (c) { return '<button class="chip' + (minhas.includes(c) ? " on" : "") + '" data-c="' + esc(c) + '" aria-pressed="' + minhas.includes(c) + '">' + esc(c) + '</button>'; }).join("")
+      + '<button class="chip" id="btNovaColPainel">+ nova</button>'
+      + '</div>'
+      + (minhas.length ? "" : '<div style="font-size:11.5px;opacity:.55;margin-top:7px;line-height:1.5">Em nenhuma coleção: aparece só no All.</div>')
+      + '</div>';
 
   /* ---- 3. carrossel ----
      A TIRA e a caixa da foto selecionada. Sem a tira, agrupar era um ato
@@ -1307,7 +1632,7 @@ function abrirPainel(caminho) {
               : (preenchidos.length ? preenchidos.join(" · ") : "vazio"),
             corpoTextos, !infoCardLigada || !preenchidos.length)
     + secao("classe", "Classificação",
-            (val(it, "tag") || "sem tag") + (val(it, "collection") ? " · " + val(it, "collection") : ""),
+            (val(it, "tag") || "sem tag") + (minhas.length ? " · " + minhas.join(", ") : ""),
             corpoClass, !val(it, "tag"))
     + (ehGrupo ? secao("carrossel", "Carrossel", resumoCarrossel, corpoCarrossel, false) : "")
     + (ehSeguidora(it) && !ehArq(it)
@@ -1415,10 +1740,18 @@ function abrirPainel(caminho) {
   });
   $("fCols").querySelectorAll("[data-c]").forEach((b) => {
     b.onclick = () => {
-      editar(it.caminho, "collection", val(it, "collection") === b.dataset.c ? "" : b.dataset.c);
+      const c = b.dataset.c;
+      definirColecoes(it.caminho, minhas.includes(c) ? minhas.filter((x) => x !== c) : minhas.concat([c]));
       abrirPainel(caminho); desenhar();
     };
   });
+  $("btNovaColPainel").onclick = () => {
+    const nome = criarColecao(prompt("Nome da coleção nova:") || "");
+    if (!nome) return;
+    const agora = colecoesDe(it);
+    if (!agora.includes(nome)) definirColecoes(it.caminho, agora.concat([nome]));
+    abrirPainel(caminho); desenhar();
+  };
   const lista = visiveis();
   const idx = lista.findIndex((x) => x.caminho === caminho);
   $("btAnt").disabled = idx <= 0;
@@ -1542,7 +1875,10 @@ async function salvarNoGitHub() {
     }
     ultimoSalvo = Date.now();
     const n = Object.keys(edicoes).length;
-    mostrarEstado("salvo · " + n + (n === 1 ? " foto" : " fotos") + " · o robô já está rodando", "ok");
+    const nc = colecoesDef ? Object.keys(colecoesDef).length : 0;
+    mostrarEstado("salvo · " + n + (n === 1 ? " foto" : " fotos")
+      + (nc ? " · " + nc + (nc === 1 ? " coleção" : " coleções") : "")
+      + " · o robô já está rodando", "ok");
     setTimeout(() => mostrarEstado("salvo há pouco", "ok"), 6000);
   } catch (e) {
     mostrarEstado(String((e && e.message) || e), "erro");
@@ -1552,6 +1888,12 @@ async function salvarNoGitHub() {
 /* ---------- EXPORTAR ---------- */
 function textoDoArquivo() {
   const saida = { tags: ordemTags, tagsVisiveis, items: {} };
+  /* as colecoes criadas aqui - so entram no arquivo quando existem, para
+     um mix-info.json sem colecao nenhuma continuar identico ao de antes */
+  if (colecoesDef && Object.keys(colecoesDef).length) {
+    saida.collections = {};
+    Object.keys(colecoesDef).sort().forEach((c) => { saida.collections[c] = colecoesDef[c]; });
+  }
   Object.keys(edicoes).sort().forEach((c) => { saida.items[c] = edicoes[c]; });
   return JSON.stringify(saida, null, 2) + "\n";
 }
@@ -1619,6 +1961,23 @@ $("fundoPainel").onclick = fecharPainel;
 $("btAgrupar").onclick = agruparCarrossel;
 $("btDesagrupar").onclick = desagrupar;
 $("btTags").onclick = () => { desenharTags(); $("modalTags").classList.add("on"); };
+/* ---------- COLECOES ---------- */
+$("btColecoes").onclick = () => { desenharColecoes(); $("modalColecoes").classList.add("on"); };
+$("btFecharCol").onclick = () => $("modalColecoes").classList.remove("on");
+$("modalColecoes").onclick = (e) => { if (e.target === $("modalColecoes")) $("modalColecoes").classList.remove("on"); };
+$("btCriarCol").onclick = () => criarDoCampo("fNovaCol", () => desenharColecoes());
+$("fNovaCol").onkeydown = (e) => { if (e.key === "Enter") criarDoCampo("fNovaCol", () => desenharColecoes()); };
+$("btColAcao").onclick = (e) => {
+  e.stopPropagation();
+  if ($("popColecoes").classList.contains("on")) fecharPopColecoes(); else abrirPopColecoes();
+};
+/* clicar fora fecha - mas clicar numa foto da grade NAO, para ela poder
+   ajustar a selecao com a lista aberta */
+document.addEventListener("pointerdown", (e) => {
+  if (!$("popColecoes").classList.contains("on")) return;
+  if (e.target.closest("#popColecoes, #btColAcao, .card")) return;
+  fecharPopColecoes();
+});
 $("btFecharTags").onclick = () => $("modalTags").classList.remove("on");
 $("modalTags").onclick = (e) => { if (e.target === $("modalTags")) $("modalTags").classList.remove("on"); };
 document.addEventListener("keydown", (e) => {
@@ -1627,9 +1986,11 @@ document.addEventListener("keydown", (e) => {
     /* dentro de um campo, Esc so sai do campo. Fechar o painel inteiro
        no primeiro Esc faria ela perder o lugar por reflexo. */
     if (digitando) { e.target.blur(); return; }
+    if ($("popColecoes").classList.contains("on")) { fecharPopColecoes(); return; }
     fecharPainel();
     $("modalTags").classList.remove("on");
     $("modalChave").classList.remove("on");
+    $("modalColecoes").classList.remove("on");
     return;
   }
   if (!atual) return;
@@ -1651,6 +2012,10 @@ document.addEventListener("keydown", (e) => {
   edicoes = g.edicoes || {};
   ordemTags = g.ordemTags || ["Design", "Motion", "Draw", "Photo", "3D"];
   tagsVisiveis = g.tagsVisiveis === undefined ? 2 : g.tagsVisiveis;
+  /* `undefined` (navegador que nunca teve a lista) vira null: a primeira
+     leitura do images.json semeia com as colecoes criadas que o robo
+     publicou. Objeto vazio e diferente - e ela ter apagado todas. */
+  colecoesDef = g.colecoesDef && typeof g.colecoesDef === "object" ? g.colecoesDef : null;
   desenhar();
   carregar();
 })();
