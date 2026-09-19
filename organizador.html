@@ -8,431 +8,417 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* ============================================================
-   Paleta e medidas do site. Escala de 8px em tudo - espacamento
-   aleatorio e a causa mais comum de um layout parecer amador.
-   ============================================================ */
-:root{
-  color-scheme:light;
-  --tinta:#352270; --ativo:#EDE7FB; --campo:#F4F1FC; --fundo:#F2F0FC;
-  --branco:#fff; --amarelo:#FFF20B; --verde:#24FB99;
-  --linha:rgba(53,34,112,.10);
-  /* SUPERFICIES, e nao cores soltas. Cada uma existe porque o modo
-     escuro precisa VIRAR essa superficie inteira - vidro, cartao,
-     painel, aviso. Cor escrita na regra nao tem como virar. */
-  --vidro:rgba(255,255,255,.72);
-  --vidro-borda:rgba(255,255,255,.55);
-  --chip:rgba(255,255,255,.7);
-  --chip-hover:#fff;
-  --painel:#fff;
-  --alerta:#FFF6C4;
-  --sobre:#fff;                    /* o que se escreve EM CIMA da tinta */
-  --sombra-fraca:rgba(53,34,112,.07);
-  --sombra-media:rgba(53,34,112,.15);
-  --sombra-forte:rgba(53,34,112,.5);
-  --ok:#0B7A4B; --erro:#B3261E; --aviso:#8A6100;
-  --mola:cubic-bezier(.22,1,.36,1);
-  --r:16px; --r-g:22px;
-}
+/* =============================================================
+   O ORGANIZADOR — layout de 19/09/2026
+   -------------------------------------------------------------
+   O desenho que ela aprovou (ver mix-github/proposta/): menu lateral
+   com as coleções e as tags, busca e filtros no alto, grade no meio,
+   e o pop-up da foto por cima. As referências que ela escolheu foram
+   um app de bibliotecas de fotos (o menu), uma galeria (a busca com
+   filtros) e as pilhas de "Spaces" (a coleção que abre em leque).
 
-/* MODO ESCURO.
-   A tinta e o fundo trocam de lado: `--tinta` deixa de ser a cor da
-   letra roxa e passa a ser a cor da letra clara. Como toda regra ja
-   lia o token, a inversao acontece num lugar so.
-   `--sobre` existe por causa disso: o que se escreve em cima da tinta
-   nao pode ser branco nos dois modos - no escuro a tinta E clara. */
-:root[data-tema="escuro"]{
-  color-scheme:dark;
-  --tinta:#EDE9FB; --ativo:#3B2C72; --campo:#241B48; --fundo:#140E2B;
-  --branco:#1D1540; --amarelo:#FFF20B; --verde:#24FB99;
-  --linha:rgba(237,233,251,.14);
-  --vidro:rgba(35,25,72,.72);
-  --vidro-borda:rgba(255,255,255,.10);
-  --chip:rgba(255,255,255,.06);
-  --chip-hover:rgba(255,255,255,.13);
-  --painel:#1D1540;
-  --alerta:#4A3A12;
-  --sobre:#140E2B;
-  --sombra-fraca:rgba(0,0,0,.35);
-  --sombra-media:rgba(0,0,0,.5);
-  --sombra-forte:rgba(0,0,0,.7);
-  /* verde e vermelho escuros somem no fundo escuro: no escuro eles
-     clareiam, e nao e a mesma cor com opacidade - e outra cor. */
-  --ok:#3BD98F; --erro:#FF9A8F; --aviso:#F0C24A;
+   DOIS TEMAS, como antes: o escuro é o padrão e o claro redefine só os
+   tokens. Quem manda é `data-tema` no <html>, escrito antes da primeira
+   pintura pelo script lá em cima.
+   ============================================================= */
+:root {
+  --fundo: #121116;
+  --painel: #1A1920;
+  --painel-2: #232230;
+  --linha: rgba(255,255,255,.09);
+  --texto: #EFEBF9;
+  --texto-2: rgba(239,235,249,.58);
+  --texto-3: rgba(239,235,249,.38);
+  --roxo: #7C54FF;
+  --verde: #24FB99;
+  --amarelo: #FFF20B;
+  --ok: #3BD98F;
+  --erro: #FF9A8F;
+  --aviso: #F0C24A;
+  --sombra: rgba(0,0,0,.6);
+  --r: 14px;
+  --mola: cubic-bezier(.22,1,.36,1);
 }
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-body{
-  font-family:'Outfit',ui-sans-serif,system-ui,sans-serif;
-  background:var(--fundo); color:var(--tinta);
-  -webkit-font-smoothing:antialiased;
-  padding-bottom:120px;
+html[data-tema="claro"] {
+  --fundo: #F6F4FD;
+  --painel: #FFFFFF;
+  --painel-2: #EFEAFB;
+  --linha: rgba(53,34,112,.13);
+  --texto: #352270;
+  --texto-2: rgba(53,34,112,.66);
+  --texto-3: rgba(53,34,112,.45);
+  --ok: #0B7A4B;
+  --erro: #B3261E;
+  --aviso: #8A6100;
+  --sombra: rgba(53,34,112,.25);
 }
-button,input,select,textarea{font:inherit;color:inherit}
-button{border:none;background:none;cursor:pointer}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--fundo); color: var(--texto);
+  font: 14px/1.5 "Outfit", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+input, textarea { font: inherit; color: inherit; }
+img, video { display: block; }
+::selection { background: rgba(124,84,255,.35); }
+:focus-visible { outline: 2px solid var(--roxo); outline-offset: 2px; }
 
-/* vidro - o mesmo da barra do site */
-.vidro{
-  background:var(--vidro);
-  backdrop-filter:blur(20px) saturate(180%);
-  -webkit-backdrop-filter:blur(20px) saturate(180%);
-  border:1px solid var(--vidro-borda);
+.app { display: grid; grid-template-columns: 252px minmax(0,1fr); min-height: 100%; }
+
+/* ---------- MENU LATERAL ---------- */
+.lado {
+  border-right: 1px solid var(--linha); background: var(--painel);
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 16px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
 }
+.marca { display: flex; align-items: center; gap: 10px; padding: 4px 8px 14px; }
+.marca .bolha {
+  width: 26px; height: 26px; border-radius: 9px; background: var(--roxo);
+  display: grid; place-items: center; font: 600 12px "Outfit",sans-serif; color: #fff;
+}
+.marca .nome { font: 600 15px "Outfit",sans-serif; letter-spacing: -.01em; }
+.marca .repo { font-size: 11px; color: var(--texto-3); word-break: break-all; }
+.marca .tema {
+  margin-left: auto; width: 30px; height: 30px; border-radius: 9px;
+  display: grid; place-items: center; color: var(--texto-2);
+}
+.marca .tema:hover { background: var(--painel-2); color: var(--texto); }
+
+.item {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 8px 10px; border-radius: 10px; text-align: left;
+  color: var(--texto-2); transition: background .15s, color .15s;
+}
+.item:hover { background: var(--painel-2); color: var(--texto); }
+.item.on { background: var(--painel-2); color: var(--texto); box-shadow: inset 2px 0 0 var(--roxo); }
+.item .rotulo { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item .qtd { font-size: 12px; color: var(--texto-3); font-variant-numeric: tabular-nums; }
+.item .engrenagem { opacity: 0; width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; }
+.item:hover .engrenagem { opacity: .7; }
+.item .engrenagem:hover { background: rgba(124,84,255,.2); opacity: 1; }
+.item.arrastando { opacity: .4; }
+.item.alvo { box-shadow: inset 0 2px 0 var(--roxo); }
+.item.oculta-linha .rotulo { text-decoration: line-through; color: var(--texto-3); }
+.pega { color: var(--texto-3); cursor: grab; display: grid; place-items: center; width: 13px; }
+
+.secao-bt {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  font: 600 10.5px/1 "Outfit",sans-serif; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--texto-3); padding: 15px 10px 7px; text-align: left;
+}
+.secao-bt:hover { color: var(--texto-2); }
+.secao-bt .rotulo { flex: 1; }
+.secao-bt .seta { transition: transform .25s var(--mola); display: grid; place-items: center; }
+.secao-bt[aria-expanded="false"] .seta { transform: rotate(-90deg); }
+.dobra { display: grid; gap: 2px; }
+.dobra[hidden] { display: none; }
+
+.novo-bt {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 8px 10px; border-radius: 10px; color: var(--texto-3); font-size: 13.5px;
+}
+.novo-bt:hover { background: var(--painel-2); color: var(--texto-2); }
+.novo-bt .mais { width: 13px; text-align: center; font-size: 15px; line-height: 1; }
+.novo-campo { padding: 4px 10px 6px; }
+.novo-campo[hidden] { display: none; }
+.novo-campo input {
+  width: 100%; height: 34px; border-radius: 10px; border: 1px solid var(--roxo);
+  background: var(--fundo); padding: 0 12px; font-size: 13.5px; outline: none;
+}
+.novo-campo .dica { font-size: 11px; color: var(--texto-3); padding: 5px 2px 0; }
+
+.rodape { margin-top: auto; padding-top: 14px; display: grid; gap: 8px; }
+.config-bt {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  height: 36px; border-radius: 11px; border: 1px solid var(--linha); color: var(--texto-2); font-size: 13.5px;
+}
+.config-bt:hover { background: var(--painel-2); color: var(--texto); }
+.salvar {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  height: 40px; border-radius: 12px; background: var(--roxo); color: #fff;
+  font: 500 14px "Outfit",sans-serif;
+}
+.salvar:hover:not(:disabled) { filter: brightness(1.12); }
+.salvar:disabled { opacity: .45; cursor: default; }
+.estado { font-size: 11.5px; color: var(--texto-3); text-align: center; min-height: 17px;
+  display: flex; align-items: center; justify-content: center; gap: 7px; line-height: 1.4; }
+.estado.ok { color: var(--ok); }
+.estado.erro { color: var(--erro); }
+.estado.aviso { color: var(--aviso); }
+.girando { width: 12px; height: 12px; border: 2px solid var(--linha);
+  border-top-color: var(--roxo); border-radius: 50%; animation: gira .7s linear infinite; flex-shrink: 0; }
+@keyframes gira { to { transform: rotate(360deg); } }
 
 /* ---------- BARRA DE CIMA ---------- */
-.topo{
-  position:sticky; top:0; z-index:40;
-  display:flex; align-items:center; gap:12px;
-  padding:12px 20px; flex-wrap:wrap;
-  box-shadow:0 1px 0 var(--linha), 0 8px 24px -20px var(--sombra-forte);
+.topo {
+  position: sticky; top: 0; z-index: 30;
+  background: color-mix(in srgb, var(--fundo) 86%, transparent);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--linha);
+  padding: 14px 24px 12px; display: grid; gap: 11px;
 }
-.marca{font-weight:700; font-size:15px; letter-spacing:-.01em; flex-shrink:0}
-.marca small{display:block;font-weight:400;font-size:11px;opacity:.5;letter-spacing:0}
-.fonte{
-  flex:1; min-width:240px; display:flex; align-items:center; gap:8px;
-  background:var(--campo); border-radius:999px; padding:0 6px 0 14px; height:38px;
+.titulo-linha { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+h1 { font: 600 22px/1.1 "Outfit",sans-serif; letter-spacing: -.02em; }
+.conta { font-size: 13px; color: var(--texto-3); font-variant-numeric: tabular-nums; }
+.ferramentas { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
+.busca {
+  display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px;
+  border-radius: 999px; border: 1px solid var(--linha); background: var(--painel);
+  min-width: 190px; flex: 0 1 250px;
 }
-.fonte input{flex:1;border:none;outline:none;background:none;font-size:13px;min-width:0}
-.contador{font-size:12px;opacity:.55;white-space:nowrap}
+.busca:focus-within { border-color: var(--roxo); }
+.busca input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 13.5px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px;
+  border-radius: 999px; border: 1px solid var(--linha); background: var(--painel);
+  font-size: 13.5px; color: var(--texto-2); transition: all .16s;
+}
+.chip:hover { color: var(--texto); border-color: color-mix(in srgb, var(--texto-3) 60%, transparent); }
+.chip.on { color: var(--texto); border-color: var(--roxo); background: rgba(124,84,255,.16); }
+.chip .n { font-size: 12px; color: var(--texto-3); font-variant-numeric: tabular-nums; }
+.alternador { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px;
+  border: 1px solid var(--linha); background: var(--painel); }
+.alternador button { height: 28px; padding: 0 13px; border-radius: 999px; font-size: 13px;
+  color: var(--texto-2); display: inline-flex; align-items: center; gap: 6px; }
+.alternador button:hover { color: var(--texto); }
+.alternador button.on { background: var(--painel-2); color: var(--texto); }
+.alternador .n { font-size: 11.5px; color: var(--texto-3); font-variant-numeric: tabular-nums; }
+.acao { width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--linha);
+  background: var(--painel); color: var(--texto-2); display: grid; place-items: center; }
+.acao:hover { color: var(--texto); border-color: color-mix(in srgb, var(--texto-3) 60%, transparent); }
+.acao.on { color: var(--texto); border-color: var(--roxo); background: rgba(124,84,255,.16); }
+.acao.forte { background: var(--roxo); border-color: var(--roxo); color: #fff; }
+.acao.forte:hover { filter: brightness(1.12); }
+.grupo-acao { display: inline-flex; align-items: center; gap: 6px; }
+.grupo-acao[hidden] { display: none; }
+.contador { font-size: 12.5px; color: var(--texto-2); padding: 0 2px; font-variant-numeric: tabular-nums; }
+.zoom { display: inline-flex; align-items: center; gap: 2px; margin-left: auto;
+  border: 1px solid var(--linha); border-radius: 999px; background: var(--painel); padding: 3px; }
+.zoom button { width: 30px; height: 28px; border-radius: 999px; display: grid; place-items: center; color: var(--texto-2); }
+.zoom button:hover:not(:disabled) { background: var(--painel-2); color: var(--texto); }
+.zoom button:disabled { opacity: .3; cursor: default; }
 
-.btn{
-  height:38px; padding:0 18px; border-radius:999px;
-  font-size:13px; font-weight:500; white-space:nowrap;
-  background:var(--campo); transition:transform .18s var(--mola), background .18s;
+/* ---------- A GRADE ---------- */
+.miolo { padding: 18px 24px 70px; }
+.aviso {
+  margin-bottom: 14px; padding: 12px 15px; border-radius: 12px;
+  background: color-mix(in srgb, var(--amarelo) 16%, var(--painel));
+  border: 1px solid color-mix(in srgb, var(--amarelo) 40%, transparent);
+  font-size: 13px; color: var(--texto);
 }
-.btn:hover{background:var(--ativo)}
-.btn:active{transform:scale(.96)}
-.btn.forte{background:var(--tinta); color:var(--sobre)}
-.btn.forte:hover{filter:brightness(1.15)}
-.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
-.btn.icone{width:38px;padding:0;display:grid;place-items:center}
+.aviso.grave { background: color-mix(in srgb, var(--erro) 16%, var(--painel));
+  border-color: color-mix(in srgb, var(--erro) 40%, transparent); }
+.grade { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); }
+.cartao { display: grid; gap: 8px; }
+.moldura {
+  position: relative; aspect-ratio: 3/4; border-radius: var(--r);
+  background: var(--painel); cursor: pointer; border: 1px solid var(--linha); overflow: visible;
+}
+.moldura > img, .moldura > video { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.moldura.marcada { outline: 2px solid var(--roxo); outline-offset: 2px; }
+.moldura.solta { outline: 2px dashed var(--verde); outline-offset: 3px; }
+.moldura.solta::after {
+  content: "soltar para juntar"; position: absolute; inset: auto 6px 6px; z-index: 7;
+  text-align: center; font: 500 11.5px "Outfit",sans-serif; color: #08210f;
+  background: var(--verde); border-radius: 8px; padding: 4px 6px;
+}
+.cartao .nome { font-size: 13.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cartao .meta { font-size: 12px; color: var(--texto-3); display: flex; gap: 7px; align-items: center; }
+.ponto { width: 6px; height: 6px; border-radius: 50%; background: var(--roxo); flex-shrink: 0; }
+.selo {
+  position: absolute; top: 8px; left: 8px; z-index: 4;
+  font: 600 10.5px "Outfit",sans-serif; letter-spacing: .06em; text-transform: uppercase;
+  padding: 4px 8px; border-radius: 999px; background: rgba(18,17,22,.72);
+  backdrop-filter: blur(8px); color: #EFEBF9;
+}
+.selo.sem { background: var(--amarelo); color: #17150b; }
+.selo.arq { background: rgba(179,38,30,.85); color: #fff; }
+.marca-sel {
+  position: absolute; top: 8px; right: 8px; z-index: 5;
+  width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  border: 1.5px solid rgba(255,255,255,.8); background: rgba(18,17,22,.5);
+  backdrop-filter: blur(6px); color: transparent; opacity: 0; transition: all .16s;
+}
+.cartao:hover .marca-sel, .modo-sel .marca-sel { opacity: 1; }
+.moldura.marcada .marca-sel { background: var(--roxo); border-color: var(--roxo); color: #fff; opacity: 1; }
 
-/* ---------- FILTROS ---------- */
-.filtros{
-  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-  padding:20px 20px 4px; max-width:1320px; margin:0 auto;
+/* A PILHA: um carrossel. Parada, as folhas ficam atrás da capa; no
+   hover elas saem em leque - foi o que ela pediu, "as imagens meio que
+   saem para você entrar na pasta". Só transform e opacidade. */
+.pilha .folha {
+  position: absolute; inset: 0; border-radius: var(--r); overflow: hidden;
+  box-shadow: 0 12px 30px -18px var(--sombra);
+  transition: transform .42s var(--mola), opacity .3s; transform-origin: 50% 92%;
 }
-.chip{
-  height:34px; padding:0 15px; border-radius:999px; font-size:13px;
-  background:var(--chip); transition:all .18s var(--mola);
-  display:inline-flex; align-items:center; gap:7px;
+.pilha .folha img, .pilha .folha video { width: 100%; height: 100%; object-fit: cover; }
+.pilha .f1 { transform: rotate(-2.5deg) translateY(2px) scale(.965); opacity: .55; }
+.pilha .f2 { transform: rotate(2deg) translateY(1px) scale(.98); opacity: .8; }
+.pilha:hover .f1, .pilha:focus-visible .f1 { transform: rotate(-11deg) translate(-16%,-6%) scale(.93); opacity: 1; }
+.pilha:hover .f2, .pilha:focus-visible .f2 { transform: rotate(8.5deg) translate(15%,-4%) scale(.95); opacity: 1; }
+.pilha:hover .f3, .pilha:focus-visible .f3 { transform: translateY(-3%) scale(1.01); }
+.pilha .entrar {
+  position: absolute; left: 50%; bottom: 10px; transform: translate(-50%,14px);
+  z-index: 6; opacity: 0; transition: opacity .25s, transform .35s var(--mola);
+  background: rgba(18,17,22,.82); backdrop-filter: blur(10px); color: #EFEBF9;
+  border-radius: 999px; padding: 7px 14px; font: 500 12.5px "Outfit",sans-serif;
+  pointer-events: none; white-space: nowrap;
 }
-.chip:hover{background:var(--chip-hover)}
-.chip.on{background:var(--ativo); font-weight:600}
-.chip .n{opacity:.45; font-size:12px}
-.chip.alerta{background:var(--alerta)}
-/* amarelo pede letra escura nos DOIS modos - nao e o tema que decide,
-   e o contraste do proprio amarelo */
-.chip.alerta.on{background:var(--amarelo); color:#211540}
-.esp{flex:1}
+.pilha:hover .entrar, .pilha:focus-visible .entrar { opacity: 1; transform: translate(-50%,0); }
 
-/* ---------- GRADE ----------
-   Cartao 3:4 como o do site. auto-fill com minmax(min(100%,W),W):
-   nunca estica, e encolhe em vez de vazar em tela estreita. */
-.grade{
-  display:grid; gap:14px; padding:16px 20px;
-  grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),190px));
-  justify-content:center; max-width:1320px; margin:0 auto;
+/* O CARD DE UMA COLEÇÃO: mosaico de 9 */
+.mosaico {
+  position: relative; aspect-ratio: 1/1; border-radius: var(--r); overflow: hidden;
+  border: 1px solid var(--linha); background: var(--painel);
+  display: grid; grid-template-columns: repeat(3,1fr); grid-auto-rows: 1fr; gap: 2px;
+  padding: 2px; cursor: pointer; transition: border-color .2s, transform .35s var(--mola);
 }
-.card{
-  position:relative; aspect-ratio:3/4; border-radius:var(--r);
-  overflow:hidden; background:var(--ativo); cursor:pointer;
-  box-shadow:0 2px 10px var(--sombra-fraca);
-  transition:transform .22s var(--mola), box-shadow .22s var(--mola);
-  outline:0 solid transparent;
-}
-.card:hover{transform:translateY(-3px); box-shadow:0 12px 26px var(--sombra-media)}
-.card.sel{outline:3px solid var(--tinta); outline-offset:2px}
-.card img,.card video{width:100%;height:100%;object-fit:cover;display:block}
+.mosaico:hover { border-color: color-mix(in srgb, var(--roxo) 60%, transparent); transform: translateY(-2px); }
+.mosaico img { width: 100%; height: 100%; object-fit: cover; border-radius: 3px; }
+.mosaico .buraco { background: color-mix(in srgb, var(--texto-3) 12%, transparent); border-radius: 3px; }
+.linha-nome { display: flex; align-items: center; gap: 8px; }
+.linha-nome .txt { flex: 1; min-width: 0; }
+.linha-nome .engrenagem { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center;
+  color: var(--texto-3); opacity: 0; }
+.cartao:hover .linha-nome .engrenagem { opacity: .8; }
+.linha-nome .engrenagem:hover { background: var(--painel-2); color: var(--texto); opacity: 1; }
+.vazio { padding: 60px 10px; text-align: center; color: var(--texto-3); }
 
-/* marca de selecao - circulo iOS no canto */
-.marca-sel{
-  position:absolute; top:8px; right:8px; width:24px; height:24px;
-  border-radius:50%; display:grid; place-items:center;
-  background:rgba(255,255,255,.55); backdrop-filter:blur(10px);
-  border:1.5px solid rgba(255,255,255,.85); color:transparent;
-  transition:all .2s var(--mola);
+/* ---------- MENU DO BOTÃO DIREITO ---------- */
+.menu {
+  position: fixed; z-index: 120; min-width: 196px; padding: 6px;
+  background: var(--painel-2); border: 1px solid var(--linha); border-radius: 12px;
+  box-shadow: 0 30px 60px -30px var(--sombra);
 }
-.card.sel .marca-sel{background:var(--tinta); border-color:var(--tinta); color:var(--sobre)}
+.menu button { display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 10px;
+  border-radius: 8px; font-size: 13.5px; text-align: left; }
+.menu button:hover { background: color-mix(in srgb, var(--texto-3) 18%, transparent); }
+.menu button.perigo:hover { background: color-mix(in srgb, var(--erro) 25%, transparent); color: var(--erro); }
+.menu .risco { height: 1px; background: var(--linha); margin: 5px 2px; }
 
-.tag-card{
-  position:absolute; top:8px; left:8px; max-width:calc(100% - 44px);
-  padding:3px 9px; border-radius:999px; font-size:10px; font-weight:600;
-  letter-spacing:.03em; color:#fff;
-  background:rgba(255,255,255,.26); backdrop-filter:blur(12px) saturate(180%);
-  -webkit-backdrop-filter:blur(12px) saturate(180%);
-  border:1px solid rgba(255,255,255,.45);
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+/* ---------- PÔR EM COLEÇÕES (seleção em lote) ---------- */
+.pop-col {
+  position: fixed; z-index: 110; right: 24px; top: 132px;
+  width: min(330px, calc(100vw - 32px)); max-height: min(420px,60vh); overflow-y: auto;
+  padding: 10px; border-radius: var(--r); background: var(--painel);
+  box-shadow: 0 30px 60px -28px var(--sombra), 0 0 0 1px var(--linha);
+  opacity: 0; pointer-events: none; transform: translateY(-8px);
+  transition: opacity .2s, transform .28s var(--mola);
 }
-.tag-card.vazia{background:rgba(255,242,11,.85); color:#000; border-color:transparent}
+.pop-col.on { opacity: 1; pointer-events: auto; transform: none; }
+.pop-col .titulo { font-size: 11px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--texto-3); padding: 4px 6px 8px; }
+.opcao-col { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px;
+  border-radius: 12px; text-align: left; font-size: 14px; }
+.opcao-col:hover { background: var(--painel-2); }
+.opcao-col img, .opcao-col .sem-capa { width: 32px; height: 32px; border-radius: 8px; object-fit: cover;
+  flex-shrink: 0; background: var(--painel-2); }
+.opcao-col .nome { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.marca3 { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center;
+  border: 1.5px solid var(--linha); color: transparent; transition: all .18s var(--mola); }
+.marca3.todas { background: var(--roxo); border-color: var(--roxo); color: #fff; }
+.marca3.algumas { background: rgba(124,84,255,.25); border-color: var(--roxo); color: var(--roxo); }
+.criar-col { display: flex; gap: 8px; margin-top: 8px; padding: 8px 2px 2px; border-top: 1px solid var(--linha); }
+.criar-col input { flex: 1; min-width: 0; height: 36px; background: var(--fundo); border: 1px solid var(--linha);
+  border-radius: 999px; padding: 0 14px; font-size: 13.5px; outline: none; }
+.criar-col input:focus { border-color: var(--roxo); }
 
-.pe{
-  position:absolute; left:0; right:0; bottom:0; padding:22px 10px 9px;
-  background:linear-gradient(to top,rgba(20,12,50,.78),transparent);
-  color:#fff; pointer-events:none;
+/* ---------- VÉU, POP-UP DA FOTO, PERGUNTA, CONFIGURAÇÕES ---------- */
+.veu { position: fixed; inset: 0; z-index: 100; background: color-mix(in srgb, var(--fundo) 72%, #000);
+  backdrop-filter: blur(6px); display: grid; place-items: center; padding: 20px; }
+.veu[hidden] { display: none; }
+.caixa { width: min(460px,100%); max-height: 88vh; overflow-y: auto; background: var(--painel);
+  border: 1px solid var(--linha); border-radius: 18px; padding: 22px; display: grid; gap: 15px;
+  box-shadow: 0 40px 90px -40px var(--sombra); }
+.caixa h2 { font: 600 19px "Outfit",sans-serif; }
+.caixa p { color: var(--texto-2); font-size: 13.5px; }
+.campo { display: grid; gap: 6px; }
+.campo label { font-size: 12px; color: var(--texto-2); }
+.campo input, .campo textarea {
+  border-radius: 11px; border: 1px solid var(--linha); background: var(--fundo);
+  padding: 9px 12px; font-size: 13.5px; outline: none; resize: vertical; width: 100%;
 }
-.pe .nome{font-size:11.5px; font-weight:500; line-height:1.3;
-  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
-.pe .frase{font-size:10px; opacity:.75; margin-top:1px;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.lapis{
-  position:absolute; bottom:8px; right:8px; width:28px; height:28px;
-  border-radius:50%; display:grid; place-items:center;
-  background:rgba(255,255,255,.85); color:var(--tinta);
-  opacity:0; transition:opacity .2s;
+.campo input:focus, .campo textarea:focus { border-color: var(--roxo); }
+.campo .dica { font-size: 11.5px; color: var(--texto-3); line-height: 1.5; }
+.duo { display: flex; gap: 8px; }
+.duo button, .btn {
+  height: 38px; padding: 0 16px; border-radius: 11px; border: 1px solid var(--linha);
+  font-size: 13.5px; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
 }
-.card:hover .lapis{opacity:1}
-.selo-video{
-  position:absolute; inset:0; display:grid; place-items:center; pointer-events:none;
-}
-.selo-video i{
-  width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
-  background:rgba(255,255,255,.24); backdrop-filter:blur(12px);
-  border:1px solid rgba(255,255,255,.45); color:#fff;
-}
+.duo button { flex: 1; }
+.duo button:hover, .btn:hover:not(:disabled) { background: var(--painel-2); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.forte, .duo button.forte { background: var(--roxo); border-color: var(--roxo); color: #fff; }
+.btn.forte:hover:not(:disabled) { filter: brightness(1.12); }
+.pergunta { width: min(410px,100%); }
 
-/* ---------- BARRA DE ACAO (aparece na selecao) ---------- */
-.acoes{
-  position:fixed; left:50%; bottom:20px; z-index:60;
-  transform:translate(-50%,140%); transition:transform .34s var(--mola);
-  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-  padding:10px 12px; border-radius:var(--r-g); max-width:calc(100vw - 32px);
-  box-shadow:0 18px 48px -18px var(--sombra-forte);
+.ficha {
+  width: min(1060px,96vw); max-height: 92vh; display: grid;
+  grid-template-columns: minmax(0,1.05fr) minmax(320px,.95fr);
+  background: var(--painel); border: 1px solid var(--linha); border-radius: 20px;
+  overflow: hidden; box-shadow: 0 50px 110px -50px var(--sombra);
 }
-.acoes.on{transform:translate(-50%,0)}
-.acoes .quantos{font-size:13px;font-weight:600;padding-left:6px;white-space:nowrap}
-.acoes .div{width:1px;height:26px;background:var(--linha)}
+.ficha .lado-foto { background: color-mix(in srgb, var(--fundo) 70%, #000);
+  display: grid; grid-template-rows: minmax(0,1fr) auto; border-right: 1px solid var(--linha); min-height: 0; }
+html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
+.ficha .palco { display: grid; place-items: center; padding: 20px; min-height: 0; }
+.ficha .palco img, .ficha .palco video { max-width: 100%; max-height: 56vh; border-radius: 10px; object-fit: contain; }
+.ficha .caminho { font-size: 11px; color: var(--texto-3); padding: 0 20px 8px; text-align: center; word-break: break-all; }
+.tiras { display: flex; gap: 8px; padding: 0 18px 16px; overflow-x: auto; }
+.tira { width: 58px; height: 58px; border-radius: 9px; overflow: hidden; flex-shrink: 0;
+  border: 2px solid transparent; position: relative; cursor: grab; }
+.tira img { width: 100%; height: 100%; object-fit: cover; }
+.tira.on { border-color: var(--roxo); }
+.tira.arrastando { opacity: .35; }
+.tira.alvo { border-color: var(--verde); }
+.tira .capa-marca { position: absolute; inset: auto 0 0 0; font: 600 8.5px "Outfit",sans-serif;
+  letter-spacing: .08em; text-transform: uppercase; text-align: center;
+  background: var(--roxo); color: #fff; padding: 2px 0; }
+.ficha .lado-dados { display: grid; grid-template-rows: auto minmax(0,1fr) auto; min-height: 0; }
+.ficha .cabeca { display: flex; align-items: center; gap: 9px; padding: 14px 18px; border-bottom: 1px solid var(--linha); }
+.ficha .cabeca .tit { flex: 1; min-width: 0; font: 600 16px "Outfit",sans-serif;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.redondo { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+  color: var(--texto-2); border: 1px solid var(--linha); }
+.redondo:hover:not(:disabled) { background: var(--painel-2); color: var(--texto); }
+.redondo:disabled { opacity: .3; cursor: default; }
+.ficha .corpo { overflow-y: auto; padding: 16px 18px; display: grid; gap: 14px; align-content: start; }
+.ficha .pe { display: flex; gap: 8px; padding: 13px 18px; border-top: 1px solid var(--linha); align-items: center; }
+.ficha .pe .aviso-pe { flex: 1; font-size: 11.5px; color: var(--texto-3); line-height: 1.45; }
+.rotulo-campo { font-size: 11.5px; color: var(--texto-2); display: block; }
+.dois-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.escolhas { display: flex; flex-wrap: wrap; gap: 6px; }
+.escolha { height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--linha);
+  font-size: 12.5px; color: var(--texto-2); }
+.escolha:hover { color: var(--texto); border-color: color-mix(in srgb, var(--texto-3) 60%, transparent); }
+.escolha.on { border-color: var(--roxo); background: rgba(124,84,255,.18); color: var(--texto); }
+.escolha.verde.on { border-color: var(--verde); background: color-mix(in srgb, var(--verde) 18%, transparent); }
+.chave-linha { display: flex; align-items: center; gap: 10px; justify-content: flex-start; }
+.chave { width: 40px; height: 23px; border-radius: 999px; flex-shrink: 0; background: var(--painel-2);
+  border: 1px solid var(--linha); position: relative; transition: background .2s, border-color .2s; }
+.chave::after { content: ""; position: absolute; top: 2px; left: 2px; width: 17px; height: 17px;
+  border-radius: 50%; background: var(--texto-3); transition: transform .24s var(--mola), background .2s; }
+.chave[aria-checked="true"] { background: rgba(124,84,255,.28); border-color: var(--roxo); }
+.chave[aria-checked="true"]::after { transform: translateX(17px); background: var(--roxo); }
+.caixa-pag { border: 1px solid var(--linha); border-radius: 13px; padding: 13px; display: grid; gap: 12px; }
+.caixa-pag .cabeca-pag { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; }
+.caixa-pag .cabeca-pag span { color: var(--texto-3); font-size: 11.5px; }
 
-/* ---------- PAINEL DE DETALHES ---------- */
-.fundo-painel{
-  position:fixed; inset:0; z-index:70; background:rgba(27,18,64,.28);
-  backdrop-filter:blur(3px); opacity:0; pointer-events:none; transition:opacity .28s;
+@media (max-width: 900px) {
+  .ficha { grid-template-columns: 1fr; max-height: 94vh; }
+  .ficha .lado-foto { border-right: 0; border-bottom: 1px solid var(--linha); }
+  .ficha .palco img, .ficha .palco video { max-height: 32vh; }
 }
-.fundo-painel.on{opacity:1;pointer-events:auto}
-.painel{
-  position:fixed; top:0; right:0; bottom:0; z-index:71; width:min(400px,100vw);
-  background:var(--branco); box-shadow:-20px 0 60px -30px var(--sombra-forte);
-  transform:translateX(101%); transition:transform .34s var(--mola);
-  display:flex; flex-direction:column;
+@media (max-width: 720px) {
+  .app { grid-template-columns: 1fr; }
+  .lado { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--linha); }
+  .miolo { padding: 16px; }
+  .topo { padding: 12px 16px; }
+  .zoom { margin-left: 0; }
 }
-.painel.on{transform:none}
-.painel header{
-  display:flex; align-items:center; justify-content:space-between;
-  padding:16px 18px; border-bottom:1px solid var(--linha);
-}
-.painel header h2{font-size:14px;font-weight:600}
-.painel .corpo{padding:18px; overflow-y:auto; flex:1}
-.previa{width:100%; border-radius:var(--r); background:var(--ativo);
-  aspect-ratio:3/4; object-fit:cover; margin-bottom:6px}
-.caminho{font-size:10.5px; opacity:.45; word-break:break-all; margin-bottom:16px}
-.campo{margin-bottom:14px}
-.campo label{display:block; font-size:10.5px; text-transform:uppercase;
-  letter-spacing:.09em; opacity:.5; font-weight:600; margin-bottom:6px}
-.campo input,.campo textarea{
-  width:100%; background:var(--campo); border:1px solid transparent;
-  border-radius:12px; padding:11px 13px; font-size:14px; outline:none;
-  transition:border-color .18s;
-}
-.campo input:focus,.campo textarea:focus{border-color:var(--tinta)}
-.campo textarea{resize:vertical; min-height:74px; line-height:1.45}
-/* ---------- SECOES DO PAINEL ----------
-   O painel era uma coluna unica de nove blocos de mesmo peso: nada dizia
-   onde ela estava, e a parte que ela mais usa - o carrossel - ficava no
-   fim de uma rolagem longa. `<details>` nativo: abre pelo teclado, nao
-   precisa de estado em JS, e o navegador ja sabe o papel dele.
-   Nome `secao-corpo`, e nao `corpo`: `.painel .corpo` ja existe com a
-   mesma especificidade, e a ultima do arquivo ganharia em silencio. */
-.secao{border-top:1px solid var(--linha)}
-.secao:first-of-type{border-top:none}
-.secao > summary{
-  display:flex; align-items:center; gap:9px; cursor:pointer;
-  padding:15px 0; list-style:none; user-select:none;
-}
-.secao > summary::-webkit-details-marker{display:none}
-.secao > summary:focus-visible{outline:2px solid var(--tinta); outline-offset:3px; border-radius:6px}
-.secao .seta{flex-shrink:0; opacity:.45; transition:transform .2s var(--mola)}
-.secao[open] .seta{transform:rotate(90deg)}
-.secao .nome-secao{font-size:11px; font-weight:600; letter-spacing:.09em;
-  text-transform:uppercase; opacity:.75}
-/* O RESUMO E INFORMACAO, nao enfeite: com a secao fechada ele responde
-   "o que ja esta preenchido aqui dentro" - que e a pergunta que ela faz
-   ao abrir a ferramenta. Com a secao aberta some, porque a resposta
-   passa a estar na tela. */
-.secao .resumo{margin-left:auto; font-size:11.5px; opacity:.5;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:56%;
-  transition:opacity .18s}
-.secao[open] .resumo{opacity:0}
-.secao .resumo.falta{opacity:.75; color:var(--aviso)}
-.secao-corpo{padding-bottom:4px}
-
-/* A FOTO SELECIONADA GANHA UMA CAIXA. Sem ela os campos ficavam soltos
-   depois da tira, e nada dizia que pertenciam a miniatura clicada. */
-.caixa-pag{border:1px solid var(--linha); border-radius:14px;
-  padding:13px 13px 1px; margin-top:12px; background:var(--campo)}
-.caixa-pag .cabeca{display:flex; align-items:baseline; gap:8px; margin-bottom:10px}
-.caixa-pag .cabeca strong{font-size:11px; font-weight:600; letter-spacing:.06em;
-  text-transform:uppercase}
-.caixa-pag .cabeca span{font-size:11px; opacity:.5}
-/* a chave de idioma: alta o suficiente para nao virar decoracao, baixa
-   o suficiente para nao competir com os nomes das secoes */
-.idiomas{display:flex; align-items:center; gap:6px; margin-bottom:16px}
-.idiomas .chip{height:28px; padding:0 13px; font-size:12px; font-weight:600; letter-spacing:.04em}
-.idiomas .nota{font-size:11.5px; opacity:.5; margin-left:2px}
-/* dois campos curtos lado a lado: ano e link nao merecem uma linha cada */
-.dupla{display:grid; grid-template-columns:minmax(0,88px) minmax(0,1fr); gap:10px}
-
-.nav{display:flex;gap:8px}
-.nav .btn{flex:1;justify-content:center;display:flex;align-items:center}
-
-/* ---------- MODAL DE TAGS ---------- */
-.modal{
-  position:fixed; inset:0; z-index:80; display:grid; place-items:center;
-  background:rgba(27,18,64,.34); backdrop-filter:blur(4px);
-  opacity:0; pointer-events:none; transition:opacity .26s; padding:20px;
-}
-.modal.on{opacity:1;pointer-events:auto}
-.caixa{
-  background:var(--painel); border-radius:var(--r-g); width:min(440px,100%);
-  max-height:86vh; overflow-y:auto; padding:22px;
-  box-shadow:0 30px 80px -30px var(--sombra-forte);
-}
-.caixa h2{font-size:16px;font-weight:600;margin-bottom:4px}
-.caixa p.sub{font-size:12.5px;opacity:.6;line-height:1.5;margin-bottom:18px}
-.linha-tag{
-  display:flex; align-items:center; gap:10px; padding:9px 12px;
-  background:var(--campo); border-radius:12px; margin-bottom:6px;
-}
-.linha-tag .nome{flex:1;font-size:14px;font-weight:500}
-.linha-tag .n{font-size:12px;opacity:.45}
-.linha-tag button{width:26px;height:26px;border-radius:8px;background:var(--campo);
-  display:grid;place-items:center;transition:background .15s}
-.linha-tag button:hover{background:var(--ativo)}
-.linha-tag button:disabled{opacity:.25;cursor:default;background:var(--campo)}
-.corte{
-  display:flex;align-items:center;gap:10px;margin:12px 0;
-  font-size:11px;text-transform:uppercase;letter-spacing:.09em;
-  opacity:.5;font-weight:600;
-}
-.corte::before,.corte::after{content:"";flex:1;height:1px;background:var(--linha)}
-
-/* estado do salvamento - o unico lugar onde o verde da marca aparece */
-.estado{
-  display:flex;align-items:center;gap:7px;font-size:12.5px;white-space:nowrap;
-  padding:0 4px;
-}
-.estado.ok{color:var(--ok);font-weight:500}
-.estado.aviso{color:var(--aviso);font-weight:500}
-.card.arq{opacity:.5}
-.card.arq:hover{opacity:.8}
-.tira{display:flex;gap:6px;flex-wrap:wrap}
-.pag{position:relative;width:58px;height:58px;padding:0;background:none;cursor:pointer;
-  border:2px solid transparent;border-radius:10px;overflow:hidden}
-.pag img{width:100%;height:100%;object-fit:cover;display:block}
-.pag:hover{border-color:#C9BEEA}
-.pag.capa{border-color:#352270}
-.pag.sel{outline:2px solid #7B5CE6;outline-offset:2px}
-.pag .marca{position:absolute;left:0;right:0;bottom:0;background:#352270;color:#fff;
-  font-size:9px;line-height:15px;letter-spacing:.03em}
-.selo-arq{position:absolute;top:8px;left:8px;background:#352270;color:#fff;
-  font-size:11px;font-weight:500;padding:3px 8px;border-radius:999px;letter-spacing:.02em}
-.estado.erro{color:var(--erro);font-weight:500}
-.girando{width:13px;height:13px;border:2px solid var(--linha);
-  border-top-color:var(--tinta);border-radius:50%;animation:gira .7s linear infinite}
-@keyframes gira{to{transform:rotate(360deg)}}
-.passo{
-  display:flex;gap:11px;align-items:flex-start;padding:11px 0;
-  border-bottom:1px solid var(--linha);font-size:13.5px;line-height:1.55;
-}
-.passo:last-of-type{border-bottom:none}
-/* SO o numero vira circulo. Antes isto era `.passo b`, e cada termo em
-   negrito dentro do texto ("Token name", "Expiration") virava um
-   circulo de 22px com a palavra vazando por cima - ilegivel. */
-.passo .n{
-  flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--ativo);
-  display:grid;place-items:center;font-size:11.5px;font-weight:700;margin-top:1px;
-}
-.passo b{font-weight:600}
-.passo .obs{display:block;margin-top:5px;opacity:.62;font-size:12.5px;line-height:1.5}
-.passo .alerta{
-  display:block;margin-top:6px;padding:8px 11px;border-radius:9px;
-  background:var(--alerta);font-size:12.5px;line-height:1.5;
-}
-.passo code{background:var(--campo);padding:1px 6px;border-radius:5px;font-size:12.5px}
-.aviso{
-  padding:14px 16px; border-radius:14px; background:var(--alerta);
-  font-size:13px; line-height:1.5; margin:16px auto; max-width:900px;
-}
-.vazio{text-align:center;padding:80px 20px;opacity:.5;font-size:14px;line-height:1.6}
-
-/* ---------- COLECOES (17/09/2026) ----------
-   Pedido dela: "um botao que mostre as colecoes | criar colecoes | qual
-   foto adicionar nas colecoes". Tres lugares, a mesma lista:
-     - o botao "Colecoes" da barra de cima abre a lista inteira
-     - a barra de baixo (com fotos selecionadas) poe e tira em lote
-     - o painel de uma foto mostra e muda as colecoes dela
-   A mesma foto pode estar em MAIS DE UMA - e o jeito dos albuns do iOS,
-   e o jeito de um trabalho de Motion tambem aparecer em "Clientes". */
-.linha-col{
-  display:flex; align-items:center; gap:12px; padding:8px 10px 8px 8px;
-  background:var(--campo); border-radius:14px; margin-bottom:6px;
-}
-.linha-col .capa{width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;
-  background:var(--ativo)}
-.linha-col .txt{flex:1;min-width:0}
-.linha-col .nome{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.linha-col .sub{font-size:12px;opacity:.55;margin-top:1px}
-.linha-col .sub.falta{opacity:.8;color:var(--aviso)}
-.linha-col .origem{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
-  opacity:.45;padding:3px 8px;border:1px solid var(--linha);border-radius:999px;white-space:nowrap}
-.linha-col .apagar{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
-  transition:background .15s}
-.linha-col .apagar:hover{background:#FFE3E0;color:var(--erro)}
-/* as setas de ordem - a mesma linguagem do "Tags e ordem" */
-.linha-col .mover{display:flex;flex-direction:column;gap:2px;flex-shrink:0}
-.linha-col .mover button{width:26px;height:20px;border-radius:7px;display:grid;place-items:center;
-  background:var(--painel);transition:background .15s}
-.linha-col .mover button:hover{background:var(--ativo)}
-.linha-col .mover button:disabled{opacity:.25;cursor:default;background:var(--painel)}
-.linha-col .pos{width:18px;text-align:center;font-size:12px;font-weight:600;opacity:.4;
-  flex-shrink:0;font-variant-numeric:tabular-nums}
-/* a janela das colecoes e mais larga que as outras: cada linha agora
-   carrega capa, nome, "pasta", Ver, as setas e a lixeira - em 440px o
-   nome cortava ("Photogr…") */
-#modalColecoes .caixa{width:min(540px,100%)}
-.linha-col{gap:10px}
-.titulo-ocultas{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
-  opacity:.55;margin:18px 2px 8px}
-.linha-col.oculta{opacity:.75}
-.linha-col.oculta .nome{text-decoration:line-through;text-decoration-thickness:1px}
-.criar-col{display:flex;gap:8px;margin-top:14px}
-.criar-col input{flex:1;min-width:0;height:38px;background:var(--campo);border:1px solid transparent;
-  border-radius:999px;padding:0 16px;font-size:14px;outline:none;transition:border-color .18s}
-.criar-col input:focus{border-color:var(--tinta)}
-/* o botao da barra de baixo e a lista que abre em cima dela */
-.pop-col{
-  position:fixed; z-index:65; left:50%; bottom:92px; transform:translate(-50%,8px);
-  width:min(340px,calc(100vw - 32px)); max-height:min(420px,60vh); overflow-y:auto;
-  padding:10px; border-radius:var(--r-g); background:var(--painel);
-  box-shadow:0 24px 60px -24px var(--sombra-forte), 0 0 0 1px var(--linha);
-  opacity:0; pointer-events:none; transition:opacity .2s, transform .28s var(--mola);
-}
-.pop-col.on{opacity:1; pointer-events:auto; transform:translate(-50%,0)}
-.pop-col .titulo{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
-  opacity:.55;padding:4px 6px 8px}
-.opcao-col{display:flex;align-items:center;gap:10px;width:100%;padding:8px;border-radius:12px;
-  text-align:left;font-size:14px;transition:background .15s}
-.opcao-col:hover{background:var(--campo)}
-.opcao-col img,.opcao-col .sem-capa{width:32px;height:32px;border-radius:8px;object-fit:cover;
-  flex-shrink:0;background:var(--ativo)}
-.opcao-col .nome{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* a marca de tres estados: todas as selecionadas estao nela / algumas / nenhuma */
-.marca3{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
-  border:1.5px solid var(--linha);color:transparent;transition:all .18s var(--mola)}
-.marca3.todas{background:var(--tinta);border-color:var(--tinta);color:var(--sobre)}
-.marca3.algumas{background:var(--ativo);border-color:var(--tinta);color:var(--tinta)}
-.pop-col .criar-col{margin-top:8px;padding:6px 2px 2px;border-top:1px solid var(--linha)}
-.chip .fechar{opacity:.6;margin-left:2px;font-size:15px;line-height:1}
-svg{display:block}
 </style>
 
 <script>
@@ -448,146 +434,223 @@ svg{display:block}
 </head>
 <body>
 
-<header class="topo vidro">
-  <div class="marca">Mix<small>organizador</small></div>
+<div class="app">
+  <!-- ---------- MENU LATERAL ---------- -->
+  <aside class="lado">
+    <div class="marca">
+      <span class="bolha" aria-hidden="true">M</span>
+      <div style="min-width:0">
+        <div class="nome">Mix</div>
+        <div class="repo" id="repoNome">organizador</div>
+      </div>
+      <button class="tema" id="btTema" title="Claro / escuro" aria-label="Trocar entre claro e escuro">
+        <svg id="icTema" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+      </button>
+    </div>
 
-  <label class="fonte">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="opacity:.4">
-      <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/>
-      <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.5-1.5"/>
-    </svg>
-    <input id="url" placeholder="link do images.json">
-  </label>
+    <button class="item on" data-vista="todas">
+      <span class="rotulo">Todas as fotos</span><span class="qtd" id="qtdTodas">0</span>
+    </button>
+    <button class="item" data-vista="semtag">
+      <span class="rotulo">Sem tag</span><span class="qtd" id="qtdSemTag">0</span>
+    </button>
+    <button class="item" data-vista="arquivadas">
+      <span class="rotulo">Arquivadas</span><span class="qtd" id="qtdArq">0</span>
+    </button>
 
-  <button class="btn icone" id="btRecarregar" title="Recarregar">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-      <path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/>
-    </svg>
-  </button>
+    <button class="secao-bt" id="btDobraCol" aria-expanded="false" aria-controls="dobraCol">
+      <span class="seta" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+      <span class="rotulo">Coleções</span><span class="qtd" id="qtdCol"></span>
+    </button>
+    <div class="dobra" id="dobraCol" hidden>
+      <div id="listaCol"></div>
+      <button class="novo-bt" id="btNovaCol"><span class="mais" aria-hidden="true">+</span> Nova coleção</button>
+      <div class="novo-campo" id="campoCol" hidden>
+        <input id="novaCol" placeholder="Nome da coleção" maxlength="60" autocomplete="off" aria-label="Nome da coleção nova">
+        <div class="dica">Enter cria · Esc desiste</div>
+      </div>
+      <div id="excluidas"></div>
+    </div>
 
-  <button class="btn icone" id="btTema" title="Claro / escuro">
-    <svg id="icTema" width="16" height="16" viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" stroke-width="2" stroke-linecap="round"></svg>
-  </button>
+    <button class="secao-bt" id="btDobraTag" aria-expanded="false" aria-controls="dobraTag">
+      <span class="seta" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+      <span class="rotulo">Tags</span><span class="qtd" id="qtdTag"></span>
+    </button>
+    <div class="dobra" id="dobraTag" hidden>
+      <div id="listaTag"></div>
+      <button class="novo-bt" id="btNovaTag"><span class="mais" aria-hidden="true">+</span> Nova tag</button>
+      <div class="novo-campo" id="campoTag" hidden>
+        <input id="novaTag" placeholder="Nome da tag" maxlength="30" autocomplete="off" aria-label="Nome da tag nova">
+        <div class="dica">Enter cria · Esc desiste</div>
+      </div>
+    </div>
 
-  <span class="contador" id="contador"></span>
-  <span class="estado" id="estado"></span>
-  <button class="btn" id="btTags">Tags e ordem</button>
-  <button class="btn" id="btColecoes">Coleções</button>
-  <button class="btn" id="btExportar" title="Baixar o arquivo em vez de salvar">Baixar</button>
-  <button class="btn forte" id="btSalvar">Salvar no GitHub</button>
-</header>
+    <div class="rodape">
+      <button class="config-bt" id="btConfig">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>
+        Configurações
+      </button>
+      <button class="salvar" id="btSalvar">Salvar no GitHub</button>
+      <div class="estado" id="estado"></div>
+    </div>
+  </aside>
 
-<div class="filtros" id="filtros"></div>
-<div id="aviso"></div>
-<main class="grade" id="grade"></main>
+  <!-- ---------- O MIOLO ---------- -->
+  <main>
+    <div class="topo">
+      <div class="titulo-linha">
+        <h1 id="tituloVista">Todas as fotos</h1>
+        <span class="conta" id="conta"></span>
+      </div>
+      <div class="ferramentas">
+        <div class="alternador" id="alternador" role="group" aria-label="O que mostrar"></div>
+        <label class="busca">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+               stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.2-3.2"/></svg>
+          <input id="busca" type="search" placeholder="Buscar por título, frase ou tag" aria-label="Buscar">
+        </label>
+        <div class="chips" id="chips"></div>
+        <div class="grupo-acao">
+          <button class="acao" id="btSelecionar" aria-pressed="false" title="Selecionar fotos" aria-label="Selecionar fotos">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </button>
+          <span class="grupo-acao" id="acoesSel" hidden>
+            <span class="contador" id="contaSel">0</span>
+            <button class="acao forte" id="btCriarColSel" title="Criar coleção com as fotos marcadas"
+                    aria-label="Criar coleção com as fotos marcadas">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <path d="M12 11v5M9.5 13.5h5"/></svg>
+            </button>
+            <button class="acao" id="btColAcao" title="Pôr nas coleções que já existem"
+                    aria-label="Pôr nas coleções que já existem">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            </button>
+            <button class="acao" id="btTagAcao" title="Pôr uma tag nas marcadas" aria-label="Pôr uma tag nas marcadas">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg>
+            </button>
+            <button class="acao" id="btCriarCar" title="Juntar as marcadas num carrossel"
+                    aria-label="Juntar as marcadas num carrossel">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="4" width="13" height="16" rx="2"/>
+              <path d="M4 7v12a2 2 0 0 0 2 2h9"/><path d="M13.5 9.5v5M11 12h5"/></svg>
+            </button>
+            <button class="acao" id="btDesagrupar" title="Desfazer o carrossel das marcadas"
+                    aria-label="Desfazer o carrossel das marcadas">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="4" width="13" height="16" rx="2"/>
+              <path d="M4 7v12a2 2 0 0 0 2 2h9"/><path d="M11 12h5"/></svg>
+            </button>
+            <button class="acao" id="btLimparSel" title="Desmarcar" aria-label="Desmarcar tudo">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                   stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </span>
+        </div>
+        <div class="zoom" role="group" aria-label="Tamanho das fotos">
+          <button id="btMenos" title="Fotos menores" aria-label="Diminuir as fotos">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                 stroke-linecap="round"><path d="M5 12h14"/></svg>
+          </button>
+          <button id="btMais" title="Fotos maiores" aria-label="Aumentar as fotos">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                 stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
 
-<div class="acoes vidro" id="acoes">
-  <span class="quantos" id="quantos">0</span>
-  <button class="btn" id="btLimpar">Limpar</button>
-  <span class="div"></span>
-  <button class="btn" id="btAgrupar">Agrupar como carrossel</button>
-  <button class="btn" id="btDesagrupar">Desagrupar</button>
-  <span class="div"></span>
-  <span style="font-size:12px;opacity:.55;padding-left:2px">marcar como</span>
-  <span id="tagsAcao" style="display:flex;gap:6px;flex-wrap:wrap"></span>
-  <span class="div"></span>
-  <button class="btn" id="btColAcao" aria-haspopup="true" aria-expanded="false">Coleções…</button>
+    <div class="miolo">
+      <div id="aviso"></div>
+      <div class="grade" id="grade"></div>
+    </div>
+  </main>
 </div>
 
 <div class="pop-col" id="popColecoes" role="dialog" aria-label="Pôr nas coleções"></div>
 
-<div class="fundo-painel" id="fundoPainel"></div>
-<aside class="painel" id="painel">
-  <header>
-    <h2>Detalhes</h2>
-    <button class="btn icone" id="btFechar">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-    </button>
-  </header>
-  <div class="corpo" id="corpoPainel"></div>
-</aside>
-
-<div class="modal" id="modalChave">
-  <div class="caixa">
-    <h2>Conectar ao GitHub</h2>
-    <p class="sub">Uma vez só. Depois disso, é um botão e pronto — sem baixar,
-      sem arrastar, sem commit.</p>
-
-    <div class="passo"><span class="n">1</span><div>Abre
-      <a href="https://github.com/settings/personal-access-tokens/new" target="_blank"
-         style="color:var(--tinta);font-weight:600">esta página</a> do GitHub.</div></div>
-
-    <div class="passo"><span class="n">2</span><div>Em <b>Token name</b>,
-      escreve <code>organizador</code>.</div></div>
-
-    <div class="passo"><span class="n">3</span><div>Em <b>Expiration</b>, escolhe
-      <b>1 year</b>.
-      <span class="obs">Serve para fechar a janela: se a chave vazar um dia, ela deixa
-      de valer sozinha. Se preferir <b>No expiration</b>, tudo bem também — dá para
-      apagar a chave a qualquer momento, num clique, e gerar outra.</span></div></div>
-
-    <div class="passo"><span class="n">4</span><div>Em <b>Repository access</b>, marca
-      <b>Only select repositories</b> e escolhe <code>mix</code>.
-      <span class="obs">Assim a chave não alcança mais nada seu.</span></div></div>
-
-    <div class="passo"><span class="n">5</span><div>Em <b>Permissions</b>, clica em
-      <b>+ Add permissions</b>. Abre uma caixa branca com um campo de busca.
-      <span class="alerta"><b>Busca por <code>Contents</code></b> — não por
-      “Repository”. Repository é a <i>categoria</i>, não existe permissão com esse
-      nome, e a busca não acha nada útil.</span>
-      <span class="obs">Marca <b>Contents</b> e põe em <b>Read and write</b>.
-      O <b>Metadata</b> aparece sozinho como obrigatório e não dá para tirar — o
-      contador mostrar <b>2</b> está certo.</span></div></div>
-
-    <div class="passo"><span class="n">6</span><div><b>Generate token</b>, copia o
-      código e cola aqui embaixo.
-      <span class="obs">O GitHub mostra o código <b>uma vez só</b>. Se fechar a página
-      sem copiar, é só gerar outro — não tem problema.</span></div></div>
-
-    <div class="campo" style="margin-top:18px">
-      <label>A chave</label>
-      <input type="password" id="fChave" placeholder="github_pat_..." autocomplete="off">
+<!-- ---------- PERGUNTA CURTA (criar coleção, juntar carrossel) ---------- -->
+<div class="veu" id="veuPergunta" hidden>
+  <div class="caixa pergunta" role="dialog" aria-modal="true" aria-labelledby="pgTitulo">
+    <h2 id="pgTitulo">Título</h2>
+    <p id="pgTexto"></p>
+    <div class="campo" id="pgCampo" hidden>
+      <input id="pgInput" maxlength="60" autocomplete="off" aria-label="Nome">
     </div>
-    <p class="sub" style="margin-bottom:14px">
-      Ela fica guardada só neste navegador, no seu computador. Não vai para lugar nenhum
-      além do próprio GitHub. Quando ela vencer, o botão Salvar avisa em vermelho —
-      é só voltar aqui e colar uma nova.</p>
-    <div style="display:flex;gap:8px">
-      <button class="btn" id="btApagarChave" style="flex:1">Apagar chave</button>
-      <button class="btn forte" id="btGuardarChave" style="flex:2">Guardar e salvar</button>
+    <div class="duo">
+      <button type="button" id="pgNao">Cancelar</button>
+      <button type="button" class="forte" id="pgSim">Confirmar</button>
     </div>
   </div>
 </div>
 
-<div class="modal" id="modalColecoes">
-  <div class="caixa">
-    <h2>Coleções</h2>
-    <p class="sub">Cada coleção vira um card na página Mix, <strong>nesta ordem</strong> — use as
-      setas para mudar. A mesma foto pode estar em mais de uma. Excluir uma coleção
-      <strong>nunca apaga foto</strong>: as fotos continuam no Mix, em All.
-      Vale no site depois de <strong>Salvar</strong>.</p>
-    <div id="listaColecoes"></div>
-    <div class="criar-col">
-      <input id="fNovaCol" placeholder="Nome da coleção nova" autocomplete="off" maxlength="60">
-      <button class="btn forte" id="btCriarCol">Criar</button>
+<!-- ---------- O POP-UP DA FOTO ---------- -->
+<div class="veu" id="veuFoto" hidden>
+  <div class="ficha" role="dialog" aria-modal="true" aria-label="Detalhes da foto">
+    <div class="lado-foto">
+      <div class="palco" id="fPalco"></div>
+      <div class="caminho" id="fCaminho"></div>
+      <div class="tiras" id="fTiras"></div>
     </div>
-    <p class="sub" style="margin:14px 0 0">Para pôr fotos numa coleção: selecione as
-      fotos na grade e use <strong>Coleções…</strong> na barra de baixo.</p>
-    <div style="display:flex;gap:8px;margin-top:18px">
-      <button class="btn" id="btFecharCol" style="flex:1">Fechar</button>
+    <div class="lado-dados">
+      <div class="cabeca">
+        <button class="redondo" id="fAnterior" aria-label="Foto anterior">‹</button>
+        <button class="redondo" id="fProxima" aria-label="Próxima foto">›</button>
+        <span class="tit" id="fTitulo">Foto</span>
+        <button class="redondo" id="fFechar" aria-label="Fechar">×</button>
+      </div>
+      <div class="corpo" id="fCorpo"></div>
+      <div class="pe">
+        <span class="aviso-pe" id="fAviso">vale no site depois de Salvar</span>
+        <button class="btn" id="fArquivar">Arquivar</button>
+        <button class="btn forte" id="fPronto">Pronto</button>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="modal" id="modalTags">
-  <div class="caixa">
-    <h2>Tags e ordem</h2>
-    <p class="sub">As de cima aparecem na barra do site. As de baixo ficam escondidas
-      atrás do <strong>+</strong>. Arraste a linha do corte para decidir quantas ficam à vista.</p>
-    <div id="listaTags"></div>
-    <div style="display:flex;gap:8px;margin-top:18px">
-      <button class="btn" id="btFecharTags" style="flex:1">Fechar</button>
+<!-- ---------- CONFIGURAÇÕES ---------- -->
+<div class="veu" id="veuConfig" hidden>
+  <div class="caixa" role="dialog" aria-modal="true" aria-label="Configurações">
+    <h2>Configurações</h2>
+    <div class="campo">
+      <label for="url">Link do images.json</label>
+      <input id="url" type="text" spellcheck="false">
+      <span class="dica">É daqui que saem o dono do repositório e o ramo.</span>
+    </div>
+    <div class="campo">
+      <label for="fChave">Chave do GitHub</label>
+      <input id="fChave" type="password" placeholder="ghp_… (fica só neste navegador)" autocomplete="off" spellcheck="false">
+      <span class="dica" id="dicaChave">Serve para o botão Salvar escrever no repositório.</span>
+    </div>
+    <div class="duo">
+      <button type="button" id="btApagarChave">Apagar chave</button>
+      <button type="button" class="forte" id="btGuardarChave">Guardar chave</button>
+    </div>
+    <div class="campo">
+      <label>Tags à vista na barra do site</label>
+      <div class="duo">
+        <button type="button" id="btMenosTags">−</button>
+        <button type="button" class="forte" id="qtdVis" style="flex:0 0 64px" disabled>2</button>
+        <button type="button" id="btMaisTags">+</button>
+      </div>
+      <span class="dica">As outras ficam atrás do “+” na página Mix.</span>
+    </div>
+    <div class="duo">
+      <button type="button" id="btExportar">Exportar mix-info.json</button>
+      <button type="button" id="btRecarregar">Recarregar do GitHub</button>
+    </div>
+    <div class="duo">
+      <button type="button" class="forte" id="btFecharConfig">Fechar</button>
     </div>
   </div>
 </div>
@@ -1026,7 +1089,8 @@ async function carregar() {
   }
 }
 
-/* ---------- DESENHAR ---------- */
+
+/* ---------- HELPERS DA GRADE E DO CARROSSEL ---------- */
 function ativa(x) { return !ehArq(x) && !ehSeguidora(x); }
 function contarTag(t) { return itens.filter((x) => ativa(x) && val(x, "tag") === t).length; }
 function semTag() { return itens.filter((x) => ativa(x) && !val(x, "tag")).length; }
@@ -1325,141 +1389,6 @@ function faixaDeAnos(it) {
   return anos[0] === anos[anos.length - 1] ? anos[0] : anos[0] + "–" + anos[anos.length - 1];
 }
 
-function visiveis() {
-  /* Arquivada sai do fluxo normal e so aparece no filtro dela. Sem isto,
-     "arquivar" nao tiraria nada da frente - que e o motivo de existir. */
-  if (filtro === "__arq") return itens.filter(ehArq).concat(arquivadasOrfas());
-  /* seguidora nao e um card: ela e uma PAGINA de outro card. Se
-     aparecesse solta na grade, agrupar nao teria tirado nada da frente. */
-  const todasBase = itens.filter((x) => !ehArq(x) && !ehSeguidora(x));
-  /* a colecao escolhida no botao "Colecoes" filtra por cima da tag */
-  const base = filtroCol ? todasBase.filter((x) => colecoesDe(x).includes(filtroCol)) : todasBase;
-  if (filtro === "__sem") return base.filter((x) => !val(x, "tag"));
-  if (filtro) return base.filter((x) => val(x, "tag") === filtro);
-  return base;
-}
-
-function desenhar() {
-  /* --- filtros --- */
-  const f = [];
-  /* a colecao aberta pelo botao "Colecoes" fica a vista, com o X para
-     sair dela - filtro escondido e grade "faltando foto" sem explicacao */
-  if (filtroCol) {
-    f.push('<button class="chip on" id="btSairCol" title="Mostrar todas as coleções">'
-      + 'Coleção: ' + esc(filtroCol) + ' <span class="fechar" aria-hidden="true">×</span></button>');
-  }
-  f.push('<button class="chip' + (filtro === "" ? " on" : "") + '" data-f="">Todas <span class="n">'
-    + contarAtivas() + '</span></button>');
-  const nSem = semTag();
-  if (nSem) {
-    f.push('<button class="chip alerta' + (filtro === "__sem" ? " on" : "")
-      + '" data-f="__sem">Sem tag <span class="n">' + nSem + '</span></button>');
-  }
-  /* SEMPRE visivel, mesmo com zero. Antes eu so mostrava quando ja
-     havia arquivada - ou seja, a secao so aparecia depois que ela
-     descobrisse sozinha que existia. Secao que se esconde ate ser usada
-     nao e descoberta nunca. */
-  f.push('<button class="chip' + (filtro === "__arq" ? " on" : "")
-    + '" data-f="__arq">Arquivadas <span class="n">' + contarArq() + '</span></button>');
-  /* chip so para tag que tem foto - filtro vazio seria botao morto.
-     A ORDEM vem da lista dela, nao dos dados. */
-  ordemTags.forEach((t) => {
-    if (!contarTag(t)) return;
-    f.push('<button class="chip' + (filtro === t ? " on" : "") + '" data-f="' + esc(t) + '">'
-      + esc(t) + ' <span class="n">' + contarTag(t) + '</span></button>');
-  });
-  f.push('<span class="esp"></span>');
-  f.push('<button class="chip" id="btTudo">Selecionar tudo</button>');
-  $("filtros").innerHTML = f.join("");
-  $("filtros").querySelectorAll("[data-f]").forEach((b) => {
-    b.onclick = () => { filtro = b.dataset.f; desenhar(); };
-  });
-  const bt = $("btTudo");
-  if (bt) bt.onclick = () => { visiveis().forEach((x) => selecao.add(x.caminho)); desenhar(); };
-  const sc = $("btSairCol");
-  if (sc) sc.onclick = () => { filtroCol = ""; desenhar(); };
-
-  /* --- aviso do "sem tag": o que falta e mais util que o que ja esta feito --- */
-  const avisoArmazena = armazenaOk ? "" :
-    '<div class="aviso" style="background:#FFE3E0"><strong>Este navegador não está guardando suas edições.</strong> '
-    + 'Salve no GitHub antes de fechar a aba, senão o trabalho se perde.</div>';
-  $("aviso").innerHTML = avisoArmazena + (nSem
-    ? '<div class="aviso"><strong>' + nSem + '</strong> ' + (nSem === 1 ? "foto ainda não tem" : "fotos ainda não têm")
-      + ' tag. Elas aparecem no site, mas só no filtro “All”.</div>'
-    : "");
-
-  /* --- grade --- */
-  const lista = visiveis();
-  if (!lista.length) {
-    $("grade").innerHTML = '<div class="vazio">' + (itens.length
-      ? "Nada aqui com esse filtro." : "Cole o link do images.json aí em cima.") + '</div>';
-  } else {
-    $("grade").innerHTML = lista.map((it) => {
-      const t = val(it, "tag"), nome = val(it, "name"), fr = val(it, "phrase");
-      /* carrossel mostra a FAIXA das fotos, como o site ("2022–2026") */
-      const ano = (grupo(it).length || (it.images && it.images.length > 1))
-        ? (faixaDeAnos(it) || val(it, "year")) : val(it, "year");
-      const capa = it.image || it.video;
-      return '<div class="card' + (selecao.has(it.caminho) ? " sel" : "")
-        + (ehArq(it) ? " arq" : "") + '" data-c="'
-        + esc(it.caminho) + '">'
-        + (it.image
-            ? '<img src="' + esc(it.image) + '" loading="lazy" alt="">'
-            : '<video src="' + esc(it.video) + '" preload="metadata" muted></video>')
-        + (it.video ? '<div class="selo-video"><i><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></i></div>' : "")
-        + (ehArq(it) ? '<span class="selo-arq">arquivada</span>' : "")
-        + (grupo(it).length
-            ? '<span class="selo-arq" style="background:#0B7A4B">'
-              + (grupo(it).length + 1) + ' fotos</span>' : "")
-        + '<span class="tag-card' + (t ? "" : " vazia") + '">' + esc(t || "sem tag") + '</span>'
-        + '<span class="marca-sel"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>'
-        + '<div class="pe"><div class="nome">' + esc(nome || it.caminho.split("/").pop())
-        + (ano ? ' <span style="opacity:.6;font-weight:500">· ' + esc(ano) + '</span>' : "") + '</div>'
-        + (fr ? '<div class="frase">' + esc(fr) + '</div>' : "") + '</div>'
-        + '<button class="lapis" data-editar="' + esc(it.caminho) + '" title="Detalhes">'
-        + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>'
-        + '</div>';
-    }).join("");
-
-    $("grade").querySelectorAll(".card").forEach((el) => {
-      el.onclick = (ev) => {
-        if (ev.target.closest("[data-editar]")) return;
-        const c = el.dataset.c;
-        if (selecao.has(c)) selecao.delete(c); else selecao.add(c);
-        desenhar();
-      };
-      el.ondblclick = () => abrirPainel(el.dataset.c);
-    });
-    $("grade").querySelectorAll("[data-editar]").forEach((b) => {
-      b.onclick = (ev) => { ev.stopPropagation(); abrirPainel(b.dataset.editar); };
-    });
-  }
-
-  /* --- contador e barra de acao --- */
-  const editados = Object.keys(edicoes).length;
-  $("contador").textContent = itens.length
-    ? itens.length + " fotos" + (editados ? " · " + editados + " editadas" : "") : "";
-  $("btSalvar").textContent = lerToken() ? "Salvar no GitHub" : "Conectar ao GitHub";
-  $("btExportar").disabled = !temTrabalho();
-  $("btSalvar").disabled = !temTrabalho() && !!lerToken();
-  if ($("popColecoes").classList.contains("on")) desenharPopColecoes();
-  if (!selecao.size) fecharPopColecoes();
-  $("quantos").textContent = selecao.size + (selecao.size === 1 ? " foto" : " fotos");
-  $("acoes").classList.toggle("on", selecao.size > 0);
-  $("tagsAcao").innerHTML = ordemTags.map((t) =>
-    '<button class="chip" data-t="' + esc(t) + '">' + esc(t) + '</button>').join("")
-    + '<button class="chip" data-t="">tirar tag</button>'
-    + '<button class="chip" id="btNovaTag">+ nova</button>';
-  $("tagsAcao").querySelectorAll("[data-t]").forEach((b) => {
-    /* data-t vazio e o botao "tirar tag": vira null, o vazio deliberado */
-    b.onclick = () => aplicarTag(b.dataset.t === "" ? null : b.dataset.t);
-  });
-  const nv = $("btNovaTag");
-  if (nv) nv.onclick = () => {
-    const t = (prompt("Nome da tag nova:") || "").trim();
-    if (t) { if (!ordemTags.includes(t)) ordemTags.push(t); aplicarTag(t); }
-  };
-}
 
 /* A ORDEM vem da grade, nao do Set: `selecao` nao guarda ordem, e a
    ordem aqui vira a ordem das fotos no carrossel. A primeira da grade
@@ -1513,87 +1442,7 @@ function aplicarTag(t) {
   selecao.clear(); salvar(); desenhar();
 }
 
-/* ---------- COLECOES: a lista inteira (o botao da barra de cima) ---------- */
-const SVG_SOBE = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>';
-const SVG_DESCE = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
-const SVG_LIXO = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>';
-function desenharColecoes() {
-  const lista = todasColecoes();
-  const ocultas = colecoesOcultas();
-  const linhas = lista.map((c, i) =>
-    '<div class="linha-col">'
-    + '<span class="pos">' + (i + 1) + '</span>'
-    + (c.capa ? '<img class="capa" src="' + esc(c.capa) + '" alt="" loading="lazy">'
-              : '<span class="capa" aria-hidden="true"></span>')
-    + '<div class="txt"><div class="nome">' + esc(c.nome) + '</div>'
-    + '<div class="sub' + (c.n ? '' : ' falta') + '">'
-    + (c.n ? c.n + (c.n === 1 ? " foto" : " fotos") : "vazia — não aparece no site") + '</div></div>'
-    + (c.pasta ? '<span class="origem" title="Esta coleção é uma pasta no GitHub">pasta</span>' : '')
-    + (c.n ? '<button class="btn" data-ver="' + esc(c.nome) + '">Ver</button>' : '')
-    + '<div class="mover">'
-    + '<button data-sobe="' + esc(c.nome) + '"' + (i === 0 ? " disabled" : "")
-      + ' title="Subir" aria-label="Subir ' + esc(c.nome) + '">' + SVG_SOBE + '</button>'
-    + '<button data-desce="' + esc(c.nome) + '"' + (i === lista.length - 1 ? " disabled" : "")
-      + ' title="Descer" aria-label="Descer ' + esc(c.nome) + '">' + SVG_DESCE + '</button>'
-    + '</div>'
-    + '<button class="apagar" data-apagar="' + esc(c.nome) + '" title="Excluir a coleção (as fotos continuam no Mix)"'
-      + ' aria-label="Excluir a coleção ' + esc(c.nome) + '">' + SVG_LIXO + '</button>'
-    + '</div>');
-  if (ocultas.length) {
-    linhas.push('<div class="titulo-ocultas">Excluídas do site — as fotos continuam em All</div>');
-    ocultas.forEach((n) => linhas.push(
-      '<div class="linha-col oculta"><span class="capa" aria-hidden="true"></span>'
-      + '<div class="txt"><div class="nome">' + esc(n) + '</div>'
-      + '<div class="sub">pasta no GitHub, fora do site</div></div>'
-      + '<button class="btn" data-restaurar="' + esc(n) + '">Restaurar</button></div>'));
-  }
-  $("listaColecoes").innerHTML = linhas.length ? linhas.join("")
-    : '<div class="vazio" style="padding:24px">Nenhuma coleção ainda.</div>';
-  const L = $("listaColecoes");
-  L.querySelectorAll("[data-ver]").forEach((b) => {
-    b.onclick = () => {
-      filtroCol = b.dataset.ver; filtro = "";
-      $("modalColecoes").classList.remove("on");
-      desenhar();
-    };
-  });
-  L.querySelectorAll("[data-sobe]").forEach((b) => {
-    b.onclick = () => { moverColecao(b.dataset.sobe, -1); desenharColecoes(); desenhar(); };
-  });
-  L.querySelectorAll("[data-desce]").forEach((b) => {
-    b.onclick = () => { moverColecao(b.dataset.desce, 1); desenharColecoes(); desenhar(); };
-  });
-  L.querySelectorAll("[data-restaurar]").forEach((b) => {
-    b.onclick = () => { restaurarColecao(b.dataset.restaurar); desenharColecoes(); desenhar(); };
-  });
-  L.querySelectorAll("[data-apagar]").forEach((b) => {
-    b.onclick = () => {
-      const nome = b.dataset.apagar;
-      const c = todasColecoes().find((x) => x.nome === nome);
-      const fotos = c && c.n ? (c.n === 1 ? "A foto continua" : "As " + c.n + " fotos continuam") : "";
-      const q = c && c.pasta
-        ? "Excluir “" + nome + "” do site?\n\n" + (fotos ? fotos + " no Mix, em All. " : "")
-          + "Nenhuma foto é apagada: a pasta continua no GitHub e dá para restaurar aqui."
-        : "Excluir a coleção “" + nome + "”?\n\n"
-          + (fotos ? fotos + " no Mix (em All e nas outras coleções). " : "")
-          + "Nenhuma foto é apagada.";
-      if (!confirm(q)) return;
-      apagarColecao(nome); desenharColecoes(); desenhar();
-    };
-  });
-}
-function criarDoCampo(campo, depois) {
-  const nome = criarColecao($(campo).value);
-  if (!nome) { $(campo).focus(); return; }
-  $(campo).value = "";
-  if (depois) depois(nome);
-  desenhar();
-}
 
-/* ---------- COLECOES: por e tirar em LOTE (a barra de baixo) ----------
-   Cada linha diz o estado das fotos selecionadas naquela colecao:
-   todas (cheia), algumas (meia) ou nenhuma (vazia). Um clique numa
-   linha "algumas" poe todas - e o gesto dos albuns do iOS. */
 function estadoNaSelecao(nome) {
   const sel = [...selecao].map(acharItem).filter(Boolean);
   const n = sel.filter((x) => colecoesDe(x).includes(nome)).length;
@@ -1651,386 +1500,10 @@ function fecharPopColecoes() {
 }
 
 /* ---------- PAINEL ---------- */
-function abrirPainel(caminho) {
-  const it = acharItem(caminho);
-  if (!it) return;
-  if (atual && atual.caminho !== caminho) paginaSel = null;
-  atual = it;
-  const cols = todasColecoes().map((c) => c.nome);
-  const minhas = colecoesDe(it);
-  const seq = paginas(it);
-  const ehGrupo = seq.length > 1;
 
-  /* A PAGINA EM EDICAO e o texto dela.
-     TRES fontes, da mais forte para a mais fraca: o que ela editou
-     agora, a propria pagina do images.json, e - so quando a pagina
-     ainda e um card solto - o item. Faltava a do meio: depois que o
-     robo roda a seguidora deixa de ser item, e o campo abria em branco
-     mesmo com texto publicado. */
-  if (ehGrupo && (!paginaSel || !seq.some(function (x) { return x.caminho === paginaSel; }))) {
-    paginaSel = seq[0].caminho;
-  }
-  const selPag = itens.find(function (x) { return x.caminho === paginaSel; });
-  const pgSel = seq.find(function (x) { return x.caminho === paginaSel; }) || {};
-  /* So o TEXTO tem idioma; ano, link e o interruptor sao os mesmos nos
-     tres. Tres fontes, da mais forte para a mais fraca: o que ela editou
-     agora, a propria pagina do images.json, e - so quando a pagina ainda
-     e um card solto - o item. */
-  const vSel = function (campo) {
-    if (idioma !== "en" && (campo === "phrase" || campo === "name")) {
-      const e = (edicoes[paginaSel] || {})[idioma] || {};
-      if (e[campo] !== undefined) return e[campo] || "";
-      const pubPg = (pgSel[idioma] && typeof pgSel[idioma] === "object") ? pgSel[idioma] : {};
-      if (pubPg[campo]) return pubPg[campo];
-      const pubIt = (selPag && selPag[idioma] && typeof selPag[idioma] === "object")
-        ? selPag[idioma] : {};
-      return pubIt[campo] || "";
-    }
-    const e = edicoes[paginaSel] || {};
-    if (e[campo] !== undefined) return e[campo] || "";
-    if (pgSel[campo]) return pgSel[campo];
-    return selPag ? (selPag[campo] || "") : "";
-  };
-  /* o ingles da mesma foto: e o que aparece de marcador cinza quando ela
-     esta traduzindo, para ter o original a vista */
-  const vSelEn = function (campo) {
-    const e = edicoes[paginaSel] || {};
-    if (e[campo] !== undefined) return e[campo] || "";
-    if (pgSel[campo]) return pgSel[campo];
-    return selPag ? (selPag[campo] || "") : "";
-  };
-  const iSel = seq.findIndex(function (x) { return x.caminho === paginaSel; });
-
-  /* lista o que JA esta preenchido - e o resumo que aparece na secao
-     fechada. Nomear os campos vazios seria a lista longa; nomear os
-     cheios responde em duas palavras. */
-  const cheios = function (fonte, pares) {
-    const out = [];
-    pares.forEach(function (par) { if (fonte(par[0])) out.push(par[1]); });
-    return out;
-  };
-  /* UM control so para os dois lugares: o do card e o de cada foto.
-     Diz o que ESTA acontecendo, nao o que o clique faz - "Aparece" e o
-     estado, e a linha de baixo conta a consequencia. */
-  const chaveInfo = function (id, ligada, oQue) {
-    return '<div class="campo"><label>Botão de info</label>'
-      + '<button class="chip' + (ligada ? " on" : "") + '" id="' + id + '">'
-      + (ligada ? "Aparece" : "Escondido") + '</button>'
-      + '<div style="font-size:11.5px;opacity:.55;margin-top:7px;line-height:1.5">'
-      + (ligada
-          ? "Desligado, " + oQue + " mostra só a imagem."
-          : "Só a imagem. Nada de cantinho colorido em " + oQue + ".")
-      + '</div></div>';
-  };
-
-  const secao = function (id, nome, resumo, corpo, falta) {
-    return '<details class="secao"' + (abertas.has(id) ? " open" : "")
-      + ' data-s="' + id + '"><summary>'
-      + '<svg class="seta" width="12" height="12" viewBox="0 0 24 24" fill="none"'
-      + ' stroke="currentColor" stroke-width="2.5" stroke-linecap="round"'
-      + ' stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>'
-      + '<span class="nome-secao">' + esc(nome) + '</span>'
-      + '<span class="resumo' + (falta ? " falta" : "") + '">' + esc(resumo) + '</span>'
-      + '</summary><div class="secao-corpo">' + corpo + '</div></details>';
-  };
-
-  /* ---- 1. a info que aparece NO CARD ----
-     Num carrossel ela e do GRUPO e mora em chave propria; numa foto
-     solta ela e da propria foto. Os rotulos falam pelo TAMANHO na tela,
-     nao pelo nome do campo no arquivo: ela descreveu assim, "grande e o
-     titulo, pequeno embaixo e o detalhe". As chaves do JSON continuam
-     `phrase` e `name` para nao quebrar o que ja esta gravado. */
-  const ehTexto = function (c) { return c === "phrase" || c === "name"; };
-  const leCard = function (c) {
-    if (ehGrupo) return ehTexto(c) ? valGrupoLingua(it, c) : valGrupo(it, c);
-    return ehTexto(c) ? valLingua(it, c) : val(it, c);
-  };
-  /* o ingles do mesmo campo, para servir de marcador cinza ao traduzir */
-  const leCardEn = function (c) { return ehGrupo ? valGrupo(it, c) : val(it, c); };
-  const idCard = ehGrupo
-    ? { f: "fGrpFrase", n: "fGrpNome", a: "fGrpAno", l: "fGrpLink" }
-    : { f: "fFrase", n: "fNome", a: "fAno", l: "fLink" };
-  const preenchidos = cheios(leCard, [
-    ["phrase", "título"], ["name", "detalhe"], ["year", "ano"], ["link", "link"],
-  ]);
-  const infoCardLigada = !desligada(ehGrupo ? valGrupo(it, "noInfo") : val(it, "noInfo"));
-  const corpoTextos =
-    (ehGrupo
-      ? '<div style="font-size:12px;opacity:.55;margin:-2px 0 12px;line-height:1.5">'
-        + 'É o que aparece no card da grade, junto da tag e do ícone de carrossel. '
-        + 'Vazio usa o texto da capa.</div>'
-      : "")
-    + '<div class="campo"><label>Título — o texto GRANDE</label><textarea id="' + idCard.f + '" placeholder="' + esc(idioma !== "en" ? (leCardEn("phrase") || "o texto em inglês") : (ehGrupo ? (val(it, "phrase") || "o texto do grupo") : "aparece ao clicar no cantinho colorido")) + '">' + esc(leCard("phrase")) + '</textarea></div>'
-    + '<div class="campo"><label>Detalhe — o pequeno embaixo</label><input id="' + idCard.n + '" value="' + esc(leCard("name")) + '" placeholder="' + esc(idioma !== "en" ? (leCardEn("name") || "o detalhe em inglês") : (ehGrupo ? (val(it, "name") || "o detalhe do grupo") : it.caminho.split("/").pop())) + '"></div>'
-    + '<div class="dupla">'
-      + '<div class="campo"><label>Ano</label><input id="' + idCard.a + '" value="' + esc(leCard("year")) + '" placeholder="' + esc(ehGrupo ? (val(it, "year") || "2024") : "2024") + '"></div>'
-      + '<div class="campo"><label>Link</label><input id="' + idCard.l + '" value="' + esc(leCard("link")) + '" placeholder="' + esc(ehGrupo ? (val(it, "link") || "https://…") : "https://instagram.com/p/…") + '"></div>'
-    + '</div>'
-    /* A FAIXA que o site vai mostrar no card do carrossel (17/09/2026):
-       sai do ano de cada foto, entao ela ve aqui antes de salvar */
-    + (ehGrupo && faixaDeAnos(it) ? '<div style="font-size:11.5px;opacity:.6;margin:-6px 0 14px;line-height:1.5">'
-        + 'No site o card mostra <strong>' + esc(faixaDeAnos(it)) + '</strong> — da foto mais antiga à mais nova. '
-        + 'A busca acha o carrossel por qualquer um desses anos.</div>' : "")
-    + chaveInfo("fInfoCard", infoCardLigada, "o card");
-
-  /* ---- 2. classificacao ---- */
-  const corpoClass =
-    '<div class="campo"><label>Tag</label><div style="display:flex;gap:6px;flex-wrap:wrap" id="fTags">'
-      + ordemTags.map(function (t) { return '<button class="chip' + (val(it, "tag") === t ? " on" : "") + '" data-t="' + esc(t) + '">' + esc(t) + '</button>'; }).join("")
-      + '<button class="chip' + (!val(it, "tag") ? " on" : "") + '" data-t="">nenhuma</button></div></div>'
-    /* COLECOES: mais de uma ao mesmo tempo (17/09/2026). Antes era uma
-       so, e o robo ignorava a escolha - o botao existia e nao fazia nada
-       no site. */
-    + '<div class="campo"><label>Coleções — pode ser mais de uma</label><div style="display:flex;gap:6px;flex-wrap:wrap" id="fCols">'
-      + cols.map(function (c) { return '<button class="chip' + (minhas.includes(c) ? " on" : "") + '" data-c="' + esc(c) + '" aria-pressed="' + minhas.includes(c) + '">' + esc(c) + '</button>'; }).join("")
-      + '<button class="chip" id="btNovaColPainel">+ nova</button>'
-      + '</div>'
-      + (minhas.length ? "" : '<div style="font-size:11.5px;opacity:.55;margin-top:7px;line-height:1.5">Em nenhuma coleção: aparece só no All.</div>')
-      + '</div>';
-
-  /* ---- 3. carrossel ----
-     A TIRA e a caixa da foto selecionada. Sem a tira, agrupar era um ato
-     cego: as seguidoras somem da grade e nao havia onde ver o que entrou
-     no card. Sem a caixa, os campos ficavam soltos embaixo da tira e nada
-     dizia de qual foto eles eram. */
-  let corpoCarrossel = "";
-  let resumoCarrossel = "";
-  if (ehGrupo) {
-    const comTexto = seq.filter(function (pg) {
-      const e = edicoes[pg.caminho] || {};
-      return !!(e.phrase || e.name || pg.phrase || pg.name);
-    }).length;
-    resumoCarrossel = seq.length + " fotos · " + comTexto + " com texto";
-    const tira = '<div class="tira" id="fTira">'
-      + seq.map(function (pg, k) {
-          return '<button class="pag' + (k === 0 ? " capa" : "")
-            + (pg.caminho === paginaSel ? " sel" : "") + '" data-p="'
-            + esc(pg.caminho) + '" title="' + esc(pg.caminho) + '">'
-            + '<img src="' + esc(pg.url) + '" alt="" loading="lazy">'
-            + (k === 0 ? '<span class="marca">capa</span>' : "") + '</button>';
-        }).join("")
-      + '</div>';
-    /* A CAPA E UMA FOTO COMO AS OUTRAS e tem os campos dela. O texto da
-       capa aparece na 1a pagina do carrossel; o do card vem da secao de
-       cima. Eram a mesma coisa ate agora, e por isso nao havia como
-       dizer uma coisa no card e outra na primeira foto. */
-    const caixa = '<div class="caixa-pag"><div class="cabeca">'
-      + '<strong>Foto ' + (iSel + 1) + ' de ' + seq.length + (iSel === 0 ? " · capa" : "") + '</strong>'
-      + '<span>' + (iSel === 0 ? "aparece na 1ª página" : "aparece nesta página") + '</span></div>'
-      + '<div class="campo"><label>Título — o texto GRANDE</label>'
-      + '<textarea id="fPagFrase" placeholder="' + esc(idioma !== "en" ? (vSelEn("phrase") || "o texto em inglês") : "o texto GRANDE desta foto") + '">' + esc(vSel("phrase")) + '</textarea></div>'
-      + '<div class="campo"><label>Detalhe — o pequeno embaixo</label>'
-      + '<input id="fPagNome" value="' + esc(vSel("name")) + '" placeholder="' + esc(idioma !== "en" ? (vSelEn("name") || "o detalhe em inglês") : "o pequeno embaixo") + '"></div>'
-      + '<div class="dupla">'
-        + '<div class="campo"><label>Ano</label><input id="fPagAno" value="' + esc(vSel("year")) + '" placeholder="' + esc(valGrupo(it, "year") || val(it, "year") || "2024") + '"></div>'
-        + '<div class="campo"><label>Link</label><input id="fPagLink" value="' + esc(vSel("link")) + '" placeholder="' + esc(valGrupo(it, "link") || val(it, "link") || "https://…") + '"></div>'
-      + '</div>'
-      + chaveInfo("fInfoPag", !desligada(vSel("noInfo")), "esta foto")
-      + (iSel > 0
-          ? '<div class="campo"><button class="btn" id="btCapa" style="width:100%">Usar esta foto como capa</button></div>'
-          : '')
-      + '</div>';
-    corpoCarrossel = '<div style="font-size:12px;opacity:.55;margin-bottom:2px">'
-      + 'Clique numa foto para editar o texto dela.</div>' + tira + caixa;
-  }
-
-  $("corpoPainel").innerHTML =
-    (it.image ? '<img class="previa" src="' + esc(it.image) + '" alt="">'
-              : '<video class="previa" src="' + esc(it.video) + '" controls preload="metadata"></video>')
-    + '<div class="caminho">' + esc(it.caminho) + '</div>'
-    /* A CHAVE DE IDIOMA vale para o painel inteiro: os textos do card e
-       os de cada foto do carrossel seguem ela. Fica aqui em cima, antes
-       de tudo, porque decide o que os campos de baixo QUEREM DIZER - se
-       aparecesse dentro de uma secao, ela poderia editar portugues
-       achando que era ingles. */
-    + '<div class="idiomas" id="fIdiomas">'
-      + IDIOMAS.map(function (lg) {
-          return '<button class="chip' + (idioma === lg[0] ? " on" : "")
-            + '" data-lg="' + lg[0] + '">' + lg[1] + '</button>';
-        }).join("")
-      + '<span class="nota">'
-      + (idioma === "en" ? "o padrão do site" : "vazio usa o inglês")
-      + '</span></div>'
-    + secao("textos", ehGrupo ? "Info do grupo" : "Textos",
-            !infoCardLigada ? "escondida"
-              : (preenchidos.length ? preenchidos.join(" · ") : "vazio"),
-            corpoTextos, !infoCardLigada || !preenchidos.length)
-    + secao("classe", "Classificação",
-            (val(it, "tag") || "sem tag") + (minhas.length ? " · " + minhas.join(", ") : ""),
-            corpoClass, !val(it, "tag"))
-    + (ehGrupo ? secao("carrossel", "Carrossel", resumoCarrossel, corpoCarrossel, false) : "")
-    + (ehSeguidora(it) && !ehArq(it)
-        ? '<div class="campo" style="margin-top:16px"><label>Esta foto é uma página de outro card</label>'
-          + '<div style="font-size:12px;opacity:.6">Para tirar do site, arquive o card'
-          + ' que a contém, ou desagrupe antes.</div></div>'
-        : '<div class="campo" style="margin-top:16px"><button class="btn" id="btArq" style="width:100%">'
-          + (ehArq(it) ? "Desarquivar" : "Arquivar") + '</button></div>')
-    + '<div class="nav"><button class="btn" id="btAnt">← anterior</button><button class="btn" id="btProx">próxima →</button></div>';
-
-  /* A SECAO ABERTA SOBREVIVE AO REDESENHO. O painel se reconstroi
-     inteiro a cada clique numa foto do carrossel; sem guardar isto,
-     tudo se fechava e ela reabria a mesma secao a cada foto. */
-  $("corpoPainel").querySelectorAll("details.secao").forEach(function (d) {
-    d.addEventListener("toggle", function () {
-      if (d.open) abertas.add(d.dataset.s); else abertas.delete(d.dataset.s);
-    });
-  });
-
-  /* Os campos da secao de cima gravam em lugares diferentes conforme o
-     que esta aberto: num carrossel, na info do GRUPO; numa foto solta,
-     na propria foto. So um dos dois conjuntos existe na tela, entao os
-     dois `liga` saem sem alvo quando nao e a vez deles. */
-  const liga = (id, campo) => {
-    const el = $(id);
-    if (!el) return;
-    el.oninput = () => { editar(it.caminho, campo, el.value.trim()); };
-    el.onchange = () => desenhar();
-  };
-  /* TEXTO vai pelo idioma da vez; ano e link sao os mesmos nos tres. */
-  const ligaTexto = (id, campo, dono) => {
-    const el = $(id);
-    if (!el) return;
-    el.oninput = () => { dono(it.caminho, campo, el.value.trim()); };
-    el.onchange = () => desenhar();
-  };
-  ligaTexto("fNome", "name", editarLingua);
-  ligaTexto("fFrase", "phrase", editarLingua);
-  liga("fLink", "link"); liga("fAno", "year");
-  const ligaGrupo = (id, campo) => {
-    const el = $(id);
-    if (!el) return;
-    el.oninput = () => { editarGrupo(it.caminho, campo, el.value.trim()); };
-    el.onchange = () => desenhar();
-  };
-  ligaTexto("fGrpNome", "name", editarGrupoLingua);
-  ligaTexto("fGrpFrase", "phrase", editarGrupoLingua);
-  ligaGrupo("fGrpLink", "link"); ligaGrupo("fGrpAno", "year");
-  $("fIdiomas").querySelectorAll("[data-lg]").forEach((b) => {
-    b.onclick = () => { idioma = b.dataset.lg; abrirPainel(caminho); };
-  });
-  if ($("fInfoCard")) $("fInfoCard").onclick = () => {
-    const marca = marcaInfo(!infoCardLigada);
-    if (ehGrupo) editarGrupo(it.caminho, "noInfo", marca);
-    else editar(it.caminho, "noInfo", marca);
-    abrirPainel(caminho); desenhar();
-  };
-  /* Desarquivar grava FALSE, e nao apaga a chave. Apagar faria o valor
-     cair de volta no que veio do images.json - que e justamente `true` -
-     e a foto voltaria a ficar arquivada sozinha. `val` devolve "" para
-     false, entao `ehArq` le como nao-arquivada, e o gerador so escreve
-     a chave quando ela e verdadeira. */
-  if ($("fTira")) {
-    $("fTira").querySelectorAll("[data-p]").forEach((b) => {
-      b.onclick = () => { paginaSel = b.dataset.p; abrirPainel(caminho); };
-    });
-    /* Os campos gravam na entrada da PAGINA, nao na do card. Cada foto
-       ja tinha entrada propria no mix-info.json (e onde mora o
-       `carrosselDe`), entao o lugar existia - faltava abrir. */
-    const ligaPag = (id, campo) => {
-      const el = $(id);
-      if (!el) return;
-      el.oninput = () => { editar(paginaSel, campo, el.value.trim()); };
-    };
-    const ligaPagTexto = (id, campo) => {
-      const el = $(id);
-      if (!el) return;
-      el.oninput = () => { editarLingua(paginaSel, campo, el.value.trim()); };
-    };
-    ligaPagTexto("fPagFrase", "phrase");
-    ligaPagTexto("fPagNome", "name");
-    /* ANO E LINK DA FOTO tambem. Sem eles a pagina do meio nao tinha
-       onde dizer que e de outro ano ou que vai para outro lugar - e o
-       generico do grupo era a unica resposta possivel. Vazio herda o do
-       grupo, que e o que o marcador cinza do campo mostra. */
-    ligaPag("fPagAno", "year");
-    ligaPag("fPagLink", "link");
-    if ($("fInfoPag")) $("fInfoPag").onclick = () => {
-      editar(paginaSel, "noInfo", marcaInfo(desligada(vSel("noInfo"))));
-      abrirPainel(caminho); desenhar();
-    };
-    if ($("btCapa")) {
-      $("btCapa").onclick = () => definirCapa(it.caminho, paginaSel);
-    }
-  }
-  if ($("btArq")) $("btArq").onclick = () => {
-    editar(it.caminho, "archived", ehArq(it) ? false : true);
-    abrirPainel(caminho); desenhar();
-  };
-  $("fTags").querySelectorAll("[data-t]").forEach((b) => {
-    b.onclick = () => {
-      editar(it.caminho, "tag", b.dataset.t === "" ? null : b.dataset.t);
-      abrirPainel(caminho); desenhar();
-    };
-  });
-  $("fCols").querySelectorAll("[data-c]").forEach((b) => {
-    b.onclick = () => {
-      const c = b.dataset.c;
-      definirColecoes(it.caminho, minhas.includes(c) ? minhas.filter((x) => x !== c) : minhas.concat([c]));
-      abrirPainel(caminho); desenhar();
-    };
-  });
-  $("btNovaColPainel").onclick = () => {
-    const nome = criarColecao(prompt("Nome da coleção nova:") || "");
-    if (!nome) return;
-    const agora = colecoesDe(it);
-    if (!agora.includes(nome)) definirColecoes(it.caminho, agora.concat([nome]));
-    abrirPainel(caminho); desenhar();
-  };
-  const lista = visiveis();
-  const idx = lista.findIndex((x) => x.caminho === caminho);
-  $("btAnt").disabled = idx <= 0;
-  $("btProx").disabled = idx < 0 || idx >= lista.length - 1;
-  $("btAnt").onclick = () => abrirPainel(lista[idx - 1].caminho);
-  $("btProx").onclick = () => abrirPainel(lista[idx + 1].caminho);
-
-  $("painel").classList.add("on");
-  $("fundoPainel").classList.add("on");
-}
-function fecharPainel() {
-  $("painel").classList.remove("on");
-  $("fundoPainel").classList.remove("on");
-  atual = null; desenhar();
-}
-
-/* ---------- TAGS E ORDEM ---------- */
-function desenharTags() {
-  const l = [];
-  ordemTags.forEach((t, i) => {
-    if (i === tagsVisiveis) l.push('<div class="corte">escondidas atrás do +</div>');
-    l.push('<div class="linha-tag"><span class="nome">' + esc(t) + '</span>'
-      + '<span class="n">' + contarTag(t) + '</span>'
-      + '<button data-sobe="' + i + '"' + (i === 0 ? " disabled" : "") + '>'
-      + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg></button>'
-      + '<button data-desce="' + i + '"' + (i === ordemTags.length - 1 ? " disabled" : "") + '>'
-      + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div>');
-  });
-  if (tagsVisiveis >= ordemTags.length) l.push('<div class="corte">nenhuma escondida</div>');
-  l.push('<div style="display:flex;align-items:center;gap:10px;margin-top:16px;font-size:13px">'
-    + '<span style="opacity:.6">à vista na barra:</span>'
-    + '<button class="chip" id="menos">−</button><strong id="qtdVis">' + tagsVisiveis + '</strong>'
-    + '<button class="chip" id="mais">+</button></div>');
-  $("listaTags").innerHTML = l.join("");
-  $("listaTags").querySelectorAll("[data-sobe]").forEach((b) => {
-    b.onclick = () => { const i = +b.dataset.sobe;
-      [ordemTags[i - 1], ordemTags[i]] = [ordemTags[i], ordemTags[i - 1]];
-      salvar(); desenharTags(); desenhar(); };
-  });
-  $("listaTags").querySelectorAll("[data-desce]").forEach((b) => {
-    b.onclick = () => { const i = +b.dataset.desce;
-      [ordemTags[i + 1], ordemTags[i]] = [ordemTags[i], ordemTags[i + 1]];
-      salvar(); desenharTags(); desenhar(); };
-  });
-  $("menos").onclick = () => { tagsVisiveis = Math.max(0, tagsVisiveis - 1); salvar(); desenharTags(); };
-  $("mais").onclick = () => { tagsVisiveis = Math.min(ordemTags.length, tagsVisiveis + 1); salvar(); desenharTags(); };
-}
-
-/* ---------- SALVAR DIRETO NO GITHUB ----------
-   Um botao no lugar de: exportar, achar o arquivo baixado, arrastar
-   para a pasta, commit, push. O robo do repositorio faz o resto
-   sozinho, como ja fazia com as fotos. */
 async function salvarNoGitHub() {
   const token = lerToken();
-  if (!token) { $("modalChave").classList.add("on"); return; }
+  if (!token) { abrirConfig(true); return; }
   const alvo = donoDoRepo();
   if (!alvo) {
     mostrarEstado("O link lá em cima não parece do jsDelivr", "erro");
@@ -2141,9 +1614,763 @@ const LUA = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
 /* O padrao segue o SISTEMA; a escolha dela so passa a mandar depois que
    ela clica. Assim um clique de teste nao apaga o tema do computador
    para sempre. */
+
+/* =============================================================
+   A TELA  (19/09/2026)
+   -------------------------------------------------------------
+   Layout novo, aprovado por ela na proposta (ver
+   `mix-github/proposta/`): menu lateral com coleções e tags, busca e
+   filtros no alto, grade no meio, pop-up da foto por cima.
+
+   A CAMADA DE DADOS ACIMA NÃO MUDOU. Ler o images.json, juntar com o
+   mix-info.json do GitHub, gravar edições, montar carrossel, arquivar e
+   salvar continuam exatamente como estavam - só a tela é nova. Por isso
+   esta parte só desenha e chama o que já existia.
+
+   O QUE O CÓDIGO DE CIMA ESPERA DAQUI: `desenhar()`, `abrirPainel()` e
+   `fecharPainel()` (o `definirCapa` chama os dois últimos), e os ids
+   `estado`, `grade`, `url`, `popColecoes`, `btSalvar` e `btExportar`.
+   ============================================================= */
+
+/* ---------- estado só da tela ---------- */
+let mostrar = "fotos";      /* fotos | colecoes | carrosseis */
+let busca = "";
+let zoom = 2;
+const ZOOMS = [126, 158, 196, 250, 320];
+let modoSel = false;
+let menuAberto = null;
+
+const SVG_ENGRENAGEM = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>';
+const SVG_PEGA = '<svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor" aria-hidden="true"><circle cx="2" cy="2" r="1.3"/><circle cx="8" cy="2" r="1.3"/><circle cx="2" cy="7" r="1.3"/><circle cx="8" cy="7" r="1.3"/><circle cx="2" cy="12" r="1.3"/><circle cx="8" cy="12" r="1.3"/></svg>';
+const SVG_CHECK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+
+/* ---------- uma pergunta curta, com ou sem campo ----------
+   Devolve o texto (ou true), ou null se ela desistir. Substitui o
+   `prompt`/`confirm` do navegador, que não dá para explicar nem estilizar. */
+function perguntar(titulo, texto, campo) {
+  return new Promise((ok) => {
+    $("pgTitulo").textContent = titulo;
+    $("pgTexto").textContent = texto || "";
+    $("pgCampo").hidden = !campo;
+    $("pgInput").value = "";
+    if (campo) $("pgInput").placeholder = campo.dica || "";
+    $("pgSim").textContent = campo ? "Criar" : "Sim";
+    $("veuPergunta").hidden = false;
+    if (campo) setTimeout(() => $("pgInput").focus(), 30);
+    const fim = (v) => {
+      $("veuPergunta").hidden = true;
+      $("pgSim").onclick = $("pgNao").onclick = $("pgInput").onkeydown = null;
+      ok(v);
+    };
+    $("pgSim").onclick = () => fim(campo ? ($("pgInput").value.trim() || null) : true);
+    $("pgNao").onclick = () => fim(null);
+    $("veuPergunta").onclick = (e) => { if (e.target === $("veuPergunta")) fim(null); };
+    $("pgInput").onkeydown = (e) => {
+      if (e.key === "Enter") fim($("pgInput").value.trim() || null);
+      if (e.key === "Escape") fim(null);
+    };
+  });
+}
+
+/* o campo "coleção nova" do pop-up de lote - o F-popcol chama isto */
+function criarDoCampo(campo, depois) {
+  const nome = criarColecao($(campo).value);
+  if (!nome) { $(campo).focus(); return; }
+  $(campo).value = "";
+  if (depois) depois(nome);
+  desenhar();
+}
+
+/* ---------- MENUS (engrenagem e botão direito) ---------- */
+function posicao(alvo) {
+  if (alvo && typeof alvo.clientX === "number") return { x: alvo.clientX, y: alvo.clientY };
+  const r = alvo.getBoundingClientRect();
+  return { x: r.left, y: r.bottom + 6 };
+}
+function fecharMenu() { if (menuAberto) { menuAberto.remove(); menuAberto = null; } }
+function abrirMenu(alvo, itens) {
+  fecharMenu();
+  const p = posicao(alvo);
+  const m = document.createElement("div");
+  m.className = "menu";
+  m.innerHTML = itens.map((i) => i === "-" ? '<div class="risco"></div>'
+    : '<button' + (i.perigo ? ' class="perigo"' : "") + ' data-i="' + i.id + '">' + esc(i.rotulo) + '</button>').join("");
+  document.body.appendChild(m);
+  m.style.left = Math.max(8, Math.min(p.x, innerWidth - m.offsetWidth - 8)) + "px";
+  m.style.top = Math.max(8, Math.min(p.y, innerHeight - m.offsetHeight - 8)) + "px";
+  menuAberto = m;
+  m.querySelectorAll("[data-i]").forEach((b) => {
+    b.onclick = (e) => {
+      e.stopPropagation();
+      const acao = itens.find((i) => i !== "-" && i.id === b.dataset.i);
+      fecharMenu();
+      if (acao && acao.faz) acao.faz();
+    };
+  });
+}
+addEventListener("click", fecharMenu);
+addEventListener("scroll", fecharMenu, true);
+
+function menuDaColecao(nome, alvo) {
+  const c = todasColecoes().find((x) => x.nome === nome) || { n: 0, pasta: false };
+  abrirMenu(alvo, [
+    { id: "sobe", rotulo: "Subir", faz: () => { moverColecao(nome, -1); desenhar(); } },
+    { id: "desce", rotulo: "Descer", faz: () => { moverColecao(nome, 1); desenhar(); } },
+    "-",
+    { id: "ver", rotulo: "Ver as fotos", faz: () => { filtroCol = nome; filtro = ""; mostrar = "fotos"; desenhar(); } },
+    { id: "exclui", rotulo: c.pasta ? "Excluir do site" : "Excluir a coleção", perigo: true, faz: async () => {
+        const fotos = c.n ? (c.n === 1 ? "A foto continua" : "As " + c.n + " fotos continuam") : "";
+        const ok = await perguntar(c.pasta ? "Excluir “" + nome + "” do site?" : "Excluir a coleção “" + nome + "”?",
+          (fotos ? fotos + " no Mix, em All. " : "")
+          + (c.pasta ? "Nenhuma foto é apagada: a pasta continua no GitHub e dá para restaurar aqui."
+                     : "Nenhuma foto é apagada."));
+        if (!ok) return;
+        apagarColecao(nome); desenhar();
+        mostrarEstado("“" + nome + "” saiu do site", "ok");
+      } },
+  ]);
+}
+function menuDaTag(nome, alvo) {
+  const i = ordemTags.indexOf(nome);
+  abrirMenu(alvo, [
+    { id: "sobe", rotulo: "Subir", faz: () => {
+        if (i > 0) { [ordemTags[i - 1], ordemTags[i]] = [ordemTags[i], ordemTags[i - 1]]; salvar(); desenhar(); } } },
+    { id: "desce", rotulo: "Descer", faz: () => {
+        if (i >= 0 && i < ordemTags.length - 1) { [ordemTags[i + 1], ordemTags[i]] = [ordemTags[i], ordemTags[i + 1]]; salvar(); desenhar(); } } },
+    "-",
+    { id: "ver", rotulo: "Ver as fotos", faz: () => { filtro = nome; desenhar(); } },
+    { id: "exclui", rotulo: "Excluir a tag", perigo: true, faz: async () => {
+        const n = contarTag(nome);
+        const ok = await perguntar("Excluir a tag “" + nome + "”?",
+          n ? "As " + n + " fotos continuam no Mix, sem tag — no site elas aparecem só no All."
+            : "Nenhuma foto usa esta tag.");
+        if (!ok) return;
+        itens.forEach((x) => { if (val(x, "tag") === nome) editar(x.caminho, "tag", null); });
+        ordemTags = ordemTags.filter((t) => t !== nome);
+        if (filtro === nome) filtro = "";
+        salvar(); desenhar();
+        mostrarEstado("tag “" + nome + "” excluída", "ok");
+      } },
+  ]);
+}
+
+/* ---------- MENU LATERAL ---------- */
+const dobraAberta = (id) => { try { return localStorage.getItem("mix-dobra-" + id) === "1"; } catch (e) { return false; } };
+const gravarDobra = (id, v) => { try { localStorage.setItem("mix-dobra-" + id, v ? "1" : "0"); } catch (e) {} };
+
+function desenharLado() {
+  $("qtdTodas").textContent = contarAtivas();
+  $("qtdSemTag").textContent = semTag();
+  $("qtdArq").textContent = contarArq();
+  document.querySelectorAll("[data-vista]").forEach((b) => {
+    const v = b.dataset.vista;
+    b.classList.toggle("on", !filtroCol
+      && ((v === "todas" && filtro === "") || (v === "semtag" && filtro === "__sem")
+          || (v === "arquivadas" && filtro === "__arq")));
+  });
+
+  const lista = todasColecoes();
+  $("qtdCol").textContent = lista.length || "";
+  $("listaCol").innerHTML = lista.map((c) =>
+    '<button class="item' + (filtroCol === c.nome ? " on" : "") + '" data-col="' + esc(c.nome) + '" draggable="true">'
+    + '<span class="pega" aria-hidden="true">' + SVG_PEGA + '</span>'
+    + '<span class="rotulo">' + esc(c.nome) + '</span>'
+    + '<span class="qtd">' + c.n + '</span>'
+    + '<span class="engrenagem" data-menucol="' + esc(c.nome) + '" role="button" tabindex="0"'
+    + ' aria-label="Opções de ' + esc(c.nome) + '">' + SVG_ENGRENAGEM + '</span></button>').join("");
+
+  const fora = colecoesOcultas();
+  $("excluidas").innerHTML = fora.length
+    ? '<div class="secao-bt" style="padding-bottom:4px"><span class="rotulo">Excluídas do site</span></div>'
+      + fora.map((n) => '<div class="item oculta-linha"><span class="rotulo">' + esc(n) + '</span>'
+        + '<button class="qtd" data-restaurar="' + esc(n) + '" style="cursor:pointer">restaurar</button></div>').join("")
+    : "";
+
+  $("qtdTag").textContent = ordemTags.length || "";
+  $("listaTag").innerHTML = ordemTags.map((t) =>
+    '<button class="item' + (filtro === t ? " on" : "") + '" data-tag="' + esc(t) + '" draggable="true">'
+    + '<span class="pega" aria-hidden="true">' + SVG_PEGA + '</span>'
+    + '<span class="rotulo">' + esc(t) + '</span>'
+    + '<span class="qtd">' + contarTag(t) + '</span>'
+    + '<span class="engrenagem" data-menutag="' + esc(t) + '" role="button" tabindex="0"'
+    + ' aria-label="Opções de ' + esc(t) + '">' + SVG_ENGRENAGEM + '</span></button>').join("");
+
+  /* clique, engrenagem, botão direito e arrastar - nas duas listas */
+  const ligarLista = (sel, aoClicar, menu, aoSoltar) => {
+    document.querySelectorAll(sel).forEach((b) => {
+      const nome = b.dataset.col || b.dataset.tag;
+      b.onclick = (e) => { if (e.target.closest("[data-menucol],[data-menutag]")) return; aoClicar(nome); };
+      b.oncontextmenu = (e) => { e.preventDefault(); menu(nome, e); };
+      b.ondragstart = (e) => { e.dataTransfer.setData("text/plain", sel + nome); b.classList.add("arrastando"); };
+      b.ondragend = () => { b.classList.remove("arrastando"); desenharLado(); };
+      b.ondragover = (e) => { e.preventDefault(); b.classList.add("alvo"); };
+      b.ondragleave = () => b.classList.remove("alvo");
+      b.ondrop = (e) => {
+        e.preventDefault(); b.classList.remove("alvo");
+        const d = String(e.dataTransfer.getData("text/plain") || "");
+        if (d.indexOf(sel) !== 0) return;
+        aoSoltar(d.slice(sel.length), nome);
+      };
+    });
+  };
+  ligarLista("[data-col]", (n) => { filtroCol = filtroCol === n ? "" : n; filtro = ""; mostrar = "fotos"; desenhar(); },
+    menuDaColecao,
+    (de, para) => {
+      const ordem = todasColecoes().map((c) => c.nome);
+      const i = ordem.indexOf(de), j = ordem.indexOf(para);
+      if (i < 0 || j < 0 || i === j) return;
+      moverColecao(de, j - i > 0 ? 1 : -1);
+      /* mais de uma casa: repete até chegar */
+      let atualI = todasColecoes().map((c) => c.nome).indexOf(de);
+      while (atualI !== j && atualI >= 0) {
+        moverColecao(de, j - atualI > 0 ? 1 : -1);
+        const novo = todasColecoes().map((c) => c.nome).indexOf(de);
+        if (novo === atualI) break;
+        atualI = novo;
+      }
+      desenhar();
+    });
+  ligarLista("[data-tag]", (t) => { filtro = filtro === t ? "" : t; desenhar(); },
+    menuDaTag,
+    (de, para) => {
+      const i = ordemTags.indexOf(de), j = ordemTags.indexOf(para);
+      if (i < 0 || j < 0 || i === j) return;
+      ordemTags.splice(i, 1);
+      ordemTags.splice(j, 0, de);
+      salvar(); desenhar();
+    });
+  document.querySelectorAll("[data-menucol]").forEach((g) => {
+    g.onclick = (e) => { e.stopPropagation(); menuDaColecao(g.dataset.menucol, g); };
+  });
+  document.querySelectorAll("[data-menutag]").forEach((g) => {
+    g.onclick = (e) => { e.stopPropagation(); menuDaTag(g.dataset.menutag, g); };
+  });
+  document.querySelectorAll("[data-restaurar]").forEach((b) => {
+    b.onclick = () => {
+      restaurarColecao(b.dataset.restaurar);
+      mostrarEstado("“" + b.dataset.restaurar + "” voltou para o site", "ok");
+      desenhar();
+    };
+  });
+}
+
+/* ---------- BARRA DE CIMA ---------- */
+function baseDaVista() {
+  if (filtro === "__arq") return itens.filter(ehArq).concat(arquivadasOrfas());
+  const vivas = itens.filter((x) => !ehArq(x) && !ehSeguidora(x));
+  return filtroCol ? vivas.filter((x) => colecoesDe(x).includes(filtroCol)) : vivas;
+}
+function visiveis() {
+  let l = baseDaVista();
+  if (mostrar === "carrosseis") l = l.filter((x) => paginas(x).length > 1);
+  if (filtro === "__sem") l = l.filter((x) => !val(x, "tag"));
+  else if (filtro && filtro !== "__arq") l = l.filter((x) => val(x, "tag") === filtro);
+  const t = busca.trim().toLowerCase();
+  if (t) {
+    l = l.filter((x) => {
+      const txt = [val(x, "name"), val(x, "phrase"), valGrupo(x, "name"), valGrupo(x, "phrase"),
+        val(x, "tag"), colecoesDe(x).join(" "), x.caminho, faixaDeAnos(x), val(x, "year")].join(" ");
+      return txt.toLowerCase().includes(t);
+    });
+  }
+  return l;
+}
+function desenharAlternador() {
+  const base = baseDaVista();
+  const nCar = base.filter((x) => paginas(x).length > 1).length;
+  const nCol = todasColecoes().length;
+  const op = [["fotos", "Fotos", base.length]];
+  if (!filtroCol && filtro !== "__arq") op.push(["colecoes", "Coleções", nCol]);
+  op.push(["carrosseis", "Carrosséis", nCar]);
+  if (mostrar === "colecoes" && (filtroCol || filtro === "__arq")) mostrar = "fotos";
+  $("alternador").innerHTML = op.map(([k, r, n]) =>
+    '<button class="' + (mostrar === k ? "on" : "") + '" data-m="' + k + '" aria-pressed="' + (mostrar === k) + '">'
+    + r + ' <span class="n">' + n + '</span></button>').join("");
+  $("alternador").querySelectorAll("[data-m]").forEach((b) => {
+    b.onclick = () => { mostrar = b.dataset.m; desenhar(); };
+  });
+}
+function desenharChips() {
+  const base = baseDaVista();
+  const conta = (t) => base.filter((x) => val(x, "tag") === t).length;
+  const nSem = base.filter((x) => !val(x, "tag")).length;
+  const f = [];
+  if (filtroCol) {
+    f.push('<button class="chip on" id="btSairCol" title="Ver todas as fotos">Coleção: '
+      + esc(filtroCol) + ' <span class="n">×</span></button>');
+  }
+  f.push('<button class="chip' + (filtro === "" || filtro === "__arq" ? " on" : "") + '" data-f="">Todas'
+    + ' <span class="n">' + base.length + '</span></button>');
+  if (nSem) {
+    f.push('<button class="chip' + (filtro === "__sem" ? " on" : "") + '" data-f="__sem">Sem tag'
+      + ' <span class="n">' + nSem + '</span></button>');
+  }
+  ordemTags.forEach((t) => {
+    if (!conta(t)) return;
+    f.push('<button class="chip' + (filtro === t ? " on" : "") + '" data-f="' + esc(t) + '">'
+      + esc(t) + ' <span class="n">' + conta(t) + '</span></button>');
+  });
+  $("chips").innerHTML = f.join("");
+  $("chips").querySelectorAll("[data-f]").forEach((b) => {
+    b.onclick = () => { filtro = b.dataset.f; desenhar(); };
+  });
+  const sc = $("btSairCol");
+  if (sc) sc.onclick = () => { filtroCol = ""; desenhar(); };
+}
+
+/* ---------- SELEÇÃO ---------- */
+function atualizarSel() {
+  $("contaSel").textContent = selecao.size;
+  $("acoesSel").hidden = selecao.size === 0;
+  $("btSelecionar").classList.toggle("on", modoSel || selecao.size > 0);
+  $("btSelecionar").setAttribute("aria-pressed", String(modoSel));
+  document.querySelector(".miolo").classList.toggle("modo-sel", modoSel);
+}
+function marcar(caminho) {
+  if (selecao.has(caminho)) selecao.delete(caminho); else selecao.add(caminho);
+  desenhar();
+}
+async function criarColecaoDasMarcadas() {
+  const n = selecao.size;
+  if (!n) return;
+  const nome = await perguntar("Nova coleção",
+    "As " + n + (n === 1 ? " foto marcada entra" : " fotos marcadas entram") + " nela. Elas continuam no All.",
+    { dica: "Nome da coleção" });
+  if (!nome) return;
+  const limpo = criarColecao(nome);
+  if (!limpo) return;
+  [...selecao].map(acharItem).filter(Boolean).forEach((x) => {
+    const l = colecoesDe(x);
+    if (!l.includes(limpo)) definirColecoes(x.caminho, l.concat([limpo]));
+  });
+  selecao.clear(); modoSel = false;
+  salvar(); desenhar();
+  mostrarEstado("“" + limpo + "” criada com " + n + (n === 1 ? " foto" : " fotos"), "ok");
+}
+/* JUNTAR DUAS FOTOS ARRASTANDO UMA NA OUTRA.
+   A foto onde ela SOLTA é a capa - é o gesto de "pôr dentro desta".
+   A ordem é escrita aqui na mão, e não pelo `agruparCarrossel`, que
+   tira a ordem da grade: arrastando, quem manda é o gesto dela. */
+async function juntarArrastando(capa, outra) {
+  if (!acharItem(capa) || capa === outra) return;
+  const nomeCapa = val(acharItem(capa), "name") || capa.split("/").pop();
+  const ok = await perguntar("Juntar num carrossel?",
+    "As duas viram um card só, com 2 páginas. A capa fica sendo “" + nomeCapa
+    + "”, a foto onde você soltou. Nenhuma foto é apagada.");
+  if (!ok) return;
+  soltarGrupo(capa); soltarGrupo(outra);
+  editar(capa, "carrossel", [outra]);
+  editar(outra, "carrosselDe", capa);
+  selecao.clear(); modoSel = false;
+  salvar(); desenhar();
+  mostrarEstado("carrossel de 2 fotos · a capa é “" + nomeCapa + "”", "ok");
+}
+
+/* ---------- A GRADE ---------- */
+function cartaoDaColecao(c) {
+  const fotos = itens.filter((x) => ativa(x) && colecoesDe(x).includes(c.nome)).slice(0, 9);
+  const quadros = [];
+  for (let i = 0; i < 9; i++) {
+    const f = fotos[i];
+    quadros.push(f && (f.image || f.video)
+      ? '<img src="' + esc(f.image || f.video) + '" alt="" loading="lazy">'
+      : '<span class="buraco"></span>');
+  }
+  return '<div class="cartao"><div class="mosaico" data-abrircol="' + esc(c.nome) + '" role="button" tabindex="0"'
+    + ' aria-label="Abrir ' + esc(c.nome) + '">' + quadros.join("") + '</div>'
+    + '<div class="linha-nome"><div class="txt"><div class="nome">' + esc(c.nome) + '</div>'
+    + '<div class="meta">' + (c.n ? c.n + (c.n === 1 ? " foto" : " fotos") : "vazia — não aparece no site")
+    + (c.pasta ? " · pasta" : "") + '</div></div>'
+    + '<button class="engrenagem" data-menucolgrade="' + esc(c.nome) + '" aria-label="Opções de '
+    + esc(c.nome) + '">' + SVG_ENGRENAGEM + '</button></div></div>';
+}
+
+function desenharGrade() {
+  $("grade").style.gridTemplateColumns = "repeat(auto-fill, minmax(" + ZOOMS[zoom] + "px, 1fr))";
+  $("btMenos").disabled = zoom === 0;
+  $("btMais").disabled = zoom === ZOOMS.length - 1;
+
+  /* --- as coleções, em mosaico --- */
+  if (mostrar === "colecoes" && !filtroCol && filtro !== "__arq") {
+    const cs = todasColecoes();
+    $("tituloVista").textContent = "Todas as coleções";
+    $("conta").textContent = cs.length + (cs.length === 1 ? " coleção" : " coleções");
+    $("grade").innerHTML = cs.length ? cs.map(cartaoDaColecao).join("")
+      : '<div class="vazio">Nenhuma coleção ainda.</div>';
+    $("grade").querySelectorAll("[data-abrircol]").forEach((b) => {
+      b.onclick = () => { filtroCol = b.dataset.abrircol; mostrar = "fotos"; filtro = ""; desenhar(); };
+      b.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); b.onclick(); } };
+      b.oncontextmenu = (e) => { e.preventDefault(); menuDaColecao(b.dataset.abrircol, e); };
+    });
+    $("grade").querySelectorAll("[data-menucolgrade]").forEach((g) => {
+      g.onclick = (e) => { e.stopPropagation(); menuDaColecao(g.dataset.menucolgrade, g); };
+    });
+    return;
+  }
+
+  /* --- as fotos --- */
+  const l = visiveis();
+  $("tituloVista").textContent = filtroCol ? filtroCol
+    : filtro === "__arq" ? "Arquivadas"
+    : filtro === "__sem" ? "Sem tag"
+    : mostrar === "carrosseis" ? "Todos os carrosséis" : "Todas as fotos";
+  $("conta").textContent = l.length + (l.length === 1 ? " foto" : " fotos")
+    + (mostrar === "carrosseis" ? " em carrosséis" : "");
+
+  $("grade").innerHTML = l.length ? l.map((it) => {
+    const seq = paginas(it);
+    const ehGrupo = seq.length > 1;
+    const t = val(it, "tag");
+    const nome = valGrupo(it, "name") || val(it, "name") || it.caminho.split("/").pop();
+    const ano = ehGrupo ? (faixaDeAnos(it) || valGrupo(it, "year") || val(it, "year")) : val(it, "year");
+    const midia = (u, cls) => (it.video && u === (it.image || it.video) && !it.image)
+      ? '<video src="' + esc(u) + '" preload="metadata" muted class="' + cls + '"></video>'
+      : '<img src="' + esc(u) + '" alt="" loading="lazy" class="' + cls + '">';
+    const marca = '<span class="marca-sel" data-marcar="' + esc(it.caminho) + '" role="button" tabindex="0"'
+      + ' aria-label="Marcar">' + SVG_CHECK + '</span>';
+    const selo = ehArq(it) ? '<span class="selo arq">arquivada</span>'
+      : ehGrupo ? '<span class="selo">' + seq.length + ' fotos</span>'
+      : (!t ? '<span class="selo sem">sem tag</span>' : "");
+    const corpo = ehGrupo
+      ? '<div class="folha f1">' + midia(seq[1].url, "") + '</div>'
+        + '<div class="folha f2">' + midia((seq[2] || seq[0]).url, "") + '</div>'
+        + '<div class="folha f3">' + midia(seq[0].url, "") + '</div>'
+        + '<span class="entrar">abrir carrossel</span>'
+      : midia(it.image || it.video, "");
+    return '<div class="cartao" data-foto="' + esc(it.caminho) + '">'
+      + '<div class="moldura' + (ehGrupo ? " pilha" : "") + (selecao.has(it.caminho) ? " marcada" : "")
+      + '" tabindex="0" role="button" draggable="true" aria-label="Abrir ' + esc(nome) + '">'
+      + marca + selo + corpo + '</div>'
+      + '<div class="nome">' + esc(nome) + '</div>'
+      + '<div class="meta"><span class="ponto"></span>' + esc(t || "sem tag")
+      + (ano ? " · " + esc(ano) : "")
+      + (colecoesDe(it).length ? " · " + esc(colecoesDe(it).join(", ")) : "") + '</div></div>';
+  }).join("") : '<div class="vazio">Nada aqui com esse filtro.</div>';
+
+  $("grade").querySelectorAll("[data-foto]").forEach((c) => {
+    const caminho = c.dataset.foto;
+    const mold = c.querySelector(".moldura");
+    const circ = c.querySelector("[data-marcar]");
+    if (circ) {
+      circ.onclick = (e) => { e.stopPropagation(); marcar(caminho); };
+      circ.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); marcar(caminho); } };
+    }
+    mold.onclick = () => { if (modoSel) marcar(caminho); else abrirPainel(caminho); };
+    mold.onkeydown = (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); modoSel ? marcar(caminho) : abrirPainel(caminho); }
+    };
+    mold.ondragstart = (e) => { e.dataTransfer.setData("text/plain", "foto:" + caminho); e.dataTransfer.effectAllowed = "move"; };
+    mold.ondragover = (e) => { e.preventDefault(); mold.classList.add("solta"); };
+    mold.ondragleave = () => mold.classList.remove("solta");
+    mold.ondrop = (e) => {
+      e.preventDefault(); mold.classList.remove("solta");
+      const d = String(e.dataTransfer.getData("text/plain") || "");
+      if (d.indexOf("foto:") !== 0) return;
+      juntarArrastando(caminho, d.slice(5));
+    };
+    c.oncontextmenu = (e) => {
+      e.preventDefault();
+      const it = acharItem(caminho);
+      if (!it) return;
+      const cols = colecoesDe(it);
+      abrirMenu(e, [
+        { id: "abrir", rotulo: "Abrir", faz: () => abrirPainel(caminho) },
+        { id: "marcar", rotulo: selecao.has(caminho) ? "Desmarcar" : "Marcar", faz: () => marcar(caminho) },
+      ].concat(cols.length ? [{ id: "col", rotulo: "Ver “" + cols[0] + "”",
+        faz: () => { filtroCol = cols[0]; filtro = ""; mostrar = "fotos"; desenhar(); } }] : [])
+        .concat(paginas(it).length > 1 ? [{ id: "desagrupa", rotulo: "Desfazer o carrossel",
+          faz: () => { selecao.clear(); selecao.add(caminho); desagrupar(); } }] : [])
+        .concat(["-", { id: "arq", rotulo: ehArq(it) ? "Desarquivar" : "Arquivar", perigo: !ehArq(it),
+          faz: () => { editar(caminho, "archived", ehArq(it) ? false : true); salvar(); desenhar(); } }]));
+    };
+  });
+}
+
+/* ---------- O POP-UP DA FOTO ----------
+   Tudo o que o painel antigo tinha, no lugar novo: idioma, textos do
+   card (ou do grupo), tag, coleções, botão de info, as páginas do
+   carrossel (agora arrastáveis) e os textos de cada página. */
+function abrirPainel(caminho) {
+  const it = acharItem(caminho);
+  if (!it) return;
+  if (atual && atual.caminho !== caminho) paginaSel = null;
+  atual = it;
+  const seq = paginas(it);
+  const ehGrupo = seq.length > 1;
+  const minhas = colecoesDe(it);
+  const cols = todasColecoes().map((c) => c.nome);
+
+  if (ehGrupo && (!paginaSel || !seq.some((x) => x.caminho === paginaSel))) paginaSel = seq[0].caminho;
+  const selPag = itens.find((x) => x.caminho === paginaSel);
+  const pgSel = seq.find((x) => x.caminho === paginaSel) || {};
+  const iSel = seq.findIndex((x) => x.caminho === paginaSel);
+
+  /* o valor de um campo da PÁGINA escolhida: o que ela editou, o que o
+     robô publicou naquela página, e só então o item solto */
+  const vSel = (campo) => {
+    if (idioma !== "en" && (campo === "phrase" || campo === "name")) {
+      const e = (edicoes[paginaSel] || {})[idioma] || {};
+      if (e[campo] !== undefined) return e[campo] || "";
+      const pubPg = (pgSel[idioma] && typeof pgSel[idioma] === "object") ? pgSel[idioma] : {};
+      if (pubPg[campo]) return pubPg[campo];
+      const pubIt = (selPag && selPag[idioma] && typeof selPag[idioma] === "object") ? selPag[idioma] : {};
+      return pubIt[campo] || "";
+    }
+    const e = edicoes[paginaSel] || {};
+    if (e[campo] !== undefined) return e[campo] || "";
+    if (pgSel[campo]) return pgSel[campo];
+    return selPag ? (selPag[campo] || "") : "";
+  };
+  const vSelEn = (campo) => {
+    const e = edicoes[paginaSel] || {};
+    if (e[campo] !== undefined) return e[campo] || "";
+    if (pgSel[campo]) return pgSel[campo];
+    return selPag ? (selPag[campo] || "") : "";
+  };
+  const ehTexto = (c) => c === "phrase" || c === "name";
+  const leCard = (c) => ehGrupo ? (ehTexto(c) ? valGrupoLingua(it, c) : valGrupo(it, c))
+                                : (ehTexto(c) ? valLingua(it, c) : val(it, c));
+  const leCardEn = (c) => ehGrupo ? valGrupo(it, c) : val(it, c);
+  const idCard = ehGrupo ? { f: "fGrpFrase", n: "fGrpNome", a: "fGrpAno", l: "fGrpLink" }
+                         : { f: "fFrase", n: "fNome", a: "fAno", l: "fLink" };
+  const infoCardLigada = !desligada(ehGrupo ? valGrupo(it, "noInfo") : val(it, "noInfo"));
+
+  /* --- a foto grande e as páginas --- */
+  $("fPalco").innerHTML = it.image
+    ? '<img src="' + esc(pgSel.url || it.image) + '" alt="">'
+    : '<video src="' + esc(it.video) + '" controls preload="metadata"></video>';
+  $("fCaminho").textContent = ehGrupo ? (paginaSel || it.caminho) : it.caminho;
+  $("fTitulo").textContent = leCard("name") || it.caminho.split("/").pop();
+  $("fTiras").innerHTML = ehGrupo ? seq.map((pg, k) =>
+    '<div class="tira' + (pg.caminho === paginaSel ? " on" : "") + '" data-p="' + esc(pg.caminho) + '"'
+    + ' data-k="' + k + '" draggable="true" role="button" tabindex="0" title="Arraste para mudar a ordem">'
+    + '<img src="' + esc(pg.url) + '" alt="">'
+    + (k === 0 ? '<span class="capa-marca">capa</span>' : "") + '</div>').join("") : "";
+
+  /* --- os campos --- */
+  const campoTexto = (id, rotulo, valor, dica, alto) => '<div class="campo">'
+    + '<label class="rotulo-campo" for="' + id + '">' + rotulo + '</label>'
+    + (alto ? '<textarea id="' + id + '" rows="2" placeholder="' + esc(dica) + '">' + esc(valor) + '</textarea>'
+            : '<input type="text" id="' + id + '" value="' + esc(valor) + '" placeholder="' + esc(dica) + '">')
+    + '</div>';
+
+  const corpo = []
+  .concat('<div class="escolhas" id="fIdiomas">' + IDIOMAS.map((lg) =>
+      '<button class="escolha' + (idioma === lg[0] ? " on" : "") + '" type="button" data-lg="' + lg[0] + '">'
+      + lg[1] + '</button>').join("")
+    + '<span class="dica" style="align-self:center">'
+    + (idioma === "en" ? "o padrão do site" : "vazio usa o inglês") + '</span></div>')
+  .concat(ehGrupo ? '<div class="dica">Estes textos são do CARD do carrossel. Os de cada foto ficam embaixo.</div>' : "")
+  .concat(campoTexto(idCard.f, "Título — o texto GRANDE", leCard("phrase"),
+      idioma !== "en" ? (leCardEn("phrase") || "o texto em inglês") : "aparece ao clicar no cantinho colorido", true))
+  .concat(campoTexto(idCard.n, "Detalhe — o pequeno embaixo", leCard("name"),
+      idioma !== "en" ? (leCardEn("name") || "o detalhe em inglês") : it.caminho.split("/").pop(), false))
+  .concat('<div class="dois-campos">'
+    + campoTexto(idCard.a, "Ano", leCard("year"), "2024", false)
+    + campoTexto(idCard.l, "Link", leCard("link"), "https://…", false) + '</div>')
+  .concat(ehGrupo && faixaDeAnos(it)
+    ? '<div class="dica">No site o card mostra <strong>' + esc(faixaDeAnos(it))
+      + '</strong> — da foto mais antiga à mais nova.</div>' : "")
+  .concat('<div class="chave-linha"><button class="chave" id="fInfoCard" role="switch" aria-checked="'
+    + infoCardLigada + '" aria-label="Botão de info"></button>'
+    + '<span class="rotulo-campo">Botão de info</span></div>')
+  .concat('<div><span class="rotulo-campo">Tag</span><div class="escolhas" id="fTags">'
+    + ordemTags.map((t) => '<button class="escolha' + (val(it, "tag") === t ? " on" : "")
+        + '" type="button" data-t="' + esc(t) + '">' + esc(t) + '</button>').join("")
+    + '<button class="escolha' + (!val(it, "tag") ? " on" : "") + '" type="button" data-t="">nenhuma</button>'
+    + '</div></div>')
+  .concat('<div><span class="rotulo-campo">Coleções — pode ser mais de uma</span><div class="escolhas" id="fCols">'
+    + cols.map((c) => '<button class="escolha verde' + (minhas.includes(c) ? " on" : "")
+        + '" type="button" data-c="' + esc(c) + '" aria-pressed="' + minhas.includes(c) + '">'
+        + esc(c) + '</button>').join("")
+    + '<button class="escolha" type="button" id="btNovaColPainel">+ nova</button></div>'
+    + (minhas.length ? "" : '<div class="dica" style="margin-top:6px">Em nenhuma coleção: aparece só no All.</div>')
+    + '</div>')
+  .concat(ehGrupo ? '<div class="caixa-pag">'
+    + '<div class="cabeca-pag"><strong>Foto ' + (iSel + 1) + ' de ' + seq.length
+    + (iSel === 0 ? " · capa" : "") + '</strong><span>'
+    + (iSel === 0 ? "aparece na 1ª página" : "aparece nesta página") + '</span></div>'
+    + campoTexto("fPagFrase", "Título desta foto", vSel("phrase"),
+        idioma !== "en" ? (vSelEn("phrase") || "o texto em inglês") : "o texto GRANDE desta foto", true)
+    + campoTexto("fPagNome", "Detalhe desta foto", vSel("name"),
+        idioma !== "en" ? (vSelEn("name") || "o detalhe em inglês") : "o pequeno embaixo", false)
+    + '<div class="dois-campos">'
+      + campoTexto("fPagAno", "Ano", vSel("year"), valGrupo(it, "year") || val(it, "year") || "2024", false)
+      + campoTexto("fPagLink", "Link", vSel("link"), valGrupo(it, "link") || val(it, "link") || "https://…", false)
+    + '</div>'
+    + '<div class="chave-linha"><button class="chave" id="fInfoPag" role="switch" aria-checked="'
+    + (!desligada(vSel("noInfo"))) + '" aria-label="Botão de info desta foto"></button>'
+    + '<span class="rotulo-campo">Botão de info desta foto</span></div>'
+    + '</div>' : "")
+  .concat(ehSeguidora(it) && !ehArq(it)
+    ? '<div class="dica">Esta foto é uma página de outro card. Para tirar do site, arquive o card que a contém, ou desfaça o carrossel.</div>'
+    : "")
+  .join("");
+  $("fCorpo").innerHTML = corpo;
+
+  /* --- ligações --- */
+  const liga = (id, campo, dono) => {
+    const el = $(id);
+    if (!el) return;
+    el.oninput = () => { dono(it.caminho, campo, el.value.trim()); };
+    el.onchange = () => { salvar(); desenhar(); };
+  };
+  liga("fFrase", "phrase", editarLingua);
+  liga("fNome", "name", editarLingua);
+  liga("fAno", "year", editar);
+  liga("fLink", "link", editar);
+  liga("fGrpFrase", "phrase", editarGrupoLingua);
+  liga("fGrpNome", "name", editarGrupoLingua);
+  liga("fGrpAno", "year", editarGrupo);
+  liga("fGrpLink", "link", editarGrupo);
+
+  $("fIdiomas").querySelectorAll("[data-lg]").forEach((b) => {
+    b.onclick = () => { idioma = b.dataset.lg; abrirPainel(caminho); };
+  });
+  $("fInfoCard").onclick = () => {
+    const marca = marcaInfo(!infoCardLigada);
+    if (ehGrupo) editarGrupo(it.caminho, "noInfo", marca); else editar(it.caminho, "noInfo", marca);
+    salvar(); abrirPainel(caminho); desenhar();
+  };
+  $("fTags").querySelectorAll("[data-t]").forEach((b) => {
+    b.onclick = () => {
+      editar(it.caminho, "tag", b.dataset.t === "" ? null : b.dataset.t);
+      salvar(); abrirPainel(caminho); desenhar();
+    };
+  });
+  $("fCols").querySelectorAll("[data-c]").forEach((b) => {
+    b.onclick = () => {
+      const c = b.dataset.c;
+      const agora = colecoesDe(it);
+      definirColecoes(it.caminho, agora.includes(c) ? agora.filter((x) => x !== c) : agora.concat([c]));
+      salvar(); abrirPainel(caminho); desenhar();
+    };
+  });
+  $("btNovaColPainel").onclick = async () => {
+    const nome = await perguntar("Nova coleção", "Ela já entra nesta foto.", { dica: "Nome da coleção" });
+    if (!nome) return;
+    const limpo = criarColecao(nome);
+    if (!limpo) return;
+    const agora = colecoesDe(it);
+    if (!agora.includes(limpo)) definirColecoes(it.caminho, agora.concat([limpo]));
+    salvar(); abrirPainel(caminho); desenhar();
+  };
+  if (ehGrupo) {
+    const ligaPag = (id, campo, dono) => {
+      const el = $(id);
+      if (!el) return;
+      el.oninput = () => { dono(paginaSel, campo, el.value.trim()); };
+      el.onchange = () => { salvar(); desenhar(); };
+    };
+    ligaPag("fPagFrase", "phrase", editarLingua);
+    ligaPag("fPagNome", "name", editarLingua);
+    ligaPag("fPagAno", "year", editar);
+    ligaPag("fPagLink", "link", editar);
+    $("fInfoPag").onclick = () => {
+      editar(paginaSel, "noInfo", marcaInfo(desligada(vSel("noInfo"))));
+      salvar(); abrirPainel(caminho); desenhar();
+    };
+    /* AS PÁGINAS: clicar escolhe, arrastar muda a ordem. A primeira da
+       fila é a capa - é o que ela pediu no lugar do botão "usar como
+       capa", que continuava existindo só para isso. */
+    $("fTiras").querySelectorAll("[data-p]").forEach((t) => {
+      t.onclick = () => { paginaSel = t.dataset.p; abrirPainel(caminho); };
+      t.ondragstart = (e) => { e.dataTransfer.setData("text/plain", "pg:" + t.dataset.k); t.classList.add("arrastando"); };
+      t.ondragend = () => t.classList.remove("arrastando");
+      t.ondragover = (e) => { e.preventDefault(); t.classList.add("alvo"); };
+      t.ondragleave = () => t.classList.remove("alvo");
+      t.ondrop = (e) => {
+        e.preventDefault(); t.classList.remove("alvo");
+        const d = String(e.dataTransfer.getData("text/plain") || "");
+        if (d.indexOf("pg:") !== 0) return;
+        const de = +d.slice(3), para = +t.dataset.k;
+        if (de === para) return;
+        const ordem = seq.map((x) => x.caminho);
+        const [x] = ordem.splice(de, 1);
+        ordem.splice(para, 0, x);
+        reordenarPaginas(ordem);
+      };
+    });
+  }
+  $("fArquivar").textContent = ehArq(it) ? "Desarquivar" : "Arquivar";
+  $("fArquivar").onclick = () => {
+    editar(it.caminho, "archived", ehArq(it) ? false : true);
+    salvar(); desenhar();
+    mostrarEstado(ehArq(it) ? "arquivada" : "de volta", "ok");
+    abrirPainel(caminho);
+  };
+  $("fAviso").textContent = ehGrupo
+    ? seq.length + " páginas · arraste para mudar a ordem · vale no site depois de Salvar"
+    : "vale no site depois de Salvar";
+
+  const lista = visiveis();
+  const idx = lista.findIndex((x) => x.caminho === caminho);
+  $("fAnterior").disabled = idx <= 0;
+  $("fProxima").disabled = idx < 0 || idx >= lista.length - 1;
+  $("fAnterior").onclick = () => { if (idx > 0) abrirPainel(lista[idx - 1].caminho); };
+  $("fProxima").onclick = () => { if (idx >= 0 && idx < lista.length - 1) abrirPainel(lista[idx + 1].caminho); };
+
+  $("veuFoto").hidden = false;
+}
+function fecharPainel() {
+  $("veuFoto").hidden = true;
+  atual = null;
+  desenhar();
+}
+/* a nova ordem das páginas: a primeira lidera (é a capa) */
+function reordenarPaginas(ordem) {
+  if (!ordem.length) return;
+  ordem.forEach((c) => { editar(c, "carrossel", ""); editar(c, "carrosselDe", ""); });
+  editar(ordem[0], "carrossel", ordem.slice(1));
+  ordem.slice(1).forEach((c) => editar(c, "carrosselDe", ordem[0]));
+  paginaSel = ordem[0];
+  salvar(); desenhar();
+  mostrarEstado("nova ordem do carrossel · a capa é a primeira", "ok");
+  if (itens.find((x) => x.caminho === ordem[0])) abrirPainel(ordem[0]);
+  else fecharPainel();
+}
+
+/* ---------- DESENHAR TUDO ---------- */
+function desenhar() {
+  desenharLado();
+  desenharAlternador();
+  desenharChips();
+  desenharGrade();
+  atualizarSel();
+
+  const editados = Object.keys(edicoes).length;
+  $("repoNome").textContent = (donoDoRepo() ? donoDoRepo().dono + "/" + donoDoRepo().repo : "sem repositório")
+    + (editados ? " · " + editados + (editados === 1 ? " editada" : " editadas") : "");
+  $("btSalvar").textContent = lerToken() ? "Salvar no GitHub" : "Conectar ao GitHub";
+  $("btSalvar").disabled = !temTrabalho() && !!lerToken();
+  $("btExportar").disabled = !temTrabalho();
+  if ($("popColecoes").classList.contains("on")) desenharPopColecoes();
+  if (!selecao.size) fecharPopColecoes();
+
+  const nSem = semTag();
+  $("aviso").innerHTML = (armazenaOk ? "" :
+      '<div class="aviso grave"><strong>Este navegador não está guardando suas edições.</strong> '
+      + 'Salve no GitHub antes de fechar a aba, senão o trabalho se perde.</div>')
+    + (nSem ? '<div class="aviso"><strong>' + nSem + '</strong> '
+      + (nSem === 1 ? "foto ainda não tem" : "fotos ainda não têm")
+      + ' tag. Elas aparecem no site, mas só no filtro “All”.</div>' : "");
+}
+
+/* ---------- CONFIGURAÇÕES ---------- */
+function abrirConfig(focoNaChave) {
+  $("qtdVis").textContent = tagsVisiveis;
+  $("dicaChave").textContent = lerToken()
+    ? "Já há uma chave guardada neste navegador. Cole outra para trocar."
+    : "Serve para o botão Salvar escrever no repositório.";
+  $("veuConfig").hidden = false;
+  if (focoNaChave) setTimeout(() => $("fChave").focus(), 30);
+}
+function fecharConfig() { $("veuConfig").hidden = true; }
+
+/* ---------- LIGAR ---------- */
 function pintarIconeTema() {
   const escuro = document.documentElement.dataset.tema === "escuro";
-  $("icTema").innerHTML = escuro ? SOL : LUA;   /* mostra PARA ONDE vai */
+  $("icTema").innerHTML = escuro ? SOL : LUA;
 }
 $("btTema").onclick = () => {
   const escuro = document.documentElement.dataset.tema !== "escuro";
@@ -2155,81 +2382,137 @@ pintarIconeTema();
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (ev) => {
   let escolhido = "";
   try { escolhido = localStorage.getItem("mix-tema") || ""; } catch (e) {}
-  if (escolhido) return;                        /* ela ja decidiu */
+  if (escolhido) return;
   document.documentElement.dataset.tema = ev.matches ? "escuro" : "claro";
   pintarIconeTema();
 });
 
-/* ---------- LIGAR ---------- */
-$("btRecarregar").onclick = carregar;
-$("url").onchange = () => { salvar(); carregar(); };
-$("btExportar").onclick = exportar;
+document.querySelectorAll("[data-vista]").forEach((b) => {
+  b.onclick = () => {
+    filtroCol = "";
+    filtro = b.dataset.vista === "todas" ? "" : b.dataset.vista === "semtag" ? "__sem" : "__arq";
+    if (filtro === "__arq") mostrar = "fotos";
+    desenhar();
+  };
+});
+const ligarDobra = (bt, dobra) => {
+  const aplicar = (aberta) => {
+    $(bt).setAttribute("aria-expanded", String(aberta));
+    $(dobra).hidden = !aberta;
+  };
+  aplicar(dobraAberta(dobra));
+  $(bt).onclick = () => {
+    const aberta = $(bt).getAttribute("aria-expanded") !== "true";
+    aplicar(aberta); gravarDobra(dobra, aberta);
+  };
+};
+ligarDobra("btDobraCol", "dobraCol");
+ligarDobra("btDobraTag", "dobraTag");
+
+const ligarCriar = (bt, campo, input, criar) => {
+  const sair = () => { $(campo).hidden = true; $(bt).hidden = false; $(input).value = ""; };
+  $(bt).onclick = () => { $(campo).hidden = false; $(bt).hidden = true; $(input).focus(); };
+  $(input).onkeydown = (e) => {
+    if (e.key === "Escape") { sair(); return; }
+    if (e.key !== "Enter") return;
+    const n = $(input).value.trim();
+    if (!n) { sair(); return; }
+    criar(n); sair(); desenhar();
+  };
+  $(input).onblur = () => { if (!$(input).value.trim()) sair(); };
+};
+ligarCriar("btNovaCol", "campoCol", "novaCol", (n) => {
+  const nome = criarColecao(n);
+  if (nome) mostrarEstado("“" + nome + "” criada — entra no site quando ganhar a primeira foto", "ok");
+});
+ligarCriar("btNovaTag", "campoTag", "novaTag", (n) => {
+  if (!ordemTags.includes(n)) ordemTags.push(n);
+  salvar();
+  mostrarEstado("tag “" + n + "” criada — marque as fotos e use o ícone de tag", "ok");
+});
+
+$("busca").oninput = (e) => { busca = e.target.value; desenharGrade(); };
+$("btMais").onclick = () => { zoom = Math.min(ZOOMS.length - 1, zoom + 1); desenharGrade(); };
+$("btMenos").onclick = () => { zoom = Math.max(0, zoom - 1); desenharGrade(); };
+$("btSelecionar").onclick = () => {
+  modoSel = !modoSel;
+  if (!modoSel) selecao.clear();
+  desenhar();
+};
+$("btLimparSel").onclick = () => { selecao.clear(); modoSel = false; desenhar(); };
+$("btCriarColSel").onclick = criarColecaoDasMarcadas;
+$("btCriarCar").onclick = agruparCarrossel;
+$("btDesagrupar").onclick = desagrupar;
+$("btTagAcao").onclick = (e) => {
+  e.stopPropagation();
+  const n = selecao.size;
+  abrirMenu(e, ordemTags.map((t) => ({ id: "t" + t, rotulo: t, faz: () => {
+      aplicarTag(t);
+      mostrarEstado("tag “" + t + "” em " + n + (n === 1 ? " foto" : " fotos"), "ok");
+    } }))
+    .concat(["-", { id: "tirar", rotulo: "Tirar a tag", faz: () => {
+      aplicarTag(null);
+      mostrarEstado("tag tirada de " + n + (n === 1 ? " foto" : " fotos"), "ok");
+    } }]));
+};
+$("btColAcao").onclick = (e) => {
+  e.stopPropagation();
+  if ($("popColecoes").classList.contains("on")) fecharPopColecoes(); else abrirPopColecoes();
+};
+document.addEventListener("pointerdown", (e) => {
+  if (!$("popColecoes").classList.contains("on")) return;
+  if (e.target.closest("#popColecoes, #btColAcao, .cartao")) return;
+  fecharPopColecoes();
+});
+
+$("fFechar").onclick = fecharPainel;
+$("fPronto").onclick = fecharPainel;
+$("veuFoto").onclick = (e) => { if (e.target === $("veuFoto")) fecharPainel(); };
+
+$("btConfig").onclick = () => abrirConfig(false);
+$("btFecharConfig").onclick = fecharConfig;
+$("veuConfig").onclick = (e) => { if (e.target === $("veuConfig")) fecharConfig(); };
 $("btSalvar").onclick = salvarNoGitHub;
+$("btExportar").onclick = exportar;
+$("btRecarregar").onclick = () => { fecharConfig(); carregar(); };
+$("url").onchange = () => { salvar(); carregar(); };
 $("btGuardarChave").onclick = () => {
   const t = $("fChave").value.trim();
   if (!t) return;
   gravarToken(t);
   $("fChave").value = "";
-  $("modalChave").classList.remove("on");
+  fecharConfig();
+  mostrarEstado("chave guardada", "ok");
+  desenhar();
   salvarNoGitHub();
 };
 $("btApagarChave").onclick = () => {
   gravarToken("");
   $("fChave").value = "";
-  $("modalChave").classList.remove("on");
   mostrarEstado("chave apagada", "");
+  desenhar();
 };
-$("modalChave").onclick = (e) => { if (e.target === $("modalChave")) $("modalChave").classList.remove("on"); };
-$("btLimpar").onclick = () => { selecao.clear(); desenhar(); };
-$("btFechar").onclick = fecharPainel;
-$("fundoPainel").onclick = fecharPainel;
-$("btAgrupar").onclick = agruparCarrossel;
-$("btDesagrupar").onclick = desagrupar;
-$("btTags").onclick = () => { desenharTags(); $("modalTags").classList.add("on"); };
-/* ---------- COLECOES ---------- */
-$("btColecoes").onclick = () => { desenharColecoes(); $("modalColecoes").classList.add("on"); };
-$("btFecharCol").onclick = () => $("modalColecoes").classList.remove("on");
-$("modalColecoes").onclick = (e) => { if (e.target === $("modalColecoes")) $("modalColecoes").classList.remove("on"); };
-$("btCriarCol").onclick = () => criarDoCampo("fNovaCol", () => desenharColecoes());
-$("fNovaCol").onkeydown = (e) => { if (e.key === "Enter") criarDoCampo("fNovaCol", () => desenharColecoes()); };
-$("btColAcao").onclick = (e) => {
-  e.stopPropagation();
-  if ($("popColecoes").classList.contains("on")) fecharPopColecoes(); else abrirPopColecoes();
-};
-/* clicar fora fecha - mas clicar numa foto da grade NAO, para ela poder
-   ajustar a selecao com a lista aberta */
-document.addEventListener("pointerdown", (e) => {
-  if (!$("popColecoes").classList.contains("on")) return;
-  if (e.target.closest("#popColecoes, #btColAcao, .card")) return;
-  fecharPopColecoes();
-});
-$("btFecharTags").onclick = () => $("modalTags").classList.remove("on");
-$("modalTags").onclick = (e) => { if (e.target === $("modalTags")) $("modalTags").classList.remove("on"); };
+$("btMenosTags").onclick = () => { tagsVisiveis = Math.max(0, tagsVisiveis - 1); salvar(); $("qtdVis").textContent = tagsVisiveis; };
+$("btMaisTags").onclick = () => { tagsVisiveis = Math.min(ordemTags.length, tagsVisiveis + 1); salvar(); $("qtdVis").textContent = tagsVisiveis; };
+
 document.addEventListener("keydown", (e) => {
   const digitando = e.target && e.target.matches && e.target.matches("input, textarea");
   if (e.key === "Escape") {
-    /* dentro de um campo, Esc so sai do campo. Fechar o painel inteiro
-       no primeiro Esc faria ela perder o lugar por reflexo. */
     if (digitando) { e.target.blur(); return; }
+    if (menuAberto) { fecharMenu(); return; }
+    if (!$("veuPergunta").hidden) { $("pgNao").click(); return; }
+    if (!$("veuFoto").hidden) { fecharPainel(); return; }
+    if (!$("veuConfig").hidden) { fecharConfig(); return; }
     if ($("popColecoes").classList.contains("on")) { fecharPopColecoes(); return; }
-    fecharPainel();
-    $("modalTags").classList.remove("on");
-    $("modalChave").classList.remove("on");
-    $("modalColecoes").classList.remove("on");
+    if (selecao.size || modoSel) { selecao.clear(); modoSel = false; desenhar(); }
     return;
   }
-  if (!atual) return;
-  /* AS SETAS NAO PODEM ROUBAR O CURSOR.
-     Sem esta linha, apertar ← para voltar uma letra dentro do nome
-     pulava para a foto anterior e remontava o painel. Quem escreve
-     voltando dentro da palavra - que e o caso dela - perdia o texto
-     de vista a cada correcao. */
-  if (digitando) return;
-  if (e.key === "ArrowRight" && !$("btProx").disabled) $("btProx").click();
-  if (e.key === "ArrowLeft" && !$("btAnt").disabled) $("btAnt").click();
+  if ($("veuFoto").hidden || digitando) return;
+  if (e.key === "ArrowRight" && !$("fProxima").disabled) $("fProxima").click();
+  if (e.key === "ArrowLeft" && !$("fAnterior").disabled) $("fAnterior").click();
 });
 
-/* ---------- INICIO ---------- */
+/* ---------- INÍCIO ---------- */
 (function () {
   let g = {};
   try { g = JSON.parse(localStorage.getItem(CHAVE) || "{}"); } catch (e) {}
@@ -2237,13 +2520,11 @@ document.addEventListener("keydown", (e) => {
   edicoes = g.edicoes || {};
   ordemTags = g.ordemTags || ["Design", "Motion", "Draw", "Photo", "3D"];
   tagsVisiveis = g.tagsVisiveis === undefined ? 2 : g.tagsVisiveis;
-  /* `undefined` (navegador que nunca teve a lista) vira null: a primeira
-     leitura do images.json semeia com as colecoes criadas que o robo
-     publicou. Objeto vazio e diferente - e ela ter apagado todas. */
   colecoesDef = g.colecoesDef && typeof g.colecoesDef === "object" ? g.colecoesDef : null;
   desenhar();
   carregar();
 })();
+
 </script>
 </body>
 </html>
