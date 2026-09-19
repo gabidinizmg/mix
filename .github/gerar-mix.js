@@ -388,6 +388,34 @@ for (const it of itens) {
     }
   }
 }
+/* COLECAO EXCLUIDA NO ORGANIZADOR (19/09/2026).
+   Ela: "nunca exclui a imagem, somente a colecao". Uma PASTA nao da para
+   apagar sem apagar as fotos - entao o organizador marca
+   `{ "Editing": { "oculta": true } }` e aqui a colecao simplesmente nao
+   entra na lista do site. As fotos continuam, no All. A pasta no GitHub
+   nao e tocada: tirar o `oculta` traz tudo de volta como era.
+   Nas fotos, a colecao escondida sai da lista delas. Foto que so estava
+   nela fica sem colecao (so no All). Quando a lista era a da PASTA (ela
+   nunca mexeu), so o campo sai - nao escrevo uma lista vazia, senao ao
+   restaurar a pasta a foto continuaria "so no All" para sempre. */
+const ocultas = new Set(Object.keys(ferramenta.collections)
+  .filter((n) => ferramenta.collections[n] && ferramenta.collections[n].oculta === true)
+  .map((n) => String(n).trim()));
+if (ocultas.size) {
+  for (const it of itens) {
+    if (Array.isArray(it.collections)) {
+      if (!it.collections.some((n) => ocultas.has(n))) continue;
+      it.collections = it.collections.filter((n) => !ocultas.has(n));
+      if (it.collections.length) it.collection = it.collections[0]; else delete it.collection;
+    } else if (it.collection && ocultas.has(it.collection)) {
+      delete it.collection;
+    }
+  }
+  for (let i = colecoes.length - 1; i >= 0; i--) {
+    if (ocultas.has(colecoes[i].name)) colecoes.splice(i, 1);
+  }
+}
+
 /* A CAPA: a declarada no mix.config.json vence; senao a primeira foto
    que PERTENCE a colecao e nao esta arquivada; senao, como antes, a
    primeira da pasta. Arquivada nao serve de capa: o site ja pulava ela

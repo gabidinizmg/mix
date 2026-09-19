@@ -387,6 +387,23 @@ button{border:none;background:none;cursor:pointer}
 .linha-col .apagar{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
   transition:background .15s}
 .linha-col .apagar:hover{background:#FFE3E0;color:var(--erro)}
+/* as setas de ordem - a mesma linguagem do "Tags e ordem" */
+.linha-col .mover{display:flex;flex-direction:column;gap:2px;flex-shrink:0}
+.linha-col .mover button{width:26px;height:20px;border-radius:7px;display:grid;place-items:center;
+  background:var(--painel);transition:background .15s}
+.linha-col .mover button:hover{background:var(--ativo)}
+.linha-col .mover button:disabled{opacity:.25;cursor:default;background:var(--painel)}
+.linha-col .pos{width:18px;text-align:center;font-size:12px;font-weight:600;opacity:.4;
+  flex-shrink:0;font-variant-numeric:tabular-nums}
+/* a janela das colecoes e mais larga que as outras: cada linha agora
+   carrega capa, nome, "pasta", Ver, as setas e a lixeira - em 440px o
+   nome cortava ("Photogr…") */
+#modalColecoes .caixa{width:min(540px,100%)}
+.linha-col{gap:10px}
+.titulo-ocultas{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  opacity:.55;margin:18px 2px 8px}
+.linha-col.oculta{opacity:.75}
+.linha-col.oculta .nome{text-decoration:line-through;text-decoration-thickness:1px}
 .criar-col{display:flex;gap:8px;margin-top:14px}
 .criar-col input{flex:1;min-width:0;height:38px;background:var(--campo);border:1px solid transparent;
   border-radius:999px;padding:0 16px;font-size:14px;outline:none;transition:border-color .18s}
@@ -546,8 +563,10 @@ svg{display:block}
 <div class="modal" id="modalColecoes">
   <div class="caixa">
     <h2>Coleções</h2>
-    <p class="sub">Cada coleção vira um card na página Mix. A mesma foto pode estar em
-      mais de uma. Coleção sem foto não aparece no site até ganhar a primeira.</p>
+    <p class="sub">Cada coleção vira um card na página Mix, <strong>nesta ordem</strong> — use as
+      setas para mudar. A mesma foto pode estar em mais de uma. Excluir uma coleção
+      <strong>nunca apaga foto</strong>: as fotos continuam no Mix, em All.
+      Vale no site depois de <strong>Salvar</strong>.</p>
     <div id="listaColecoes"></div>
     <div class="criar-col">
       <input id="fNovaCol" placeholder="Nome da coleção nova" autocomplete="off" maxlength="60">
@@ -791,6 +810,108 @@ const semCdn = (u) => {
   return m ? "https://raw.githubusercontent.com/" + m[1] + "/" + m[2] + "/" + m[3] + "/" + m[4] : "";
 };
 
+/* ---------- O MIX-INFO.JSON DO GITHUB: JUNTAR, NUNCA ATROPELAR ----------
+   (19/09/2026) O RISCO que existia: o "Salvar" escrevia no GitHub SO o que
+   estava neste navegador. Num navegador novo (ou com os dados apagados), o
+   primeiro Salvar trocaria o mix-info.json inteiro por quase nada - textos,
+   carrosseis, traducoes e colecoes sumiriam do site.
+
+   Agora a ferramenta le o arquivo do GitHub ao ABRIR e de novo na hora de
+   SALVAR, e junta com o daqui, foto por foto e colecao por colecao,
+   comparando com a ultima versao que ESTE navegador viu la (a "base"):
+     - so mudou aqui            -> vale o daqui
+     - so mudou no GitHub       -> vale o do GitHub (outro navegador, outra maquina)
+     - mudou nos dois, diferente -> vale o daqui, e ela e avisada
+     - nunca vi o GitHub antes  -> soma: o daqui vence, o que falta vem de la
+   Nada que so existe no GitHub e apagado por um navegador que nunca o viu. */
+const CHAVE_BASE = "mix-organizador-base";
+const lerBase = () => { try { return JSON.parse(localStorage.getItem(CHAVE_BASE) || "null"); } catch (e) { return null; } };
+const gravarBase = (b) => { try { localStorage.setItem(CHAVE_BASE, JSON.stringify(b)); } catch (e) {} };
+const ordenarChaves = (v) => {
+  if (Array.isArray(v)) return v.map(ordenarChaves);
+  if (v && typeof v === "object") {
+    const o = {};
+    Object.keys(v).sort().forEach((k) => { o[k] = ordenarChaves(v[k]); });
+    return o;
+  }
+  return v;
+};
+const canon = (v) => (v === undefined ? "\u2205" : JSON.stringify(ordenarChaves(v)));
+function juntar3(base, local, repo) {
+  const out = {};
+  let conflitos = 0, trazidos = 0;
+  const L = local || {}, R = repo || {};
+  const chaves = new Set([...Object.keys(base || {}), ...Object.keys(L), ...Object.keys(R)]);
+  chaves.forEach((k) => {
+    const l = L[k], r = R[k];
+    const cl = canon(l), cr = canon(r);
+    let v;
+    if (cl === cr) v = l;
+    else if (!base) { v = l !== undefined ? l : r; if (l === undefined) trazidos++; }
+    else {
+      const cb = canon(base[k]);
+      if (cl === cb) { v = r; trazidos++; }
+      else if (cr === cb) v = l;
+      else { v = l !== undefined ? l : r; conflitos++; }
+    }
+    if (v !== undefined) out[k] = v;
+  });
+  return { out, conflitos, trazidos };
+}
+const deBase64 = (c) => {
+  const bin = atob(String(c || "").replace(/\s/g, ""));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+};
+const lerInfoTexto = (txt) => {
+  const d = JSON.parse(txt || "{}");
+  const obj = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
+  return { items: obj(d.items), collections: obj(d.collections) };
+};
+/* Com a chave: pela API (sempre o AGORA, e traz o `sha` para salvar).
+   Sem a chave: pelo endereco publico do arquivo (pode atrasar uns minutos
+   - por isso o Salvar le de novo, pela API, antes de escrever). */
+async function lerInfoDoRepo(paraSalvar) {
+  const alvo = donoDoRepo();
+  if (!alvo) return null;
+  const token = lerToken();
+  if (token) {
+    const r = await fetch("https://api.github.com/repos/" + alvo.dono + "/" + alvo.repo
+      + "/contents/mix-info.json?ref=" + encodeURIComponent(alvo.branch) + "&t=" + Date.now(), {
+      headers: { "Authorization": "Bearer " + token, "Accept": "application/vnd.github+json",
+                 "X-GitHub-Api-Version": "2022-11-28" },
+      cache: "no-store",
+    });
+    if (r.status === 404) return { dados: { items: {}, collections: {} }, sha: null };
+    if (r.status === 401) throw new Error("A chave não foi aceita. Clique em Salvar e cole uma nova.");
+    if (r.status === 403) throw new Error("A chave não tem permissão de escrita em Contents.");
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    return { dados: lerInfoTexto(deBase64(j.content)), sha: j.sha };
+  }
+  if (paraSalvar) return null;
+  const r = await fetch("https://raw.githubusercontent.com/" + alvo.dono + "/" + alvo.repo + "/"
+    + alvo.branch + "/mix-info.json?t=" + Date.now(), { cache: "no-store" });
+  if (r.status === 404) return { dados: { items: {}, collections: {} } };
+  if (!r.ok) return null;
+  return { dados: lerInfoTexto(await r.text()) };
+}
+/* junta o do GitHub com o daqui; a base passa a ser o que o GitHub tem */
+function sincronizar(repo) {
+  const base = lerBase();
+  const a = juntar3(base && base.items, edicoes, repo.items);
+  const b = juntar3(base && base.collections, colecoesDef || {}, repo.collections);
+  edicoes = a.out;
+  if (colecoesDef !== null || Object.keys(b.out).length) colecoesDef = b.out;
+  gravarBase({ items: repo.items, collections: repo.collections });
+  return { trazidos: a.trazidos + b.trazidos, conflitos: a.conflitos + b.conflitos };
+}
+const resumoSync = (s) => (s.trazidos
+  ? " · " + s.trazidos + (s.trazidos === 1 ? " mudança veio" : " mudanças vieram") + " do GitHub" : "")
+  + (s.conflitos ? " · " + s.conflitos + (s.conflitos === 1 ? " foto editada" : " fotos editadas")
+    + " aqui e lá: ficou a daqui" : "");
+
 /* ---------- CARREGAR ---------- */
 async function carregar() {
   const url = $("url").value.trim();
@@ -863,6 +984,14 @@ async function carregar() {
       .map((c) => ({ name: String((c && (c.name || c.nome)) || "").trim(),
                      cover: (c && c.cover) || "", criada: !!(c && c.criada) }))
       .filter((c) => c.name);
+    /* PRIMEIRO o mix-info.json do GitHub (ver "JUNTAR, NUNCA ATROPELAR").
+       So se ele nao puder ser lido e que as colecoes criadas sao
+       reconstruidas do images.json, como antes. */
+    let sync = null;
+    try {
+      const lido = await lerInfoDoRepo(false);
+      if (lido) sync = sincronizar(lido.dados);
+    } catch (e) { /* sem rede ou sem permissao: segue com o daqui */ }
     if (colecoesDef === null) {
       colecoesDef = {};
       colecoesPub.forEach((c, i) => { if (c.criada) colecoesDef[c.name] = { order: 100 + i }; });
@@ -889,7 +1018,8 @@ async function carregar() {
     const achadas = [...new Set(itens.map((x) => val(x, "tag")).filter(Boolean))];
     achadas.forEach((t) => { if (!ordemTags.includes(t)) ordemTags.push(t); });
     salvar(); desenhar();
-    mostrarEstado("lido do " + fonte, fonte === "repositorio" ? "" : "aviso");
+    mostrarEstado("lido do " + fonte + (sync ? resumoSync(sync) : ""),
+      fonte === "repositorio" && !(sync && sync.conflitos) ? "" : "aviso");
   } catch (e) {
     $("grade").innerHTML = '<div class="vazio">Não consegui ler.<br><br>' + esc(e.message)
       + '<br><br>Confira o link, e se o repositório é <strong>público</strong>.</div>';
@@ -1072,21 +1202,47 @@ function definirColecoes(caminho, lista) {
 /* TODAS as colecoes que existem: as do robo, as criadas aqui, e qualquer
    nome que alguma foto carregue. Uma criada aqui e depois APAGADA
    continua no images.json ate o robo rodar - ela sai da lista mesmo
-   assim, senao apagar pareceria nao funcionar. */
+   assim, senao apagar pareceria nao funcionar.
+
+   A ORDEM (19/09/2026) - ela: "editar as ordens das colecoes". A ordem
+   escrita aqui (`order` em `colecoesDef`) manda; sem ela, vale a posicao
+   em que o robo publicou (que ja segue o mix.config.json). Ao mexer
+   numa seta, TODAS as visiveis ganham um numero 1, 2, 3... - senao uma
+   pasta sem numero empataria com uma com numero e o site desempataria
+   pelo alfabeto, que nao e o que ela pediu.
+
+   EXCLUIDAS - ela: "nunca exclui a imagem, somente a colecao". Uma
+   PASTA nao some do GitHub (as fotos moram nela): ela ganha `oculta` e o
+   robo tira do site. Fica numa lista propria, com "Restaurar". */
+function ordemDaColecao(n) {
+  const def = colecoesDef || {};
+  if (def[n] && typeof def[n].order === "number") return def[n].order;
+  const i = colecoesPub.findIndex((c) => c.name === n);
+  return i >= 0 ? i + 1 : 999;
+}
+const ehOculta = (n) => !!(colecoesDef && colecoesDef[n] && colecoesDef[n].oculta);
 function todasColecoes() {
   const def = colecoesDef || {};
   const pastas = new Set(colecoesPub.filter((c) => !c.criada).map((c) => c.name));
   const nomes = [];
   const add = (n) => { n = String(n || "").trim(); if (n && !nomes.includes(n)) nomes.push(n); };
   colecoesPub.forEach((c) => { if (!c.criada || def[c.name]) add(c.name); });
-  Object.keys(def).sort((a, b) => ((def[a].order || 0) - (def[b].order || 0))).forEach(add);
+  Object.keys(def).forEach(add);
   itens.forEach((x) => { if (ativa(x)) colecoesDe(x).forEach(add); });
-  return nomes.map((n) => {
-    const membros = itens.filter((x) => ativa(x) && colecoesDe(x).includes(n));
-    const capa = membros.find((x) => x.image);
-    return { nome: n, n: membros.length, capa: capa ? capa.image : "",
-             pasta: pastas.has(n), criada: !!def[n] };
-  });
+  return nomes
+    .filter((n) => !ehOculta(n))
+    .sort((a, b) => (ordemDaColecao(a) - ordemDaColecao(b)) || a.localeCompare(b))
+    .map((n) => {
+      const membros = itens.filter((x) => ativa(x) && colecoesDe(x).includes(n));
+      const capa = membros.find((x) => x.image);
+      return { nome: n, n: membros.length, capa: capa ? capa.image : "",
+               pasta: pastas.has(n), criada: !!def[n] && !pastas.has(n) };
+    });
+}
+/* as excluidas que ainda da para trazer de volta (as pastas) */
+function colecoesOcultas() {
+  const def = colecoesDef || {};
+  return Object.keys(def).filter((n) => def[n] && def[n].oculta).sort();
 }
 function criarColecao(nome) {
   nome = String(nome || "").trim().replace(/\s+/g, " ");
@@ -1096,20 +1252,54 @@ function criarColecao(nome) {
   const ja = todasColecoes().find((c) => c.nome.toLowerCase() === nome.toLowerCase());
   if (ja) return ja.nome;
   if (!colecoesDef) colecoesDef = {};
-  const ordens = Object.keys(colecoesDef).map((k) => colecoesDef[k].order || 0);
-  colecoesDef[nome] = { order: Math.max(100, ...ordens) + 1 };
+  /* uma PASTA excluida com o mesmo nome: criar e trazer de volta */
+  const oculta = colecoesOcultas().find((n) => n.toLowerCase() === nome.toLowerCase());
+  if (oculta) { restaurarColecao(oculta); return oculta; }
+  /* nasce no FIM da lista, depois de todas as que ja existem */
+  const ultima = todasColecoes().reduce((m, c) => Math.max(m, ordemDaColecao(c.nome)), 0);
+  colecoesDef[nome] = { order: Math.max(100, ultima) + 1 };
   salvar();
   return nome;
 }
+/* EXCLUIR. Nunca toca em foto nenhuma.
+   - criada aqui (ou que so existia dentro das fotos): some de vez, e as
+     fotos saem dela - continuam no Mix, no All e nas outras colecoes
+   - PASTA do GitHub: fica escondida do site (`oculta`) - a pasta e as
+     fotos continuam no repositorio, e "Restaurar" traz tudo de volta */
 function apagarColecao(nome) {
-  if (!colecoesDef || !colecoesDef[nome]) return;
-  delete colecoesDef[nome];
-  /* as fotos saem dela; as fotos em si nao sao tocadas */
-  itens.forEach((x) => {
-    const l = colecoesDe(x);
-    if (l.includes(nome)) definirColecoes(x.caminho, l.filter((c) => c !== nome));
-  });
+  const pasta = colecoesPub.some((c) => c.name === nome && !c.criada);
+  if (!colecoesDef) colecoesDef = {};
+  if (pasta) {
+    colecoesDef[nome] = Object.assign({}, colecoesDef[nome] || {}, { oculta: true });
+  } else {
+    delete colecoesDef[nome];
+    /* as fotos saem dela; as fotos em si nao sao tocadas */
+    itens.forEach((x) => {
+      const l = colecoesDe(x);
+      if (l.includes(nome)) definirColecoes(x.caminho, l.filter((c) => c !== nome));
+    });
+  }
   if (filtroCol === nome) filtroCol = "";
+  salvar();
+}
+function restaurarColecao(nome) {
+  if (!colecoesDef || !colecoesDef[nome]) return;
+  delete colecoesDef[nome].oculta;
+  /* volta no fim da lista, onde ela vai ver que voltou */
+  const ultima = todasColecoes().reduce((m, c) => Math.max(m, ordemDaColecao(c.nome)), 0);
+  colecoesDef[nome].order = ultima + 1;
+  salvar();
+}
+/* SOBE ou DESCE uma posicao, e numera todas as visiveis de novo */
+function moverColecao(nome, passo) {
+  const lista = todasColecoes().map((c) => c.nome);
+  const i = lista.indexOf(nome), j = i + passo;
+  if (i < 0 || j < 0 || j >= lista.length) return;
+  [lista[i], lista[j]] = [lista[j], lista[i]];
+  if (!colecoesDef) colecoesDef = {};
+  lista.forEach((n, k) => {
+    colecoesDef[n] = Object.assign({}, colecoesDef[n] || {}, { order: k + 1 });
+  });
   salvar();
 }
 const temTrabalho = () => Object.keys(edicoes).length > 0
@@ -1324,35 +1514,69 @@ function aplicarTag(t) {
 }
 
 /* ---------- COLECOES: a lista inteira (o botao da barra de cima) ---------- */
+const SVG_SOBE = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>';
+const SVG_DESCE = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+const SVG_LIXO = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>';
 function desenharColecoes() {
   const lista = todasColecoes();
-  $("listaColecoes").innerHTML = lista.length ? lista.map((c) =>
+  const ocultas = colecoesOcultas();
+  const linhas = lista.map((c, i) =>
     '<div class="linha-col">'
+    + '<span class="pos">' + (i + 1) + '</span>'
     + (c.capa ? '<img class="capa" src="' + esc(c.capa) + '" alt="" loading="lazy">'
               : '<span class="capa" aria-hidden="true"></span>')
     + '<div class="txt"><div class="nome">' + esc(c.nome) + '</div>'
     + '<div class="sub' + (c.n ? '' : ' falta') + '">'
     + (c.n ? c.n + (c.n === 1 ? " foto" : " fotos") : "vazia — não aparece no site") + '</div></div>'
-    + (c.pasta && !c.criada ? '<span class="origem" title="Esta coleção é uma pasta no GitHub">pasta</span>' : '')
+    + (c.pasta ? '<span class="origem" title="Esta coleção é uma pasta no GitHub">pasta</span>' : '')
     + (c.n ? '<button class="btn" data-ver="' + esc(c.nome) + '">Ver</button>' : '')
-    + (c.criada && !c.pasta ? '<button class="apagar" data-apagar="' + esc(c.nome)
-        + '" title="Apagar a coleção (as fotos continuam no Mix)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>' : '')
-    + '</div>').join("")
+    + '<div class="mover">'
+    + '<button data-sobe="' + esc(c.nome) + '"' + (i === 0 ? " disabled" : "")
+      + ' title="Subir" aria-label="Subir ' + esc(c.nome) + '">' + SVG_SOBE + '</button>'
+    + '<button data-desce="' + esc(c.nome) + '"' + (i === lista.length - 1 ? " disabled" : "")
+      + ' title="Descer" aria-label="Descer ' + esc(c.nome) + '">' + SVG_DESCE + '</button>'
+    + '</div>'
+    + '<button class="apagar" data-apagar="' + esc(c.nome) + '" title="Excluir a coleção (as fotos continuam no Mix)"'
+      + ' aria-label="Excluir a coleção ' + esc(c.nome) + '">' + SVG_LIXO + '</button>'
+    + '</div>');
+  if (ocultas.length) {
+    linhas.push('<div class="titulo-ocultas">Excluídas do site — as fotos continuam em All</div>');
+    ocultas.forEach((n) => linhas.push(
+      '<div class="linha-col oculta"><span class="capa" aria-hidden="true"></span>'
+      + '<div class="txt"><div class="nome">' + esc(n) + '</div>'
+      + '<div class="sub">pasta no GitHub, fora do site</div></div>'
+      + '<button class="btn" data-restaurar="' + esc(n) + '">Restaurar</button></div>'));
+  }
+  $("listaColecoes").innerHTML = linhas.length ? linhas.join("")
     : '<div class="vazio" style="padding:24px">Nenhuma coleção ainda.</div>';
-  $("listaColecoes").querySelectorAll("[data-ver]").forEach((b) => {
+  const L = $("listaColecoes");
+  L.querySelectorAll("[data-ver]").forEach((b) => {
     b.onclick = () => {
       filtroCol = b.dataset.ver; filtro = "";
       $("modalColecoes").classList.remove("on");
       desenhar();
     };
   });
-  $("listaColecoes").querySelectorAll("[data-apagar]").forEach((b) => {
+  L.querySelectorAll("[data-sobe]").forEach((b) => {
+    b.onclick = () => { moverColecao(b.dataset.sobe, -1); desenharColecoes(); desenhar(); };
+  });
+  L.querySelectorAll("[data-desce]").forEach((b) => {
+    b.onclick = () => { moverColecao(b.dataset.desce, 1); desenharColecoes(); desenhar(); };
+  });
+  L.querySelectorAll("[data-restaurar]").forEach((b) => {
+    b.onclick = () => { restaurarColecao(b.dataset.restaurar); desenharColecoes(); desenhar(); };
+  });
+  L.querySelectorAll("[data-apagar]").forEach((b) => {
     b.onclick = () => {
       const nome = b.dataset.apagar;
-      const n = todasColecoes().find((c) => c.nome === nome);
-      const q = n && n.n
-        ? "Apagar a coleção “" + nome + "”? As " + n.n + " fotos continuam no Mix, só saem dela."
-        : "Apagar a coleção “" + nome + "”?";
+      const c = todasColecoes().find((x) => x.nome === nome);
+      const fotos = c && c.n ? (c.n === 1 ? "A foto continua" : "As " + c.n + " fotos continuam") : "";
+      const q = c && c.pasta
+        ? "Excluir “" + nome + "” do site?\n\n" + (fotos ? fotos + " no Mix, em All. " : "")
+          + "Nenhuma foto é apagada: a pasta continua no GitHub e dá para restaurar aqui."
+        : "Excluir a coleção “" + nome + "”?\n\n"
+          + (fotos ? fotos + " no Mix (em All e nas outras coleções). " : "")
+          + "Nenhuma foto é apagada.";
       if (!confirm(q)) return;
       apagarColecao(nome); desenharColecoes(); desenhar();
     };
@@ -1821,24 +2045,21 @@ async function salvarNoGitHub() {
   };
   mostrarEstado("salvando…", "indo");
 
-  /* Busca o `sha` atual do arquivo - a trava que o GitHub usa para
-     impedir que duas gravacoes se atropelem.
-
-     `cache: "no-store"` NAO e detalhe: a API responde com
-     `Cache-Control: private, max-age=60`, entao o navegador guarda a
-     resposta por um minuto. Salvando duas vezes seguidas, a segunda
-     recebia o sha VELHO do cache e o GitHub recusava com 409 - o erro
-     aparecia sem ela ter feito nada de errado. */
-  const pegarSha = async () => {
-    const r = await fetch(
-      api + "?ref=" + encodeURIComponent(alvo.branch) + "&t=" + Date.now(),
-      { headers: cab, cache: "no-store" }
-    );
-    if (r.status === 200) return (await r.json()).sha;
-    if (r.status === 404) return null;          /* ainda nao existe */
-    if (r.status === 401) throw new Error("A chave não foi aceita. Clique em Salvar e cole uma nova.");
-    if (r.status === 403) throw new Error("A chave não tem permissão de escrita em Contents.");
-    throw new Error("HTTP " + r.status);
+  /* `cache: "no-store"` na leitura (lerInfoDoRepo) NAO e detalhe: a API
+     responde com `Cache-Control: private, max-age=60`, e salvando duas
+     vezes seguidas a segunda receberia o sha VELHO do cache - o GitHub
+     recusava com 409 sem ela ter feito nada de errado. */
+  /* ANTES DE ESCREVER: le o que esta no GitHub AGORA e junta com o
+     daqui. E isso que impede um navegador novo de apagar o que ele nao
+     conhece. Devolve o `sha` - a trava do GitHub contra duas gravacoes
+     se atropelarem. */
+  let sync = null;
+  const lerEJuntar = async () => {
+    const lido = await lerInfoDoRepo(true);
+    if (!lido) throw new Error("Não consegui ler o mix-info.json do GitHub.");
+    sync = sincronizar(lido.dados);
+    salvar();
+    return lido.sha;
   };
 
   const gravar = async (sha) => {
@@ -1852,7 +2073,7 @@ async function salvarNoGitHub() {
   };
 
   try {
-    let r = await gravar(await pegarSha());
+    let r = await gravar(await lerEJuntar());
 
     /* Uma segunda tentativa, automatica, com o sha buscado de novo.
        Quem escreve o mix-info.json e so ela, por esta ferramenta - o
@@ -1862,7 +2083,7 @@ async function salvarNoGitHub() {
        resolve sozinho. */
     if (r.status === 409 || r.status === 422) {
       mostrarEstado("ajustando…", "indo");
-      r = await gravar(await pegarSha());
+      r = await gravar(await lerEJuntar());
     }
 
     if (!r.ok) {
@@ -1874,11 +2095,15 @@ async function salvarNoGitHub() {
       throw new Error(msg);
     }
     ultimoSalvo = Date.now();
+    /* o que acabou de ser escrito e o que o GitHub tem agora */
+    gravarBase(lerInfoTexto(textoDoArquivo()));
+    desenhar();
     const n = Object.keys(edicoes).length;
     const nc = colecoesDef ? Object.keys(colecoesDef).length : 0;
     mostrarEstado("salvo · " + n + (n === 1 ? " foto" : " fotos")
       + (nc ? " · " + nc + (nc === 1 ? " coleção" : " coleções") : "")
-      + " · o robô já está rodando", "ok");
+      + " · o robô já está rodando" + (sync ? resumoSync(sync) : ""),
+      sync && sync.conflitos ? "aviso" : "ok");
     setTimeout(() => mostrarEstado("salvo há pouco", "ok"), 6000);
   } catch (e) {
     mostrarEstado(String((e && e.message) || e), "erro");
