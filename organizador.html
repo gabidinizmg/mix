@@ -415,9 +415,30 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
   border-radius: 50%; background: var(--texto-3); transition: transform .24s var(--mola), background .2s; }
 .chave[aria-checked="true"] { background: rgba(124,84,255,.28); border-color: var(--roxo); }
 .chave[aria-checked="true"]::after { transform: translateX(17px); background: var(--roxo); }
-.caixa-pag { border: 1px solid var(--linha); border-radius: 13px; padding: 13px; display: grid; gap: 12px; }
-.caixa-pag .cabeca-pag { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; }
-.caixa-pag .cabeca-pag span { color: var(--texto-3); font-size: 11.5px; }
+/* ---------- AS SEÇÕES DO POP-UP ----------
+   Ela: "isso aqui pode ficar fechado, num accordion". Cada bloco fecha,
+   e fechado mostra um RESUMO do que já está preenchido - nomear o que
+   está cheio responde em duas palavras; listar o que falta seria a
+   lista longa. O que fica aberto é lembrado enquanto o pop-up vive. */
+.secao { border: 1px solid var(--linha); border-radius: 13px; background: color-mix(in srgb, var(--texto-3) 5%, transparent); }
+.secao + .secao { margin-top: 2px; }
+.secao > summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center; gap: 9px;
+  padding: 11px 13px; font-size: 13.5px; border-radius: 13px;
+}
+.secao > summary::-webkit-details-marker { display: none; }
+.secao > summary:hover { background: color-mix(in srgb, var(--texto-3) 8%, transparent); }
+.secao > summary:focus-visible { outline: 2px solid var(--roxo); outline-offset: -2px; }
+.secao .seta-s { color: var(--texto-3); display: grid; place-items: center; transition: transform .2s var(--mola); }
+.secao[open] .seta-s { transform: rotate(90deg); }
+.secao .nome-s { font-weight: 500; white-space: nowrap; }
+.secao .resumo-s {
+  margin-left: auto; color: var(--texto-3); font-size: 12px; text-align: right;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 58%;
+}
+.secao .resumo-s.falta { color: var(--aviso); }
+.secao .corpo-s { padding: 0 13px 13px; display: grid; gap: 12px; }
+.secao .aviso-capa { font-size: 11.5px; color: var(--texto-3); }
 
 @media (max-width: 900px) {
   .ficha { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); height: 94vh; max-height: 94vh; }
@@ -1646,6 +1667,9 @@ const LUA = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
    ============================================================= */
 
 /* ---------- estado só da tela ---------- */
+/* o pop-up abre com os textos e a classificação à vista; a foto do
+   carrossel fica fechada até ela querer (pedido dela, 20/09/2026) */
+abertas.add("textos"); abertas.add("classe");
 let mostrar = "fotos";      /* fotos | colecoes | carrosseis */
 let busca = "";
 let zoom = 2;
@@ -2161,48 +2185,58 @@ function abrirPainel(caminho) {
     + (k === 0 ? '<span class="capa-marca">capa</span>' : "") + '</div>').join("") : "";
 
   /* --- os campos --- */
+  /* uma seção que abre e fecha; o que está aberto sobrevive ao redesenho
+     (o pop-up se remonta inteiro a cada clique numa página) */
+  const secao = (id, nome, resumo, corpoHtml, falta) =>
+    '<details class="secao"' + (abertas.has(id) ? " open" : "") + ' data-s="' + id + '">'
+    + '<summary><span class="seta-s" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 24 24"'
+    + ' fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">'
+    + '<path d="M9 18l6-6-6-6"/></svg></span>'
+    + '<span class="nome-s">' + esc(nome) + '</span>'
+    + '<span class="resumo-s' + (falta ? " falta" : "") + '">' + esc(resumo) + '</span></summary>'
+    + '<div class="corpo-s">' + corpoHtml + '</div></details>';
+  /* o resumo: os campos que JÁ estão preenchidos */
+  const cheios = (le, pares) => pares.filter((p) => le(p[0])).map((p) => p[1]);
+
   const campoTexto = (id, rotulo, valor, dica, alto) => '<div class="campo">'
     + '<label class="rotulo-campo" for="' + id + '">' + rotulo + '</label>'
     + (alto ? '<textarea id="' + id + '" rows="2" placeholder="' + esc(dica) + '">' + esc(valor) + '</textarea>'
             : '<input type="text" id="' + id + '" value="' + esc(valor) + '" placeholder="' + esc(dica) + '">')
     + '</div>';
 
-  const corpo = []
-  .concat('<div class="escolhas" id="fIdiomas">' + IDIOMAS.map((lg) =>
-      '<button class="escolha' + (idioma === lg[0] ? " on" : "") + '" type="button" data-lg="' + lg[0] + '">'
-      + lg[1] + '</button>').join("")
-    + '<span class="dica" style="align-self:center">'
-    + (idioma === "en" ? "o padrão do site" : "vazio usa o inglês") + '</span></div>')
-  .concat(ehGrupo ? '<div class="dica">Estes textos são do CARD do carrossel. Os de cada foto ficam embaixo.</div>' : "")
-  .concat(campoTexto(idCard.f, "Título — o texto GRANDE", leCard("phrase"),
-      idioma !== "en" ? (leCardEn("phrase") || "o texto em inglês") : "aparece ao clicar no cantinho colorido", true))
-  .concat(campoTexto(idCard.n, "Detalhe — o pequeno embaixo", leCard("name"),
-      idioma !== "en" ? (leCardEn("name") || "o detalhe em inglês") : it.caminho.split("/").pop(), false))
-  .concat('<div class="dois-campos">'
-    + campoTexto(idCard.a, "Ano", leCard("year"), "2024", false)
-    + campoTexto(idCard.l, "Link", leCard("link"), "https://…", false) + '</div>')
-  .concat(ehGrupo && faixaDeAnos(it)
-    ? '<div class="dica">No site o card mostra <strong>' + esc(faixaDeAnos(it))
-      + '</strong> — da foto mais antiga à mais nova.</div>' : "")
-  .concat('<div class="chave-linha"><button class="chave" id="fInfoCard" role="switch" aria-checked="'
-    + infoCardLigada + '" aria-label="Botão de info"></button>'
-    + '<span class="rotulo-campo">Botão de info</span></div>')
-  .concat('<div><span class="rotulo-campo">Tag</span><div class="escolhas" id="fTags">'
+  const preenchidos = cheios(leCard, [["phrase", "título"], ["name", "detalhe"],
+    ["year", "ano"], ["link", "link"]]);
+  const corpoTextos = (ehGrupo
+      ? '<div class="dica">É o que aparece no CARD do carrossel. Vazio usa o texto da capa.</div>' : "")
+    + campoTexto(idCard.f, "Título — o texto GRANDE", leCard("phrase"),
+        idioma !== "en" ? (leCardEn("phrase") || "o texto em inglês") : "aparece ao clicar no cantinho colorido", true)
+    + campoTexto(idCard.n, "Detalhe — o pequeno embaixo", leCard("name"),
+        idioma !== "en" ? (leCardEn("name") || "o detalhe em inglês") : it.caminho.split("/").pop(), false)
+    + '<div class="dois-campos">'
+      + campoTexto(idCard.a, "Ano", leCard("year"), "2024", false)
+      + campoTexto(idCard.l, "Link", leCard("link"), "https://…", false) + '</div>'
+    + (ehGrupo && faixaDeAnos(it)
+        ? '<div class="dica">No site o card mostra <strong>' + esc(faixaDeAnos(it))
+          + '</strong> — da foto mais antiga à mais nova.</div>' : "")
+    + '<div class="chave-linha"><button class="chave" id="fInfoCard" role="switch" aria-checked="'
+      + infoCardLigada + '" aria-label="Botão de info"></button>'
+      + '<span class="rotulo-campo">Botão de info</span></div>';
+
+  const corpoClasse = '<div><span class="rotulo-campo">Tag</span><div class="escolhas" id="fTags">'
     + ordemTags.map((t) => '<button class="escolha' + (val(it, "tag") === t ? " on" : "")
         + '" type="button" data-t="' + esc(t) + '">' + esc(t) + '</button>').join("")
     + '<button class="escolha' + (!val(it, "tag") ? " on" : "") + '" type="button" data-t="">nenhuma</button>'
-    + '</div></div>')
-  .concat('<div><span class="rotulo-campo">Coleções — pode ser mais de uma</span><div class="escolhas" id="fCols">'
+    + '</div></div>'
+    + '<div><span class="rotulo-campo">Coleções — pode ser mais de uma</span><div class="escolhas" id="fCols">'
     + cols.map((c) => '<button class="escolha verde' + (minhas.includes(c) ? " on" : "")
         + '" type="button" data-c="' + esc(c) + '" aria-pressed="' + minhas.includes(c) + '">'
         + esc(c) + '</button>').join("")
     + '<button class="escolha" type="button" id="btNovaColPainel">+ nova</button></div>'
     + (minhas.length ? "" : '<div class="dica" style="margin-top:6px">Em nenhuma coleção: aparece só no All.</div>')
-    + '</div>')
-  .concat(ehGrupo ? '<div class="caixa-pag">'
-    + '<div class="cabeca-pag"><strong>Foto ' + (iSel + 1) + ' de ' + seq.length
-    + (iSel === 0 ? " · capa" : "") + '</strong><span>'
-    + (iSel === 0 ? "aparece na 1ª página" : "aparece nesta página") + '</span></div>'
+    + '</div>';
+
+  const corpoPagina = !ehGrupo ? "" :
+    (iSel === 0 ? '<div class="aviso-capa">Esta é a capa: o texto dela aparece na 1ª página do carrossel.</div>' : "")
     + campoTexto("fPagFrase", "Título desta foto", vSel("phrase"),
         idioma !== "en" ? (vSelEn("phrase") || "o texto em inglês") : "o texto GRANDE desta foto", true)
     + campoTexto("fPagNome", "Detalhe desta foto", vSel("name"),
@@ -2212,14 +2246,36 @@ function abrirPainel(caminho) {
       + campoTexto("fPagLink", "Link", vSel("link"), valGrupo(it, "link") || val(it, "link") || "https://…", false)
     + '</div>'
     + '<div class="chave-linha"><button class="chave" id="fInfoPag" role="switch" aria-checked="'
-    + (!desligada(vSel("noInfo"))) + '" aria-label="Botão de info desta foto"></button>'
-    + '<span class="rotulo-campo">Botão de info desta foto</span></div>'
-    + '</div>' : "")
-  .concat(ehSeguidora(it) && !ehArq(it)
-    ? '<div class="dica">Esta foto é uma página de outro card. Para tirar do site, arquive o card que a contém, ou desfaça o carrossel.</div>'
-    : "")
-  .join("");
+      + (!desligada(vSel("noInfo"))) + '" aria-label="Botão de info desta foto"></button>'
+      + '<span class="rotulo-campo">Botão de info desta foto</span></div>';
+
+  const resumoPagina = (vSel("name") || vSel("phrase") || "sem texto")
+    + (desligada(vSel("noInfo")) ? " · sem info" : "");
+
+  const corpo = '<div class="escolhas" id="fIdiomas">' + IDIOMAS.map((lg) =>
+      '<button class="escolha' + (idioma === lg[0] ? " on" : "") + '" type="button" data-lg="' + lg[0] + '">'
+      + lg[1] + '</button>').join("")
+    + '<span class="dica" style="align-self:center">'
+    + (idioma === "en" ? "o padrão do site" : "vazio usa o inglês") + '</span></div>'
+    + secao("textos", ehGrupo ? "Info do card" : "Textos",
+        !infoCardLigada ? "sem botão de info"
+          : (preenchidos.length ? preenchidos.join(" · ") : "vazio"),
+        corpoTextos, !infoCardLigada || !preenchidos.length)
+    + secao("classe", "Tag e coleções",
+        (val(it, "tag") || "sem tag") + (minhas.length ? " · " + minhas.join(", ") : ""),
+        corpoClasse, !val(it, "tag"))
+    + (ehGrupo ? secao("pagina", "Foto " + (iSel + 1) + " de " + seq.length + (iSel === 0 ? " · capa" : ""),
+        resumoPagina, corpoPagina, false) : "")
+    + (ehSeguidora(it) && !ehArq(it)
+        ? '<div class="dica">Esta foto é uma página de outro card. Para tirar do site, arquive o card que a contém, ou desfaça o carrossel.</div>'
+        : "");
   $("fCorpo").innerHTML = corpo;
+  /* a seção aberta sobrevive ao redesenho */
+  $("fCorpo").querySelectorAll("details.secao").forEach((d) => {
+    d.addEventListener("toggle", () => {
+      if (d.open) abertas.add(d.dataset.s); else abertas.delete(d.dataset.s);
+    });
+  });
 
   /* --- ligações --- */
   const liga = (id, campo, dono) => {
@@ -2287,7 +2343,7 @@ function abrirPainel(caminho) {
        fila é a capa - é o que ela pediu no lugar do botão "usar como
        capa", que continuava existindo só para isso. */
     $("fTiras").querySelectorAll("[data-p]").forEach((t) => {
-      t.onclick = () => { paginaSel = t.dataset.p; abrirPainel(caminho); };
+      t.onclick = () => { paginaSel = t.dataset.p; abertas.add("pagina"); abrirPainel(caminho); };
       t.ondragstart = (e) => { e.dataTransfer.setData("text/plain", "pg:" + t.dataset.k); t.classList.add("arrastando"); };
       t.ondragend = () => t.classList.remove("arrastando");
       t.ondragover = (e) => { e.preventDefault(); t.classList.add("alvo"); };
