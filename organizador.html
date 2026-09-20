@@ -213,7 +213,12 @@ h1 { font: 600 22px/1.1 "Outfit",sans-serif; letter-spacing: -.02em; }
 .aviso.grave { background: color-mix(in srgb, var(--erro) 16%, var(--painel));
   border-color: color-mix(in srgb, var(--erro) 40%, transparent); }
 .grade { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); }
-.cartao { display: grid; gap: 8px; }
+.cartao { display: grid; gap: 8px; position: relative; }
+/* A PILHA ABERTA PASSA POR CIMA DOS VIZINHOS.
+   Sem isto o card seguinte é pintado em cima das folhas (ordem do DOM) e
+   o leque só aparecia do lado direito do último da fila - era a
+   diferença que ela viu entre a ferramenta e a proposta. */
+.cartao:hover, .cartao:focus-within { z-index: 6; }
 .moldura {
   position: relative; aspect-ratio: 3/4; border-radius: var(--r);
   background: var(--painel); cursor: pointer; border: 1px solid var(--linha); overflow: visible;
