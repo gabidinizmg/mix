@@ -363,8 +363,13 @@ h1 { font: 600 22px/1.1 "Outfit",sans-serif; letter-spacing: -.02em; }
 .campo label { font-size: 12px; color: var(--texto-2); }
 .campo input, .campo textarea {
   border-radius: 11px; border: 1px solid var(--linha); background: var(--fundo);
-  padding: 9px 12px; font-size: 13.5px; outline: none; resize: vertical; width: 100%;
+  padding: 10px 13px; font-size: 13.5px; outline: none; resize: vertical; width: 100%;
 }
+/* O NOME DO CAMPO MORA DENTRO DELE.
+   Ela: "isso pode ficar dentro da caixa caso ela esteja vazia". Com o
+   campo preenchido o rotulo nao faz falta - o que esta escrito ja diz o
+   que e -, e sem a linha de cima cada campo ganha ar. */
+.campo input::placeholder, .campo textarea::placeholder { color: var(--texto-3); }
 .campo input:focus, .campo textarea:focus { border-color: var(--roxo); }
 /* AS EXPLICAÇÕES SÃO NOTA DE RODAPÉ, não texto da tela.
    Ela: "achei que o texto podia ser mais sutil, ter menos destaque, já
@@ -426,7 +431,7 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
 .ficha .pe .aviso-pe { flex: 1; font-size: 11.5px; color: var(--texto-3); line-height: 1.45; }
 .rotulo-campo { font-size: 11.5px; color: var(--texto-2); display: block; }
 .dois-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.escolhas { display: flex; flex-wrap: wrap; gap: 6px; }
+.escolhas { display: flex; flex-wrap: wrap; gap: 7px; }
 .escolha { height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--linha);
   font-size: 12.5px; color: var(--texto-2); }
 .escolha:hover { color: var(--texto); border-color: color-mix(in srgb, var(--texto-3) 60%, transparent); }
@@ -471,7 +476,7 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 58%;
 }
 .secao .resumo-s.falta { color: var(--aviso); }
-.secao .corpo-s { padding: 6px 2px 4px; display: grid; gap: 16px; }
+.secao .corpo-s { padding: 8px 2px 6px; display: grid; gap: 20px; }
 /* o "i": a explicação só aparece quando ela pede */
 .ajuda {
   width: 17px; height: 17px; border-radius: 50%; border: 1px solid var(--linha);
@@ -2242,44 +2247,55 @@ function abrirPainel(caminho) {
   /* o resumo: os campos que JÁ estão preenchidos */
   const cheios = (le, pares) => pares.filter((p) => le(p[0])).map((p) => p[1]);
 
-  const campoTexto = (id, rotulo, valor, dica, alto) => '<div class="campo">'
-    + '<label class="rotulo-campo" for="' + id + '">' + rotulo + '</label>'
-    + (alto ? '<textarea id="' + id + '" rows="2" placeholder="' + esc(dica) + '">' + esc(valor) + '</textarea>'
-            : '<input type="text" id="' + id + '" value="' + esc(valor) + '" placeholder="' + esc(dica) + '">')
+  /* o nome do campo e o texto de dentro (placeholder), e some quando ela
+     escreve; o `aria-label` mantem o nome para quem usa leitor de tela */
+  const campoTexto = (id, nome, valor, alto) => '<div class="campo">'
+    + (alto
+        ? '<textarea id="' + id + '" rows="2" placeholder="' + esc(nome) + '" aria-label="' + esc(nome) + '">'
+          + esc(valor) + '</textarea>'
+        : '<input type="text" id="' + id + '" value="' + esc(valor) + '" placeholder="' + esc(nome)
+          + '" aria-label="' + esc(nome) + '">')
     + '</div>';
 
   const preenchidos = cheios(leCard, [["phrase", "título"], ["name", "detalhe"],
     ["year", "ano"], ["link", "link"]]);
-  const corpoTextos = campoTexto(idCard.f, "Título — o texto GRANDE", leCard("phrase"),
-        idioma !== "en" ? (leCardEn("phrase") || "o texto em inglês") : "aparece ao clicar no cantinho colorido", true)
-    + campoTexto(idCard.n, "Detalhe — o pequeno embaixo", leCard("name"),
-        idioma !== "en" ? (leCardEn("name") || "o detalhe em inglês") : it.caminho.split("/").pop(), false)
+  const corpoTextos = campoTexto(idCard.f,
+        idioma !== "en" ? (leCardEn("phrase") || "Título — o texto grande") : "Título — o texto grande",
+        leCard("phrase"), true)
+    + campoTexto(idCard.n,
+        idioma !== "en" ? (leCardEn("name") || "Detalhe — o pequeno embaixo") : "Detalhe — o pequeno embaixo",
+        leCard("name"), false)
     + '<div class="dois-campos">'
-      + campoTexto(idCard.a, "Ano", leCard("year"), "2024", false)
-      + campoTexto(idCard.l, "Link", leCard("link"), "https://…", false) + '</div>'
+      + campoTexto(idCard.a, "Ano", leCard("year"), false)
+      + campoTexto(idCard.l, "Link", leCard("link"), false) + '</div>'
     + '<div class="chave-linha"><button class="chave" id="fInfoCard" role="switch" aria-checked="'
       + infoCardLigada + '" aria-label="Botão de info"></button>'
       + '<span class="rotulo-campo">Botão de info</span></div>';
 
-  const corpoClasse = '<div><span class="rotulo-campo">Tag</span><div class="escolhas" id="fTags">'
+  /* SEM OS ROTULOS "Tag" e "Colecoes": a secao ja se chama assim. A fila
+     de cima e a tag (roxa quando escolhida); a de baixo sao as colecoes
+     (verdes, e terminam no "+ nova"). O "i" conta isso. */
+  const corpoClasse = '<div class="escolhas" id="fTags" role="group" aria-label="Tag">'
     + ordemTags.map((t) => '<button class="escolha' + (val(it, "tag") === t ? " on" : "")
         + '" type="button" data-t="' + esc(t) + '">' + esc(t) + '</button>').join("")
     + '<button class="escolha' + (!val(it, "tag") ? " on" : "") + '" type="button" data-t="">nenhuma</button>'
-    + '</div></div>'
-    + '<div><span class="rotulo-campo">Coleções — pode ser mais de uma</span><div class="escolhas" id="fCols">'
+    + '</div>'
+    + '<div class="escolhas" id="fCols" role="group" aria-label="Coleções">'
     + cols.map((c) => '<button class="escolha verde' + (minhas.includes(c) ? " on" : "")
         + '" type="button" data-c="' + esc(c) + '" aria-pressed="' + minhas.includes(c) + '">'
         + esc(c) + '</button>').join("")
-    + '<button class="escolha" type="button" id="btNovaColPainel">+ nova</button></div></div>';
+    + '<button class="escolha" type="button" id="btNovaColPainel">+ nova</button></div>';
 
   const corpoPagina = !ehGrupo ? "" :
-    campoTexto("fPagFrase", "Título desta foto", vSel("phrase"),
-        idioma !== "en" ? (vSelEn("phrase") || "o texto em inglês") : "o texto GRANDE desta foto", true)
-    + campoTexto("fPagNome", "Detalhe desta foto", vSel("name"),
-        idioma !== "en" ? (vSelEn("name") || "o detalhe em inglês") : "o pequeno embaixo", false)
+    campoTexto("fPagFrase",
+        idioma !== "en" ? (vSelEn("phrase") || "Título desta foto") : "Título desta foto",
+        vSel("phrase"), true)
+    + campoTexto("fPagNome",
+        idioma !== "en" ? (vSelEn("name") || "Detalhe desta foto") : "Detalhe desta foto",
+        vSel("name"), false)
     + '<div class="dois-campos">'
-      + campoTexto("fPagAno", "Ano", vSel("year"), valGrupo(it, "year") || val(it, "year") || "2024", false)
-      + campoTexto("fPagLink", "Link", vSel("link"), valGrupo(it, "link") || val(it, "link") || "https://…", false)
+      + campoTexto("fPagAno", valGrupo(it, "year") || val(it, "year") || "Ano", vSel("year"), false)
+      + campoTexto("fPagLink", valGrupo(it, "link") || val(it, "link") || "Link", vSel("link"), false)
     + '</div>'
     + '<div class="chave-linha"><button class="chave" id="fInfoPag" role="switch" aria-checked="'
       + (!desligada(vSel("noInfo"))) + '" aria-label="Botão de info desta foto"></button>'
@@ -2305,7 +2321,7 @@ function abrirPainel(caminho) {
     + secao("classe", "Tag e coleções",
         (val(it, "tag") || "sem tag") + (minhas.length ? " · " + minhas.join(", ") : ""),
         corpoClasse, !val(it, "tag"),
-        "A tag é o filtro da barra do site. As coleções viram cards na página Mix, e a mesma foto pode estar em mais de uma. Em nenhuma, ela aparece só no All.")
+        "A fila de cima é a <strong>tag</strong>, o filtro da barra do site — uma por foto. A de baixo são as <strong>coleções</strong>, que viram cards na página Mix; a mesma foto pode estar em várias, e em nenhuma ela aparece só no All.")
     + (ehGrupo ? secao("pagina", "Foto " + (iSel + 1) + " de " + seq.length + (iSel === 0 ? " · capa" : ""),
         resumoPagina, corpoPagina, false,
         (iSel === 0 ? "Esta é a capa: o texto dela aparece na 1ª página do carrossel. "
