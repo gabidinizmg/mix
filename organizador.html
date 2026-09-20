@@ -441,7 +441,8 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
 /* O IDIOMA NA MESMA LINGUAGEM DO "Fotos · Coleções · Carrosséis":
    só as três siglas, com um traço embaixo da que está valendo. O que
    cada uma faz mora atrás do "i", como nas seções. */
-.linha-idioma { display: flex; align-items: center; gap: 12px; padding: 2px 2px 6px; }
+.linha-idioma { display: flex; align-items: center; gap: 12px; padding: 2px 0 6px; }
+.linha-idioma .ajuda { margin-left: auto; }
 .chave { width: 40px; height: 23px; border-radius: 999px; flex-shrink: 0; background: var(--painel-2);
   border: 1px solid var(--linha); position: relative; transition: background .2s, border-color .2s; }
 .chave::after { content: ""; position: absolute; top: 2px; left: 2px; width: 17px; height: 17px;
@@ -475,19 +476,23 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
 .secao[open] .seta-s { transform: rotate(90deg); }
 .secao .nome-s { white-space: nowrap; }
 .secao .resumo-s {
-  margin-left: auto; color: var(--texto-3); font-size: 11.5px; font-weight: 400;
+  margin-left: auto; margin-right: 2px; color: var(--texto-3); font-size: 11.5px; font-weight: 400;
   letter-spacing: 0; text-transform: none; text-align: right;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 58%;
 }
 .secao .resumo-s.falta { color: var(--aviso); }
 .secao .corpo-s { padding: 8px 2px 6px; display: grid; gap: 20px; }
-/* o "i": a explicação só aparece quando ela pede */
+/* O "i": só a letra, sempre na PONTA DIREITA da linha, para os de todas
+   as seções ficarem alinhados. Sem círculo parado; o hover é que mostra
+   que ali tem um botão. */
 .ajuda {
-  width: 17px; height: 17px; border-radius: 50%; border: 1px solid var(--linha);
+  border: 0; background: none; border-radius: 6px; padding: 3px 6px;
   color: var(--texto-3); display: grid; place-items: center; flex-shrink: 0;
-  font: 600 9.5px/1 "Outfit",sans-serif; letter-spacing: 0; text-transform: none;
+  font: 600 11px/1 "Outfit",sans-serif; letter-spacing: 0; text-transform: none;
+  transition: color .15s, background .15s;
 }
-.ajuda:hover, .ajuda[aria-expanded="true"] { color: var(--texto); border-color: var(--texto-3); }
+.ajuda:hover { color: var(--texto); background: color-mix(in srgb, var(--texto-3) 16%, transparent); }
+.ajuda[aria-expanded="true"] { color: var(--roxo); }
 .explica { display: none; }
 .explica.on { display: block; }
 
@@ -873,7 +878,8 @@ const val = (it, campo) => {
    So o TEXTO tem idioma. Ano, link, tag e colecao sao os mesmos nos
    tres - um ano nao se traduz, e uma tag que mudasse de nome por idioma
    quebraria o filtro em duas listas diferentes. */
-const IDIOMAS = [["en", "EN"], ["pt", "PT"], ["es", "ES"]];
+/* o codigo e o que vai para o arquivo; o nome e o que ela le */
+const IDIOMAS = [["en", "Inglês"], ["pt", "Português"], ["es", "Espanhol"]];
 let idioma = "en";
 
 const valLingua = (it, campo) => {
@@ -2242,9 +2248,10 @@ function abrirPainel(caminho) {
     + ' fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">'
     + '<path d="M9 18l6-6-6-6"/></svg></span>'
     + '<span class="nome-s">' + esc(nome) + '</span>'
+    + '<span class="resumo-s' + (falta ? " falta" : "") + '">' + esc(resumo) + '</span>'
     + (ajuda ? '<button class="ajuda" data-ajuda="' + id + '" aria-expanded="false"'
         + ' aria-label="O que é isto" title="O que é isto">i</button>' : "")
-    + '<span class="resumo-s' + (falta ? " falta" : "") + '">' + esc(resumo) + '</span></summary>'
+    + '</summary>' 
     + '<div class="corpo-s">'
     + (ajuda ? '<p class="dica explica" id="explica-' + id + '">' + ajuda + '</p>' : "")
     + corpoHtml + '</div></details>';
