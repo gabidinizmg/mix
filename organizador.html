@@ -164,13 +164,29 @@ img, video { display: block; }
 h1 { font: 600 22px/1.1 "Outfit",sans-serif; letter-spacing: -.02em; }
 .conta { font-size: 13px; color: var(--texto-3); font-variant-numeric: tabular-nums; }
 .ferramentas { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
+/* A BUSCA É UM ÍCONE ATÉ ELA QUERER ESCREVER.
+   Pedido dela: "só um ícone; quando você clica, aí sim você escreve".
+   Fechada ela ocupa o mesmo espaço de um botão; aberta, cresce. */
 .busca {
-  display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px;
-  border-radius: 999px; border: 1px solid var(--linha); background: var(--painel);
-  min-width: 190px; flex: 0 1 250px;
+  display: flex; align-items: center; gap: 0; height: 36px; padding: 0;
+  border-radius: 999px; border: 1px solid transparent; background: transparent;
+  width: 36px; flex: 0 0 auto; color: var(--texto-2); cursor: text;
+  transition: width .3s var(--mola), background .2s, border-color .2s, gap .2s, padding .2s;
 }
-.busca:focus-within { border-color: var(--roxo); }
-.busca input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 13.5px; }
+.busca > svg { flex-shrink: 0; margin: 0 10px; }
+.busca:hover { color: var(--texto); }
+.busca.aberta {
+  width: min(250px, 42vw); background: var(--painel); border-color: var(--linha); padding-right: 6px;
+}
+.busca.aberta:focus-within { border-color: var(--roxo); }
+.busca input {
+  flex: 1; min-width: 0; width: 0; border: 0; background: none; outline: none; font-size: 13.5px;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.busca.aberta input { opacity: 1; pointer-events: auto; }
+.busca .limpar { width: 24px; height: 24px; border-radius: 50%; display: none; place-items: center; color: var(--texto-3); }
+.busca.aberta .limpar { display: grid; }
+.busca .limpar:hover { background: var(--painel-2); color: var(--texto); }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip {
   display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px;
@@ -180,13 +196,16 @@ h1 { font: 600 22px/1.1 "Outfit",sans-serif; letter-spacing: -.02em; }
 .chip:hover { color: var(--texto); border-color: color-mix(in srgb, var(--texto-3) 60%, transparent); }
 .chip.on { color: var(--texto); border-color: var(--roxo); background: rgba(124,84,255,.16); }
 .chip .n { font-size: 12px; color: var(--texto-3); font-variant-numeric: tabular-nums; }
-.alternador { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px;
-  border: 1px solid var(--linha); background: var(--painel); }
-.alternador button { height: 28px; padding: 0 13px; border-radius: 999px; font-size: 13px;
-  color: var(--texto-2); display: inline-flex; align-items: center; gap: 6px; }
-.alternador button:hover { color: var(--texto); }
-.alternador button.on { background: var(--painel-2); color: var(--texto); }
-.alternador .n { font-size: 11.5px; color: var(--texto-3); font-variant-numeric: tabular-nums; }
+/* O ALTERNADOR SEM CAIXA: só as três palavras, e um traço embaixo da
+   que está valendo. Ela: "queria o toggle mais minimalista ainda". */
+.alternador { display: inline-flex; gap: 16px; align-items: center; }
+.alternador button {
+  font-size: 13.5px; color: var(--texto-3); padding: 2px 0 4px;
+  border-bottom: 1.5px solid transparent; display: inline-flex; align-items: baseline; gap: 5px;
+}
+.alternador button:hover { color: var(--texto-2); }
+.alternador button.on { color: var(--texto); border-bottom-color: var(--roxo); }
+.alternador .n { font-size: 11px; color: var(--texto-3); font-variant-numeric: tabular-nums; }
 .acao { width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--linha);
   background: var(--painel); color: var(--texto-2); display: grid; place-items: center; }
 .acao:hover { color: var(--texto); border-color: color-mix(in srgb, var(--texto-3) 60%, transparent); }
@@ -248,7 +267,7 @@ h1 { font: 600 22px/1.1 "Outfit",sans-serif; letter-spacing: -.02em; }
   border: 1.5px solid rgba(255,255,255,.8); background: rgba(18,17,22,.5);
   backdrop-filter: blur(6px); color: transparent; opacity: 0; transition: all .16s;
 }
-.cartao:hover .marca-sel, .modo-sel .marca-sel { opacity: 1; }
+.cartao:hover .marca-sel, .cartao:focus-within .marca-sel { opacity: 1; }
 .moldura.marcada .marca-sel { background: var(--roxo); border-color: var(--roxo); color: #fff; opacity: 1; }
 
 /* A PILHA: um carrossel. Parada, as folhas ficam atrás da capa; no
@@ -347,7 +366,12 @@ h1 { font: 600 22px/1.1 "Outfit",sans-serif; letter-spacing: -.02em; }
   padding: 9px 12px; font-size: 13.5px; outline: none; resize: vertical; width: 100%;
 }
 .campo input:focus, .campo textarea:focus { border-color: var(--roxo); }
-.campo .dica { font-size: 11.5px; color: var(--texto-3); line-height: 1.5; }
+/* AS EXPLICAÇÕES SÃO NOTA DE RODAPÉ, não texto da tela.
+   Ela: "achei que o texto podia ser mais sutil, ter menos destaque, já
+   que é só uma informação". Faltava uma regra para o `.dica` solto: ele
+   herdava o corpo de 14px e a cor do texto, e competia com os campos. */
+.dica, .campo .dica { font-size: 11.5px; line-height: 1.5; color: var(--texto-3); font-weight: 400; }
+.dica strong { font-weight: 500; color: var(--texto-2); }
 .duo { display: flex; gap: 8px; }
 .duo button, .btn {
   height: 38px; padding: 0 16px; border-radius: 11px; border: 1px solid var(--linha);
@@ -543,18 +567,17 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
       </div>
       <div class="ferramentas">
         <div class="alternador" id="alternador" role="group" aria-label="O que mostrar"></div>
-        <label class="busca">
+        <div class="busca" id="caixaBusca" role="search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.2-3.2"/></svg>
-          <input id="busca" type="search" placeholder="Buscar por título, frase ou tag" aria-label="Buscar">
-        </label>
+          <input id="busca" type="search" placeholder="título, frase ou tag" aria-label="Buscar">
+          <button class="limpar" id="btLimparBusca" aria-label="Fechar a busca" tabindex="-1">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                 stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
         <div class="chips" id="chips"></div>
         <div class="grupo-acao">
-          <button class="acao" id="btSelecionar" aria-pressed="false" title="Selecionar fotos" aria-label="Selecionar fotos">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/>
-            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          </button>
           <span class="grupo-acao" id="acoesSel" hidden>
             <span class="contador" id="contaSel">0</span>
             <button class="acao forte" id="btCriarColSel" title="Criar coleção com as fotos marcadas"
@@ -1674,7 +1697,6 @@ let mostrar = "fotos";      /* fotos | colecoes | carrosseis */
 let busca = "";
 let zoom = 2;
 const ZOOMS = [126, 158, 196, 250, 320];
-let modoSel = false;
 let menuAberto = null;
 
 const SVG_ENGRENAGEM = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>';
@@ -1956,12 +1978,12 @@ function desenharChips() {
 }
 
 /* ---------- SELEÇÃO ---------- */
+/* SEM BOTÃO DE "SELECIONAR": marcar é clicar na bolinha da foto.
+   Ela: "se você clicar na bolinha de cada imagem já dá a função dele".
+   Os ícones de ação aparecem sozinhos quando existe foto marcada. */
 function atualizarSel() {
   $("contaSel").textContent = selecao.size;
   $("acoesSel").hidden = selecao.size === 0;
-  $("btSelecionar").classList.toggle("on", modoSel || selecao.size > 0);
-  $("btSelecionar").setAttribute("aria-pressed", String(modoSel));
-  document.querySelector(".miolo").classList.toggle("modo-sel", modoSel);
 }
 function marcar(caminho) {
   if (selecao.has(caminho)) selecao.delete(caminho); else selecao.add(caminho);
@@ -1980,7 +2002,7 @@ async function criarColecaoDasMarcadas() {
     const l = colecoesDe(x);
     if (!l.includes(limpo)) definirColecoes(x.caminho, l.concat([limpo]));
   });
-  selecao.clear(); modoSel = false;
+  selecao.clear();
   salvar(); desenhar();
   mostrarEstado("“" + limpo + "” criada com " + n + (n === 1 ? " foto" : " fotos"), "ok");
 }
@@ -1998,7 +2020,7 @@ async function juntarArrastando(capa, outra) {
   soltarGrupo(capa); soltarGrupo(outra);
   editar(capa, "carrossel", [outra]);
   editar(outra, "carrosselDe", capa);
-  selecao.clear(); modoSel = false;
+  selecao.clear();
   salvar(); desenhar();
   mostrarEstado("carrossel de 2 fotos · a capa é “" + nomeCapa + "”", "ok");
 }
@@ -2092,9 +2114,9 @@ function desenharGrade() {
       circ.onclick = (e) => { e.stopPropagation(); marcar(caminho); };
       circ.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); marcar(caminho); } };
     }
-    mold.onclick = () => { if (modoSel) marcar(caminho); else abrirPainel(caminho); };
+    mold.onclick = () => abrirPainel(caminho);
     mold.onkeydown = (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); modoSel ? marcar(caminho) : abrirPainel(caminho); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrirPainel(caminho); }
     };
     mold.ondragstart = (e) => { e.dataTransfer.setData("text/plain", "foto:" + caminho); e.dataTransfer.effectAllowed = "move"; };
     mold.ondragover = (e) => { e.preventDefault(); mold.classList.add("solta"); };
@@ -2500,15 +2522,22 @@ ligarCriar("btNovaTag", "campoTag", "novaTag", (n) => {
   mostrarEstado("tag “" + n + "” criada — marque as fotos e use o ícone de tag", "ok");
 });
 
+/* a busca: ícone fechado, campo aberto */
+const abrirBusca = () => { $("caixaBusca").classList.add("aberta"); $("busca").focus(); };
+const fecharBusca = () => {
+  $("caixaBusca").classList.remove("aberta");
+  if (busca) { busca = ""; $("busca").value = ""; desenharGrade(); }
+};
+$("caixaBusca").onclick = (e) => {
+  if (e.target.closest("#btLimparBusca")) { fecharBusca(); return; }
+  abrirBusca();
+};
 $("busca").oninput = (e) => { busca = e.target.value; desenharGrade(); };
+$("busca").onblur = () => { if (!$("busca").value.trim()) $("caixaBusca").classList.remove("aberta"); };
+$("busca").onkeydown = (e) => { if (e.key === "Escape") { e.stopPropagation(); fecharBusca(); $("busca").blur(); } };
 $("btMais").onclick = () => { zoom = Math.min(ZOOMS.length - 1, zoom + 1); desenharGrade(); };
 $("btMenos").onclick = () => { zoom = Math.max(0, zoom - 1); desenharGrade(); };
-$("btSelecionar").onclick = () => {
-  modoSel = !modoSel;
-  if (!modoSel) selecao.clear();
-  desenhar();
-};
-$("btLimparSel").onclick = () => { selecao.clear(); modoSel = false; desenhar(); };
+$("btLimparSel").onclick = () => { selecao.clear(); desenhar(); };
 $("btCriarColSel").onclick = criarColecaoDasMarcadas;
 $("btCriarCar").onclick = agruparCarrossel;
 $("btDesagrupar").onclick = desagrupar;
@@ -2573,7 +2602,7 @@ document.addEventListener("keydown", (e) => {
     if (!$("veuFoto").hidden) { fecharPainel(); return; }
     if (!$("veuConfig").hidden) { fecharConfig(); return; }
     if ($("popColecoes").classList.contains("on")) { fecharPopColecoes(); return; }
-    if (selecao.size || modoSel) { selecao.clear(); modoSel = false; desenhar(); }
+    if (selecao.size) { selecao.clear(); desenhar(); }
     return;
   }
   if ($("veuFoto").hidden || digitando) return;
