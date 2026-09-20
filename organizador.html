@@ -421,7 +421,7 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
   color: var(--texto-2); border: 1px solid var(--linha); }
 .redondo:hover:not(:disabled) { background: var(--painel-2); color: var(--texto); }
 .redondo:disabled { opacity: .3; cursor: default; }
-.ficha .corpo { overflow-y: auto; padding: 16px 18px; display: grid; gap: 14px; align-content: start; }
+.ficha .corpo { overflow-y: auto; padding: 14px 18px 18px; display: grid; gap: 4px; align-content: start; }
 .ficha .pe { display: flex; gap: 8px; padding: 13px 18px; border-top: 1px solid var(--linha); align-items: center; }
 .ficha .pe .aviso-pe { flex: 1; font-size: 11.5px; color: var(--texto-3); line-height: 1.45; }
 .rotulo-campo { font-size: 11.5px; color: var(--texto-2); display: block; }
@@ -444,25 +444,43 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
    e fechado mostra um RESUMO do que já está preenchido - nomear o que
    está cheio responde em duas palavras; listar o que falta seria a
    lista longa. O que fica aberto é lembrado enquanto o pop-up vive. */
-.secao { border: 1px solid var(--linha); border-radius: 13px; background: color-mix(in srgb, var(--texto-3) 5%, transparent); }
-.secao + .secao { margin-top: 2px; }
+/* ---------- AS SEÇÕES DO POP-UP ----------
+   Ela: "não gostei de entrarem num bloco com borda; podia ser mais
+   minimalista, como as coleções e tags na barra lateral". Então é a
+   MESMA linguagem do menu: um rótulo pequeno em maiúsculas, a seta, e o
+   resumo à direita. Sem caixa, sem borda - o respiro separa.
+   E as explicações saem da tela: ficam atrás do "i" de cada seção. */
+.secao { border: 0; background: none; }
+.secao + .secao { margin-top: 10px; }
 .secao > summary {
-  list-style: none; cursor: pointer; display: flex; align-items: center; gap: 9px;
-  padding: 11px 13px; font-size: 13.5px; border-radius: 13px;
+  list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px;
+  padding: 8px 2px 6px; border-radius: 8px;
+  font: 600 10.5px/1 "Outfit",sans-serif; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--texto-3);
 }
 .secao > summary::-webkit-details-marker { display: none; }
-.secao > summary:hover { background: color-mix(in srgb, var(--texto-3) 8%, transparent); }
+.secao > summary:hover { color: var(--texto-2); }
+.secao[open] > summary { color: var(--texto-2); }
 .secao > summary:focus-visible { outline: 2px solid var(--roxo); outline-offset: -2px; }
 .secao .seta-s { color: var(--texto-3); display: grid; place-items: center; transition: transform .2s var(--mola); }
 .secao[open] .seta-s { transform: rotate(90deg); }
-.secao .nome-s { font-weight: 500; white-space: nowrap; }
+.secao .nome-s { white-space: nowrap; }
 .secao .resumo-s {
-  margin-left: auto; color: var(--texto-3); font-size: 12px; text-align: right;
+  margin-left: auto; color: var(--texto-3); font-size: 11.5px; font-weight: 400;
+  letter-spacing: 0; text-transform: none; text-align: right;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 58%;
 }
 .secao .resumo-s.falta { color: var(--aviso); }
-.secao .corpo-s { padding: 0 13px 13px; display: grid; gap: 12px; }
-.secao .aviso-capa { font-size: 11.5px; color: var(--texto-3); }
+.secao .corpo-s { padding: 6px 2px 4px; display: grid; gap: 16px; }
+/* o "i": a explicação só aparece quando ela pede */
+.ajuda {
+  width: 17px; height: 17px; border-radius: 50%; border: 1px solid var(--linha);
+  color: var(--texto-3); display: grid; place-items: center; flex-shrink: 0;
+  font: 600 9.5px/1 "Outfit",sans-serif; letter-spacing: 0; text-transform: none;
+}
+.ajuda:hover, .ajuda[aria-expanded="true"] { color: var(--texto); border-color: var(--texto-3); }
+.explica { display: none; }
+.explica.on { display: block; }
 
 @media (max-width: 900px) {
   .ficha { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); height: 94vh; max-height: 94vh; }
@@ -1690,9 +1708,9 @@ const LUA = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
    ============================================================= */
 
 /* ---------- estado só da tela ---------- */
-/* o pop-up abre com os textos e a classificação à vista; a foto do
-   carrossel fica fechada até ela querer (pedido dela, 20/09/2026) */
-abertas.add("textos"); abertas.add("classe");
+/* O POP-UP ABRE COM UMA SEÇÃO SÓ: a info do card. O resto fica fechado
+   até ela querer (pedido dela, 20/09/2026). */
+abertas.add("textos");
 let mostrar = "fotos";      /* fotos | colecoes | carrosseis */
 let busca = "";
 let zoom = 2;
@@ -2209,14 +2227,18 @@ function abrirPainel(caminho) {
   /* --- os campos --- */
   /* uma seção que abre e fecha; o que está aberto sobrevive ao redesenho
      (o pop-up se remonta inteiro a cada clique numa página) */
-  const secao = (id, nome, resumo, corpoHtml, falta) =>
+  const secao = (id, nome, resumo, corpoHtml, falta, ajuda) =>
     '<details class="secao"' + (abertas.has(id) ? " open" : "") + ' data-s="' + id + '">'
     + '<summary><span class="seta-s" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 24 24"'
     + ' fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">'
     + '<path d="M9 18l6-6-6-6"/></svg></span>'
     + '<span class="nome-s">' + esc(nome) + '</span>'
+    + (ajuda ? '<button class="ajuda" data-ajuda="' + id + '" aria-expanded="false"'
+        + ' aria-label="O que é isto" title="O que é isto">i</button>' : "")
     + '<span class="resumo-s' + (falta ? " falta" : "") + '">' + esc(resumo) + '</span></summary>'
-    + '<div class="corpo-s">' + corpoHtml + '</div></details>';
+    + '<div class="corpo-s">'
+    + (ajuda ? '<p class="dica explica" id="explica-' + id + '">' + ajuda + '</p>' : "")
+    + corpoHtml + '</div></details>';
   /* o resumo: os campos que JÁ estão preenchidos */
   const cheios = (le, pares) => pares.filter((p) => le(p[0])).map((p) => p[1]);
 
@@ -2228,18 +2250,13 @@ function abrirPainel(caminho) {
 
   const preenchidos = cheios(leCard, [["phrase", "título"], ["name", "detalhe"],
     ["year", "ano"], ["link", "link"]]);
-  const corpoTextos = (ehGrupo
-      ? '<div class="dica">É o que aparece no CARD do carrossel. Vazio usa o texto da capa.</div>' : "")
-    + campoTexto(idCard.f, "Título — o texto GRANDE", leCard("phrase"),
+  const corpoTextos = campoTexto(idCard.f, "Título — o texto GRANDE", leCard("phrase"),
         idioma !== "en" ? (leCardEn("phrase") || "o texto em inglês") : "aparece ao clicar no cantinho colorido", true)
     + campoTexto(idCard.n, "Detalhe — o pequeno embaixo", leCard("name"),
         idioma !== "en" ? (leCardEn("name") || "o detalhe em inglês") : it.caminho.split("/").pop(), false)
     + '<div class="dois-campos">'
       + campoTexto(idCard.a, "Ano", leCard("year"), "2024", false)
       + campoTexto(idCard.l, "Link", leCard("link"), "https://…", false) + '</div>'
-    + (ehGrupo && faixaDeAnos(it)
-        ? '<div class="dica">No site o card mostra <strong>' + esc(faixaDeAnos(it))
-          + '</strong> — da foto mais antiga à mais nova.</div>' : "")
     + '<div class="chave-linha"><button class="chave" id="fInfoCard" role="switch" aria-checked="'
       + infoCardLigada + '" aria-label="Botão de info"></button>'
       + '<span class="rotulo-campo">Botão de info</span></div>';
@@ -2253,13 +2270,10 @@ function abrirPainel(caminho) {
     + cols.map((c) => '<button class="escolha verde' + (minhas.includes(c) ? " on" : "")
         + '" type="button" data-c="' + esc(c) + '" aria-pressed="' + minhas.includes(c) + '">'
         + esc(c) + '</button>').join("")
-    + '<button class="escolha" type="button" id="btNovaColPainel">+ nova</button></div>'
-    + (minhas.length ? "" : '<div class="dica" style="margin-top:6px">Em nenhuma coleção: aparece só no All.</div>')
-    + '</div>';
+    + '<button class="escolha" type="button" id="btNovaColPainel">+ nova</button></div></div>';
 
   const corpoPagina = !ehGrupo ? "" :
-    (iSel === 0 ? '<div class="aviso-capa">Esta é a capa: o texto dela aparece na 1ª página do carrossel.</div>' : "")
-    + campoTexto("fPagFrase", "Título desta foto", vSel("phrase"),
+    campoTexto("fPagFrase", "Título desta foto", vSel("phrase"),
         idioma !== "en" ? (vSelEn("phrase") || "o texto em inglês") : "o texto GRANDE desta foto", true)
     + campoTexto("fPagNome", "Detalhe desta foto", vSel("name"),
         idioma !== "en" ? (vSelEn("name") || "o detalhe em inglês") : "o pequeno embaixo", false)
@@ -2282,16 +2296,39 @@ function abrirPainel(caminho) {
     + secao("textos", ehGrupo ? "Info do card" : "Textos",
         !infoCardLigada ? "sem botão de info"
           : (preenchidos.length ? preenchidos.join(" · ") : "vazio"),
-        corpoTextos, !infoCardLigada || !preenchidos.length)
+        corpoTextos, !infoCardLigada || !preenchidos.length,
+        (ehGrupo ? "É o que aparece no card do carrossel, junto da tag. Vazio, o card usa o texto da capa. "
+                 : "É o que aparece ao clicar no cantinho colorido da foto, no site. ")
+        + (ehGrupo && faixaDeAnos(it)
+            ? "No site o card mostra <strong>" + esc(faixaDeAnos(it)) + "</strong>, da foto mais antiga à mais nova. " : "")
+        + "O botão de info liga e desliga esse cantinho.")
     + secao("classe", "Tag e coleções",
         (val(it, "tag") || "sem tag") + (minhas.length ? " · " + minhas.join(", ") : ""),
-        corpoClasse, !val(it, "tag"))
+        corpoClasse, !val(it, "tag"),
+        "A tag é o filtro da barra do site. As coleções viram cards na página Mix, e a mesma foto pode estar em mais de uma. Em nenhuma, ela aparece só no All.")
     + (ehGrupo ? secao("pagina", "Foto " + (iSel + 1) + " de " + seq.length + (iSel === 0 ? " · capa" : ""),
-        resumoPagina, corpoPagina, false) : "")
+        resumoPagina, corpoPagina, false,
+        (iSel === 0 ? "Esta é a capa: o texto dela aparece na 1ª página do carrossel. "
+                    : "O texto aparece quando esta foto está na tela, dentro do carrossel. ")
+        + "Arraste as miniaturas para mudar a ordem; a primeira é sempre a capa.") : "")
     + (ehSeguidora(it) && !ehArq(it)
         ? '<div class="dica">Esta foto é uma página de outro card. Para tirar do site, arquive o card que a contém, ou desfaça o carrossel.</div>'
         : "");
   $("fCorpo").innerHTML = corpo;
+  /* o "i" mostra e esconde a explicação daquela seção, sem abrir ou
+     fechar a seção junto */
+  $("fCorpo").querySelectorAll("[data-ajuda]").forEach((b) => {
+    b.onclick = (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const p = $("explica-" + b.dataset.ajuda);
+      if (!p) return;
+      const mostrar = !p.classList.contains("on");
+      p.classList.toggle("on", mostrar);
+      b.setAttribute("aria-expanded", String(mostrar));
+      const d = b.closest("details");
+      if (mostrar && d && !d.open) d.open = true;
+    };
+  });
   /* a seção aberta sobrevive ao redesenho */
   $("fCorpo").querySelectorAll("details.secao").forEach((d) => {
     d.addEventListener("toggle", () => {
