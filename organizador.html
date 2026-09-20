@@ -438,6 +438,10 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
 .escolha.on { border-color: var(--roxo); background: rgba(124,84,255,.18); color: var(--texto); }
 .escolha.verde.on { border-color: var(--verde); background: color-mix(in srgb, var(--verde) 18%, transparent); }
 .chave-linha { display: flex; align-items: center; gap: 10px; justify-content: flex-start; }
+/* O IDIOMA NA MESMA LINGUAGEM DO "Fotos · Coleções · Carrosséis":
+   só as três siglas, com um traço embaixo da que está valendo. O que
+   cada uma faz mora atrás do "i", como nas seções. */
+.linha-idioma { display: flex; align-items: center; gap: 12px; padding: 2px 2px 6px; }
 .chave { width: 40px; height: 23px; border-radius: 999px; flex-shrink: 0; background: var(--painel-2);
   border: 1px solid var(--linha); position: relative; transition: background .2s, border-color .2s; }
 .chave::after { content: ""; position: absolute; top: 2px; left: 2px; width: 17px; height: 17px;
@@ -2304,11 +2308,15 @@ function abrirPainel(caminho) {
   const resumoPagina = (vSel("name") || vSel("phrase") || "sem texto")
     + (desligada(vSel("noInfo")) ? " · sem info" : "");
 
-  const corpo = '<div class="escolhas" id="fIdiomas">' + IDIOMAS.map((lg) =>
-      '<button class="escolha' + (idioma === lg[0] ? " on" : "") + '" type="button" data-lg="' + lg[0] + '">'
+  const corpo = '<div class="linha-idioma"><div class="alternador" id="fIdiomas" role="group"'
+    + ' aria-label="Idioma dos textos">' + IDIOMAS.map((lg) =>
+      '<button class="' + (idioma === lg[0] ? "on" : "") + '" data-lg="' + lg[0] + '">'
       + lg[1] + '</button>').join("")
-    + '<span class="dica" style="align-self:center">'
-    + (idioma === "en" ? "o padrão do site" : "vazio usa o inglês") + '</span></div>'
+    + '</div><button class="ajuda" data-ajuda="idioma" aria-expanded="false"'
+    + ' aria-label="O que é isto" title="O que é isto">i</button></div>'
+    + '<p class="dica explica" id="explica-idioma">O site nasce em <strong>inglês</strong>: é o que'
+    + ' aparece para quem não escolheu idioma. Em PT e ES, campo vazio usa o inglês, e o texto'
+    + ' apagado dentro do campo mostra o original — dá para traduzir olhando para ele.</p>'
     + secao("textos", ehGrupo ? "Info do card" : "Textos",
         !infoCardLigada ? "sem botão de info"
           : (preenchidos.length ? preenchidos.join(" · ") : "vazio"),
