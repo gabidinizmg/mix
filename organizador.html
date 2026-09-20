@@ -361,8 +361,14 @@ h1 { font: 600 22px/1.1 "Outfit",sans-serif; letter-spacing: -.02em; }
 .pergunta { width: min(410px,100%); }
 
 .ficha {
-  width: min(1060px,96vw); max-height: 92vh; display: grid;
+  width: min(1060px,96vw); height: 92vh; max-height: 92vh; display: grid;
   grid-template-columns: minmax(0,1.05fr) minmax(320px,.95fr);
+  /* A LINHA TEM QUE ENCOLHER.
+     Sem `grid-template-rows: minmax(0,1fr)` a linha fica do tamanho do
+     CONTEÚDO: o `max-height` corta a caixa, mas as miniaturas do
+     carrossel e o rodapé ficavam para fora, invisíveis. MEDIDO numa
+     janela de 768px: a coluna da foto pedia 1074px. */
+  grid-template-rows: minmax(0,1fr);
   background: var(--painel); border: 1px solid var(--linha); border-radius: 20px;
   overflow: hidden; box-shadow: 0 50px 110px -50px var(--sombra);
 }
@@ -370,7 +376,8 @@ h1 { font: 600 22px/1.1 "Outfit",sans-serif; letter-spacing: -.02em; }
   display: grid; grid-template-rows: minmax(0,1fr) auto; border-right: 1px solid var(--linha); min-height: 0; }
 html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
 .ficha .palco { display: grid; place-items: center; padding: 20px; min-height: 0; }
-.ficha .palco img, .ficha .palco video { max-width: 100%; max-height: 56vh; border-radius: 10px; object-fit: contain; }
+/* a foto usa o espaço que sobrar, e não uma fatia fixa da tela */
+.ficha .palco img, .ficha .palco video { max-width: 100%; max-height: 100%; border-radius: 10px; object-fit: contain; }
 .ficha .caminho { font-size: 11px; color: var(--texto-3); padding: 0 20px 8px; text-align: center; word-break: break-all; }
 .tiras { display: flex; gap: 8px; padding: 0 18px 16px; overflow-x: auto; }
 .tira { width: 58px; height: 58px; border-radius: 9px; overflow: hidden; flex-shrink: 0;
@@ -413,9 +420,10 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
 .caixa-pag .cabeca-pag span { color: var(--texto-3); font-size: 11.5px; }
 
 @media (max-width: 900px) {
-  .ficha { grid-template-columns: 1fr; max-height: 94vh; }
+  .ficha { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); height: 94vh; max-height: 94vh; }
   .ficha .lado-foto { border-right: 0; border-bottom: 1px solid var(--linha); }
-  .ficha .palco img, .ficha .palco video { max-height: 32vh; }
+  .ficha .palco img, .ficha .palco video { max-height: 30vh; }
+  .ficha .lado-foto { grid-template-rows: auto auto auto; }
 }
 @media (max-width: 720px) {
   .app { grid-template-columns: 1fr; }
