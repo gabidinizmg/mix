@@ -1912,7 +1912,13 @@ async function acompanhar(sha, rotulo) {
   let run = null;
   while (vivo() && Date.now() - inicio < LIMITE) {
     try {
-      const r = await gh("GET", "/actions/workflows/" + ROBO + "/runs?per_page=5&head_sha=" + sha + "&t=" + Date.now());
+      /* com a chave primeiro (limite alto); se ela nao tiver a permissao
+         de Actions, o repositorio e publico: le sem chave */
+      const rota = "https://api.github.com/repos/" + alvo.dono + "/" + alvo.repo + "/actions/workflows/"
+        + ROBO + "/runs?per_page=5&head_sha=" + sha + "&t=" + Date.now();
+      let r = await fetch(rota, { cache: "no-store", headers: { "Authorization": "Bearer " + lerToken(),
+        "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" } });
+      if (!r.ok) r = await fetch(rota, { cache: "no-store" });
       if (r.ok) run = ((await r.json()).workflow_runs || [])[0] || null;
     } catch (e) { /* sem rede por um instante: tenta no proximo passo */ }
     if (run && run.status === "completed") break;
