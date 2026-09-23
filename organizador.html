@@ -653,7 +653,7 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                    stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
             </button>
-            <button class="acao" id="btTagAcao" title="Pôr uma tag nas marcadas" aria-label="Pôr uma tag nas marcadas">
+            <button class="acao" id="btTagAcao" title="Tags das marcadas" aria-label="Tags das marcadas">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                    stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg>
             </button>
@@ -913,6 +913,25 @@ const val = (it, campo) => {
   const e = edicoes[it.caminho] || {};
   return e[campo] !== undefined ? (e[campo] || "") : (it[campo] || "");
 };
+/* VARIAS TAGS POR FOTO (23/09/2026). Ela: "quero poder escolher mais de
+   uma tag". A lista mora em `tags`; `tag` continua sendo gravada com a
+   PRIMEIRA, para um robo ou site antigo nao ficar sem nada.
+   Ordem de quem manda: a lista editada aqui; a tag antiga editada aqui
+   (null = tirada de proposito); o que o robo publicou. */
+function tagsDe(it) {
+  const e = edicoes[it.caminho] || {};
+  if (Array.isArray(e.tags)) return e.tags.slice();
+  if (e.tag !== undefined) return e.tag ? [e.tag] : [];
+  if (Array.isArray(it.tags)) return it.tags.slice();
+  return it.tag ? [it.tag] : [];
+}
+function definirTags(caminho, lista) {
+  const l = [...new Set((lista || []).map((t) => String(t || "").trim()).filter(Boolean))];
+  /* lista VAZIA fica gravada: e "sem tag de proposito", senao a tag que o
+     robo publicou voltaria sozinha */
+  editar(caminho, "tags", l);
+  editar(caminho, "tag", l[0] || null);
+}
 /* ---------- A INFO DO GRUPO ----------
    Sao TRES coisas diferentes, e eu tinha juntado duas:
      1. a info do GRUPO     -> aparece no CARD, junto da tag e do icone
@@ -1074,7 +1093,8 @@ const deBase64 = (c) => {
 const lerInfoTexto = (txt) => {
   const d = JSON.parse(txt || "{}");
   const obj = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
-  return { items: obj(d.items), collections: obj(d.collections) };
+  return { items: obj(d.items), collections: obj(d.collections),
+           tags: Array.isArray(d.tags) ? d.tags.map(String) : [] };
 };
 /* Com a chave: pela API (sempre o AGORA, e traz o `sha` para salvar).
    Sem a chave: pelo endereco publico do arquivo (pode atrasar uns minutos
@@ -1164,6 +1184,8 @@ async function carregar() {
           : String(it.year),
         link: it.link || "",
         tag: it.tag || "",
+        /* VARIAS TAGS (23/09/2026): a lista, quando o robo a escreveu */
+        tags: Array.isArray(it.tags) ? it.tags.map(String).filter(Boolean) : (it.tag ? [String(it.tag)] : []),
         /* ARQUIVADA vinda do repositorio. Sem ler isto aqui, abrir a
            ferramenta noutro navegador mostraria tudo como nao-arquivado. */
         archived: it.archived === true || it.archived === "true",
@@ -1195,10 +1217,10 @@ async function carregar() {
     /* PRIMEIRO o mix-info.json do GitHub (ver "JUNTAR, NUNCA ATROPELAR").
        So se ele nao puder ser lido e que as colecoes criadas sao
        reconstruidas do images.json, como antes. */
-    let sync = null;
+    let sync = null, tagsDoRepo = [];
     try {
       const lido = await lerInfoDoRepo(false);
-      if (lido) sync = sincronizar(lido.dados);
+      if (lido) { sync = sincronizar(lido.dados); tagsDoRepo = lido.dados.tags || []; }
     } catch (e) { /* sem rede ou sem permissao: segue com o daqui */ }
     if (colecoesDef === null) {
       colecoesDef = {};
@@ -1212,7 +1234,12 @@ async function carregar() {
        Agora o images.json manda - e ele ja carrega `tags`, escrito pelo
        robo. O navegador so acrescenta o que for novo. */
     if (Array.isArray(d.tags) && d.tags.length) {
-      ordemTags = d.tags.map(String);
+      /* o robo so publica tags que alguma foto USA. Sem guardar as outras
+         (no fim da lista), uma tag sem foto sumia das escolhas e nunca
+         mais dava para marcar - foi o que aconteceu com "3D". */
+      const semFoto = ordemTags.concat(tagsDoRepo)
+        .filter((t, i, todas) => !d.tags.includes(t) && todas.indexOf(t) === i);
+      ordemTags = d.tags.map(String).concat(semFoto);
       if (typeof d.tagsVisiveis === "number") tagsVisiveis = d.tagsVisiveis;
     }
 
@@ -1223,7 +1250,7 @@ async function carregar() {
        reconstruida na ordem em que as tags apareceram nos dados.
        Agora a lista dela e preservada; tag que ainda nao tem foto
        aparece com contagem zero, e tag nova entra no fim. */
-    const achadas = [...new Set(itens.map((x) => val(x, "tag")).filter(Boolean))];
+    const achadas = [...new Set(itens.flatMap(tagsDe))];
     achadas.forEach((t) => { if (!ordemTags.includes(t)) ordemTags.push(t); });
     salvar(); desenhar();
     mostrarEstado("lido do " + fonte + (sync ? resumoSync(sync) : ""),
@@ -1237,8 +1264,8 @@ async function carregar() {
 
 /* ---------- HELPERS DA GRADE E DO CARROSSEL ---------- */
 function ativa(x) { return !ehArq(x) && !ehSeguidora(x); }
-function contarTag(t) { return itens.filter((x) => ativa(x) && val(x, "tag") === t).length; }
-function semTag() { return itens.filter((x) => ativa(x) && !val(x, "tag")).length; }
+function contarTag(t) { return itens.filter((x) => ativa(x) && tagsDe(x).includes(t)).length; }
+function semTag() { return itens.filter((x) => ativa(x) && !tagsDe(x).length).length; }
 function contarArq() { return itens.filter(ehArq).length + arquivadasOrfas().length; }
 function contarAtivas() { return itens.filter(ativa).length; }
 
@@ -1582,7 +1609,13 @@ function desagrupar() {
 }
 
 function aplicarTag(t) {
-  selecao.forEach((c) => editar(c, "tag", t));
+  const sel = [...selecao].map(acharItem).filter(Boolean);
+  const todas = !!t && sel.length && sel.every((x) => tagsDe(x).includes(t));
+  sel.forEach((x) => {
+    if (!t) definirTags(x.caminho, []);
+    else if (todas) definirTags(x.caminho, tagsDe(x).filter((y) => y !== t));
+    else definirTags(x.caminho, tagsDe(x).concat(t));
+  });
   if (t && !ordemTags.includes(t)) ordemTags.push(t);
   selecao.clear(); salvar(); desenhar();
 }
@@ -1892,7 +1925,9 @@ function menuDaTag(nome, alvo) {
           n ? "As " + n + " fotos continuam no Mix, sem tag — no site elas aparecem só no All."
             : "Nenhuma foto usa esta tag.");
         if (!ok) return;
-        itens.forEach((x) => { if (val(x, "tag") === nome) editar(x.caminho, "tag", null); });
+        itens.forEach((x) => {
+          if (tagsDe(x).includes(nome)) definirTags(x.caminho, tagsDe(x).filter((y) => y !== nome));
+        });
         ordemTags = ordemTags.filter((t) => t !== nome);
         if (filtro === nome) filtro = "";
         salvar(); desenhar();
@@ -2010,13 +2045,13 @@ function baseDaVista() {
 function visiveis() {
   let l = baseDaVista();
   if (mostrar === "carrosseis") l = l.filter((x) => paginas(x).length > 1);
-  if (filtro === "__sem") l = l.filter((x) => !val(x, "tag"));
-  else if (filtro && filtro !== "__arq") l = l.filter((x) => val(x, "tag") === filtro);
+  if (filtro === "__sem") l = l.filter((x) => !tagsDe(x).length);
+  else if (filtro && filtro !== "__arq") l = l.filter((x) => tagsDe(x).includes(filtro));
   const t = busca.trim().toLowerCase();
   if (t) {
     l = l.filter((x) => {
       const txt = [val(x, "name"), val(x, "phrase"), valGrupo(x, "name"), valGrupo(x, "phrase"),
-        val(x, "tag"), colecoesDe(x).join(" "), x.caminho, faixaDeAnos(x), val(x, "year")].join(" ");
+        tagsDe(x).join(" "), colecoesDe(x).join(" "), x.caminho, faixaDeAnos(x), val(x, "year")].join(" ");
       return txt.toLowerCase().includes(t);
     });
   }
@@ -2039,8 +2074,8 @@ function desenharAlternador() {
 }
 function desenharChips() {
   const base = baseDaVista();
-  const conta = (t) => base.filter((x) => val(x, "tag") === t).length;
-  const nSem = base.filter((x) => !val(x, "tag")).length;
+  const conta = (t) => base.filter((x) => tagsDe(x).includes(t)).length;
+  const nSem = base.filter((x) => !tagsDe(x).length).length;
   const f = [];
   if (filtroCol) {
     f.push('<button class="chip on" id="btSairCol" title="Ver todas as fotos">Coleção: '
@@ -2167,7 +2202,7 @@ function desenharGrade() {
   $("grade").innerHTML = l.length ? l.map((it) => {
     const seq = paginas(it);
     const ehGrupo = seq.length > 1;
-    const t = val(it, "tag");
+    const t = tagsDe(it).join(", ");
     const nome = valGrupo(it, "name") || val(it, "name") || it.caminho.split("/").pop();
     const ano = ehGrupo ? (faixaDeAnos(it) || valGrupo(it, "year") || val(it, "year")) : val(it, "year");
     const midia = (u, cls) => (it.video && u === (it.image || it.video) && !it.image)
@@ -2345,10 +2380,12 @@ function abrirPainel(caminho) {
   /* SEM OS ROTULOS "Tag" e "Colecoes": a secao ja se chama assim. A fila
      de cima e a tag (roxa quando escolhida); a de baixo sao as colecoes
      (verdes, e terminam no "+ nova"). O "i" conta isso. */
+  const minhasTags = tagsDe(it);
   const corpoClasse = '<div class="escolhas" id="fTags" role="group" aria-label="Tag">'
-    + ordemTags.map((t) => '<button class="escolha' + (val(it, "tag") === t ? " on" : "")
-        + '" type="button" data-t="' + esc(t) + '">' + esc(t) + '</button>').join("")
-    + '<button class="escolha' + (!val(it, "tag") ? " on" : "") + '" type="button" data-t="">nenhuma</button>'
+    + ordemTags.map((t) => '<button class="escolha' + (minhasTags.includes(t) ? " on" : "")
+        + '" type="button" data-t="' + esc(t) + '" aria-pressed="' + minhasTags.includes(t) + '">'
+        + esc(t) + '</button>').join("")
+    + '<button class="escolha' + (!minhasTags.length ? " on" : "") + '" type="button" data-t="">nenhuma</button>'
     + '</div>'
     + '<div class="escolhas" id="fCols" role="group" aria-label="Coleções">'
     + cols.map((c) => '<button class="escolha verde' + (minhas.includes(c) ? " on" : "")
@@ -2393,8 +2430,8 @@ function abrirPainel(caminho) {
             ? "No site o card mostra <strong>" + esc(faixaDeAnos(it)) + "</strong>, da foto mais antiga à mais nova. " : "")
         + "O botão de info liga e desliga esse cantinho.")
     + secao("classe", "Tag e coleções",
-        (val(it, "tag") || "sem tag") + (minhas.length ? " · " + minhas.join(", ") : ""),
-        corpoClasse, !val(it, "tag"),
+        (tagsDe(it).join(", ") || "sem tag") + (minhas.length ? " · " + minhas.join(", ") : ""),
+        corpoClasse, !tagsDe(it).length,
         "A fila de cima é a <strong>tag</strong>, o filtro da barra do site — uma por foto. A de baixo são as <strong>coleções</strong>, que viram cards na página Mix; a mesma foto pode estar em várias, e em nenhuma ela aparece só no All.")
     + (ehGrupo ? secao("pagina", "Foto " + (iSel + 1) + " de " + seq.length + (iSel === 0 ? " · capa" : ""),
         resumoPagina, corpoPagina, false,
@@ -2452,7 +2489,8 @@ function abrirPainel(caminho) {
   };
   $("fTags").querySelectorAll("[data-t]").forEach((b) => {
     b.onclick = () => {
-      editar(it.caminho, "tag", b.dataset.t === "" ? null : b.dataset.t);
+      const t = b.dataset.t, agora = tagsDe(it);
+      definirTags(it.caminho, t === "" ? [] : agora.includes(t) ? agora.filter((y) => y !== t) : agora.concat(t));
       salvar(); abrirPainel(caminho); desenhar();
     };
   });
@@ -2671,13 +2709,18 @@ $("btDesagrupar").onclick = desagrupar;
 $("btTagAcao").onclick = (e) => {
   e.stopPropagation();
   const n = selecao.size;
-  abrirMenu(e, ordemTags.map((t) => ({ id: "t" + t, rotulo: t, faz: () => {
+  const sel = [...selecao].map(acharItem).filter(Boolean);
+  abrirMenu(e, ordemTags.map((t) => {
+    const todas = sel.length && sel.every((x) => tagsDe(x).includes(t));
+    return { id: "t" + t, rotulo: (todas ? "✓ " : "") + t, faz: () => {
       aplicarTag(t);
-      mostrarEstado("tag “" + t + "” em " + n + (n === 1 ? " foto" : " fotos"), "ok");
-    } }))
-    .concat(["-", { id: "tirar", rotulo: "Tirar a tag", faz: () => {
+      mostrarEstado((todas ? "tag “" + t + "” tirada de " : "tag “" + t + "” em ") + n
+        + (n === 1 ? " foto" : " fotos"), "ok");
+    } };
+  })
+    .concat(["-", { id: "tirar", rotulo: "Tirar todas as tags", faz: () => {
       aplicarTag(null);
-      mostrarEstado("tag tirada de " + n + (n === 1 ? " foto" : " fotos"), "ok");
+      mostrarEstado("tags tiradas de " + n + (n === 1 ? " foto" : " fotos"), "ok");
     } }]));
 };
 $("btColAcao").onclick = (e) => {
@@ -2738,14 +2781,16 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* ---------- SUBIR FOTOS (23/09/2026) ----------
-   Ela: "gostaria de arrastar uma imagem ou varias".
-   Vão para Uploads/Fotos|Videos|Gifs/AAAA-MM/ - o robô não faz dessa pasta
-   uma coleção: a foto nasce só no All, sem tag, e ela organiza aqui.
+   Ela: "gostaria de arrastar uma imagem ou varias", e depois "organiza as
+   pastas com as imagens/videos/gifs, renomeia certinho os arquivos, pode
+   data e hora do upload".
+   Vão para Imagens|Videos|Gifs/AAAA-MM/AAAA-MM-DD_HH-MM-SS.ext - pasta
+   é arrumação, não coleção: a foto nasce só no All, sem tag, e ela
+   organiza aqui.
    TODAS NUM COMMIT SÓ (API de blobs/árvore): um commit por foto dispararia
    o robô uma vez por foto, e duas rodadas juntas brigam no push.
    Até o robô publicar, a foto não está no images.json - por isso a lista
    `subidas` a mantém na grade, inclusive depois de recarregar a página. */
-const PASTA_SUBIDAS = "Uploads";
 const LIMITE_CDN = 20 * 1024 * 1024;   /* o jsDelivr não entrega arquivo maior que isto */
 const LADO_MAX = 2560;
 const REDUZ_ACIMA = 1.5 * 1024 * 1024;
@@ -2768,12 +2813,10 @@ function temArquivos(e) {
   return !!t && Array.prototype.indexOf.call(t, "Files") >= 0;
 }
 
-/* o mesmo título que o robô tira do nome do arquivo */
-const tituloDoArquivo = (nome) => nome.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ")
-  .replace(/\s+/g, " ").trim().replace(/^\w/, (c) => c.toUpperCase());
-/* Nome começando com "." ou "_" o robô ignora (é a convenção de rascunho) */
-const limparNome = (nome) => nome.normalize("NFC").replace(/[\\/:*?"<>|#%{}^~`[\]]+/g, "-")
-  .replace(/\s+/g, " ").replace(/^[._\s-]+/, "").trim();
+/* 2026-09-23_17-05-12: a data e a hora da subida, no fuso dela */
+const doisDig = (n) => String(n).padStart(2, "0");
+const carimbo = (d) => d.getFullYear() + "-" + doisDig(d.getMonth() + 1) + "-" + doisDig(d.getDate())
+  + "_" + doisDig(d.getHours()) + "-" + doisDig(d.getMinutes()) + "-" + doisDig(d.getSeconds());
 const tamanho = (n) => n < 1048576 ? Math.max(1, Math.round(n / 1024)) + " KB"
   : (n / 1048576).toFixed(1).replace(".", ",") + " MB";
 
@@ -2784,7 +2827,7 @@ function itemDaSubida(s) {
   const u = previas[s.caminho] || cru;
   return {
     i: itens.length, image: s.video ? "" : u, video: s.video ? u : "", caminho: s.caminho,
-    name: tituloDoArquivo(s.caminho.split("/").pop()), phrase: "", year: "", link: "", tag: "",
+    name: "", phrase: "", year: "", link: "", tag: "", tags: [],
     archived: false, images: [], grupo: {}, pt: {}, es: {}, collection: "", collections: null, nova: true,
   };
 }
@@ -2809,10 +2852,10 @@ const bytesParaBase64 = (buf) => {
 /* Foto grande é reduzida ANTES de subir: a de celular tem 4000px e 8 MB, e
    o card mais largo do site não passa de 2560px. GIF nunca passa por aqui
    (perderia a animação); PNG e WebP saem em WebP, que guarda a transparência. */
-async function preparar(arq) {
+async function preparar(arq, base) {
   const nome = arq.name || "foto";
-  const ext = ((/\.([^.]+)$/.exec(nome) || [])[1] || "").toLowerCase();
-  const base = limparNome(nome.replace(/\.[^.]+$/, "")) || "foto";
+  let ext = ((/\.([^.]+)$/.exec(nome) || [])[1] || "").toLowerCase();
+  if (ext === "jpeg") ext = "jpg";
   const ehVideo = EXT_VIDEO.test(nome) || /^video\//.test(arq.type);
   const ehFoto = EXT_FOTO.test(nome) || /^image\//.test(arq.type);
   if (!ehVideo && !ehFoto) throw new Error("não é foto nem vídeo");
@@ -2825,16 +2868,16 @@ async function preparar(arq) {
   };
   if (ehVideo) return original("Videos");
   if (ext === "gif") return original("Gifs");
-  if (ext === "svg" || ext === "avif") return original("Fotos");
+  if (ext === "svg" || ext === "avif") return original("Imagens");
   const heic = ext === "heic" || ext === "heif" || /hei[cf]/i.test(arq.type);
   let bmp = null;
   try { bmp = await createImageBitmap(arq, { imageOrientation: "from-image" }); } catch (e) {}
   if (!bmp) {
     if (heic) throw new Error("HEIC não abre neste navegador — exporte em JPG, ou use o Safari");
-    return original("Fotos");
+    return original("Imagens");
   }
   const lado = Math.max(bmp.width, bmp.height);
-  if (!heic && arq.size <= REDUZ_ACIMA && lado <= LADO_MAX) { bmp.close(); return original("Fotos"); }
+  if (!heic && arq.size <= REDUZ_ACIMA && lado <= LADO_MAX) { bmp.close(); return original("Imagens"); }
   const k = Math.min(1, LADO_MAX / lado);
   const w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
   const cv = document.createElement("canvas");
@@ -2849,10 +2892,10 @@ async function preparar(arq) {
                                                     transparente ? 0.9 : 0.86));
   /* o navegador que não sabe gravar WebP devolve PNG - se não ficou menor,
      vai o original */
-  if (!blob || (!heic && blob.size >= arq.size)) return original("Fotos");
+  if (!blob || (!heic && blob.size >= arq.size)) return original("Imagens");
   if (blob.size > LIMITE_CDN) throw new Error(tamanho(blob.size) + " — o site só entrega arquivos até 20 MB");
   const saida = blob.type === "image/webp" ? "webp" : blob.type === "image/png" ? "png" : "jpg";
-  return { blob, nome: base + "." + saida, tipo: "Fotos", video: false,
+  return { blob, nome: base + "." + saida, tipo: "Imagens", video: false,
            nota: tamanho(arq.size) + " → " + tamanho(blob.size) };
 }
 
@@ -2925,20 +2968,21 @@ async function subirArquivos(lista) {
     $("subindoFechar").hidden = subindoAgora;
     $("subindoLista").innerHTML = linhas.map((l) => '<li class="' + l.classe + '">'
       + (l.mini ? '<img src="' + esc(l.mini) + '" alt="">' : '<span class="mini"></span>')
-      + '<div style="min-width:0"><div class="arq-nome">' + esc(l.caminho ? l.caminho.split("/").pop() : l.nome)
+      + '<div style="min-width:0"><div class="arq-nome">' + esc(l.caminho ? l.nome + " → " + l.caminho.split("/").pop() : l.nome)
       + '</div><div class="arq-estado">' + esc(l.estado) + '</div></div></li>').join("");
   };
   $("subindo").hidden = false;
   pinta();
   const d = new Date();
-  const mes = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+  const mes = d.getFullYear() + "-" + doisDig(d.getMonth() + 1);
+  const base = carimbo(d);
   const usados = {};
   const prontas = [];
   for (const l of linhas) {
     try {
       l.estado = "preparando…"; pinta();
-      const p = await preparar(l.arq);
-      const pasta = PASTA_SUBIDAS + "/" + p.tipo + "/" + mes;
+      const p = await preparar(l.arq, base);
+      const pasta = p.tipo + "/" + mes;
       if (!usados[pasta]) usados[pasta] = await nomesNaPasta(pasta);
       const semExt = p.nome.replace(/\.[^.]+$/, ""), ext = p.nome.slice(semExt.length);
       let nome = p.nome, n = 2;

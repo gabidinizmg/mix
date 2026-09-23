@@ -1,5 +1,5 @@
 {
-  "_leia": "Define a TAG padrao de cada colecao e a ordem das colecoes na grade. A ferramenta (organizador.html) pode trocar a tag de uma foto especifica, sem mexer aqui.",
+  "_leia": "So vale para PASTA que e colecao (o jeito antigo). Desde 23/09/2026 as fotos moram em Imagens/ Videos/ Gifs/ e colecao, ordem e tag sao escolhidas no organizador (mix-info.json).",
 
   "collections": {
     "UI":           { "tag": "Design", "order": 1 },

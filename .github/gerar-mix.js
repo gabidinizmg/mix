@@ -4,8 +4,11 @@
    Roda sozinho no GitHub a cada vez que a Gabriela sobe um arquivo.
    Ela nunca abre isto - so arrasta a foto para a pasta da colecao.
 
-   REGRA CENTRAL: pasta = colecao. Nome do arquivo = titulo.
-   Tudo o mais e opcional e vive no mix.config.json.
+   (23/09/2026) AS FOTOS MORAM EM Imagens/ Videos/ Gifs/, por mes, com o
+   nome na data e hora da subida. Essas pastas sao ARRUMACAO, nao colecao:
+   colecao e tag moram no mix-info.json, escolhidas no organizador.
+   Qualquer OUTRA pasta continua valendo como antes: pasta = colecao,
+   nome do arquivo = titulo.
    ============================================================= */
 const fs = require("fs");
 const path = require("path");
@@ -32,6 +35,12 @@ const titulo = (arquivo) =>
     .replace(/\s+/g, " ")
     .trim()
     .replace(/^\w/, (c) => c.toUpperCase());
+
+/* "2026-09-23_17-05-12.jpg" (o nome que o organizador da ao subir) nao e
+   titulo: o card fica sem nome ate ela escrever um. */
+const SO_DATA = /^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(-\d+)?$/;
+const tituloPadrao = (arquivo) =>
+  SO_DATA.test(path.basename(arquivo, path.extname(arquivo))) ? "" : titulo(arquivo);
 
 const url = (p) => CDN + p.split(path.sep).map(encodeURIComponent).join("/");
 
@@ -191,7 +200,7 @@ const montar = (arquivos, nomeColecao, info) => {
     /* o nome sai do ARQUIVO por padrao: renomear a foto ja resolve o
        titulo, sem abrir arquivo nenhum. O `_info.json` so entra quando
        ela quiser um nome diferente do nome do arquivo. */
-    const item = { name: String(d.name || d.nome || titulo(a)) };
+    const item = { name: String(d.name || d.nome || tituloPadrao(a)) };
     const frase = d.phrase || d.frase || d.description;
     if (frase) item.phrase = String(frase);
     /* ANO. Vai como TEXTO, nao como numero: "2024" e "2024-2025" tem
@@ -326,10 +335,21 @@ const montar = (arquivos, nomeColecao, info) => {
     if (membros.length) item.collection = membros[0];
     if (mexeu) item.collections = membros;
     /* tag: a da foto manda; senao a da colecao; senao o nome da pasta.
-       Assim os filtros ja nascem funcionando e ela ajusta so o que quiser. */
-    const tag = d.tag !== undefined ? d.tag
-      : (conf.tag === undefined ? nomeColecao : conf.tag);
-    if (tag) item.tag = tag;
+       Assim os filtros ja nascem funcionando e ela ajusta so o que quiser.
+       VARIAS TAGS (23/09/2026): a lista `tags` do organizador vence tudo -
+       inclusive vazia, que e "sem tag de proposito". `tag` continua saindo
+       (a PRIMEIRA) para o site antigo; `tags` so sai quando ha mais de uma,
+       para o images.json de quem tem uma so nao mudar. */
+    let tags;
+    if (Array.isArray(d.tags)) tags = d.tags;
+    else {
+      const tag = d.tag !== undefined ? d.tag
+        : (conf.tag === undefined ? nomeColecao : conf.tag);
+      tags = tag ? [tag] : [];
+    }
+    tags = [...new Set(tags.map((x) => String(x || "").trim()).filter(Boolean))];
+    if (tags.length) item.tag = tags[0];
+    if (tags.length > 1) item.tags = tags;
     itens.push(item);
   }
 };
@@ -339,19 +359,26 @@ const pastas = fs.readdirSync(RAIZ)
   .filter((n) => !ignorar(n) && fs.statSync(path.join(RAIZ, n)).isDirectory())
   .sort();
 
-/* AS FOTOS SUBIDAS PELO ORGANIZADOR (23/09/2026) moram em
-   Uploads/Fotos|Videos|Gifs/AAAA-MM/ - arrumacao para ela achar no GitHub,
-   nao colecao. Entram como as soltas na raiz: so no All, sem tag, ate ela
-   escolher colecao e tag no organizador. */
-const PASTA_SUBIDAS = "Uploads";
+/* AS PASTAS DE MIDIA (23/09/2026): Imagens/, Videos/ e Gifs/ (e Uploads/,
+   o nome da primeira versao). Arrumacao para ela achar no GitHub, nao
+   colecao: a foto entra sem colecao e sem tag de pasta, e o que vale e o
+   que ela escolheu no organizador.
+   As tres entram JUNTAS e a MAIS NOVA PRIMEIRO - o nome e a data da
+   subida, entao ordenar pelo nome e ordenar pela data. Sem juntar, todos
+   os GIFs viriam antes de todas as fotos. */
+const PASTAS_MIDIA = ["Imagens", "Videos", "Gifs", "Uploads"];
+const daMidia = [];
+for (const pasta of pastas) {
+  if (!PASTAS_MIDIA.includes(pasta)) continue;
+  for (const a of listar(path.join(RAIZ, pasta), pasta)) daMidia.push(a);
+}
+daMidia.sort((x, y) => path.basename(y).localeCompare(path.basename(x)) || y.localeCompare(x));
+if (daMidia.length) montar(daMidia, "", {});
 
 for (const pasta of pastas) {
+  if (PASTAS_MIDIA.includes(pasta)) continue;
   const arquivos = listar(path.join(RAIZ, pasta), pasta);
   if (!arquivos.length) continue;
-  if (pasta === PASTA_SUBIDAS) {
-    montar(arquivos, "", lerInfo(path.join(RAIZ, pasta)));
-    continue;
-  }
   const antes = itens.length;
   montar(arquivos, pasta, lerInfo(path.join(RAIZ, pasta)));
   const conf = config.collections[pasta] || {};
@@ -447,7 +474,7 @@ for (const c of colecoes) { delete c._ordem; delete c._pasta; }
    aparecem - ou seja, mudaria sozinha ao subir uma foto nova.
    As tags que existem de verdade, na ordem que ela definiu; as que
    sobrarem entram no fim. */
-const usadas = [...new Set(itens.map((i) => i.tag).filter(Boolean))];
+const usadas = [...new Set(itens.flatMap((i) => i.tags || (i.tag ? [i.tag] : [])))];
 const tags = ferramenta.tags.filter((t) => usadas.includes(t));
 for (const t of usadas) if (!tags.includes(t)) tags.push(t);
 

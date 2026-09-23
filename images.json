@@ -9,55 +9,100 @@
   "collections": [
     {
       "name": "UI",
-      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/UI/a77f13a310147c55aedcd607693f6937.jpg",
-      "link": ""
+      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-8.jpg",
+      "link": "",
+      "criada": true
     },
     {
       "name": "Social Media",
-      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Social%20Media/a77f13a310147c55aedcd607693f6937.jpg",
-      "link": ""
+      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-7.jpg",
+      "link": "",
+      "criada": true
     },
     {
       "name": "Editing",
       "cover": "",
-      "link": ""
+      "link": "",
+      "criada": true
     },
     {
       "name": "Motion",
-      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/425dee78a01bc4ff60ee64c612df759a.jpg",
-      "link": ""
+      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-4.jpg",
+      "link": "",
+      "criada": true
     },
     {
       "name": "3D",
-      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/3D/a27b0ad3306f42b26c08e9ff52cfd9e1.jpg",
-      "link": ""
+      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56.jpg",
+      "link": "",
+      "criada": true
     },
     {
       "name": "Photography",
-      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Photography/627a0c96f7611a4519143310e1e62e5b.jpg",
-      "link": ""
+      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_18-28-23.jpg",
+      "link": "",
+      "criada": true
     },
     {
       "name": "Drawing",
-      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Drawing/45064a2d95348bde596903e5e6805a4b.jpg",
-      "link": ""
+      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-2.jpg",
+      "link": "",
+      "criada": true
     }
   ],
   "items": [
+    {
+      "name": "",
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-09/2026-09-23_17-05-25.jpg"
+    },
     {
       "name": "detalhes",
       "phrase": "Teste",
       "year": "2024",
       "link": "https://motionographer.com/",
-      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/3D/a27b0ad3306f42b26c08e9ff52cfd9e1.jpg",
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56.jpg",
       "collection": "3D",
+      "collections": [
+        "3D"
+      ],
       "tag": "Photo"
     },
     {
-      "name": "sadsa",
-      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Drawing/45064a2d95348bde596903e5e6805a4b.jpg",
-      "collection": "Drawing",
-      "tag": "Draw"
+      "name": "",
+      "phrase": "Arte conceitual",
+      "year": "2025",
+      "noInfo": true,
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-8.jpg",
+      "collection": "UI",
+      "collections": [
+        "UI"
+      ],
+      "tag": "Design"
+    },
+    {
+      "name": "teste 4",
+      "phrase": "teste carrossel",
+      "images": [
+        {
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-7.jpg",
+          "name": "teste 4",
+          "phrase": "testem4"
+        },
+        {
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-6.jpg",
+          "name": "teste 6",
+          "phrase": "teste 6"
+        }
+      ],
+      "grupo": {
+        "phrase": "teste carrossel"
+      },
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-7.jpg",
+      "collection": "Social Media",
+      "collections": [
+        "Social Media"
+      ],
+      "tag": "Design"
     },
     {
       "name": "Detalhe 2",
@@ -68,7 +113,7 @@
       },
       "images": [
         {
-          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/425dee78a01bc4ff60ee64c612df759a.jpg",
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-4.jpg",
           "name": "Nome cara adesivo",
           "phrase": "Legal",
           "pt": {
@@ -76,13 +121,13 @@
           }
         },
         {
-          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Editing/baa98a6a98d22599c3a19a3303eb79c7.jpg",
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-3.jpg",
           "name": "Teste texto",
           "phrase": "Imagem 2",
           "link": "https://bigadiniz.com/info"
         },
         {
-          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/493923dd84e2ee07534de0790c0a8e9b.jpg",
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-5.jpg",
           "name": "Teste texto",
           "phrase": "teste 3",
           "noInfo": true
@@ -98,57 +143,40 @@
           "phrase": "PT - Carrossel"
         }
       },
-      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Motion/425dee78a01bc4ff60ee64c612df759a.jpg",
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-4.jpg",
       "collection": "Motion",
+      "collections": [
+        "Motion"
+      ],
       "tag": "Motion"
+    },
+    {
+      "name": "sadsa",
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-2.jpg",
+      "collection": "Drawing",
+      "collections": [
+        "Drawing"
+      ],
+      "tag": "Draw"
     },
     {
       "name": "TESTE",
       "phrase": "ETETETETE",
-      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Photography/627a0c96f7611a4519143310e1e62e5b.jpg",
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_18-28-23.jpg",
       "collection": "Photography",
-      "tag": "Photo"
-    },
-    {
-      "name": "6adc87905a6c511070f0abf943a92658",
-      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Photography/6adc87905a6c511070f0abf943a92658.jpg",
-      "collection": "Photography",
-      "tag": "Photo"
-    },
-    {
-      "name": "teste 4",
-      "phrase": "teste carrossel",
-      "images": [
-        {
-          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Social%20Media/a77f13a310147c55aedcd607693f6937.jpg",
-          "name": "teste 4",
-          "phrase": "testem4"
-        },
-        {
-          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Social%20Media/45064a2d95348bde596903e5e6805a4b.jpg",
-          "name": "teste 6",
-          "phrase": "teste 6"
-        }
+      "collections": [
+        "Photography"
       ],
-      "grupo": {
-        "phrase": "teste carrossel"
-      },
-      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Social%20Media/a77f13a310147c55aedcd607693f6937.jpg",
-      "collection": "Social Media",
-      "tag": "Design"
+      "tag": "Photo"
     },
     {
-      "name": "A77f13a310147c55aedcd607693f6937",
-      "phrase": "Arte conceitual",
-      "year": "2025",
-      "noInfo": true,
-      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/UI/a77f13a310147c55aedcd607693f6937.jpg",
-      "collection": "UI",
-      "tag": "Design"
-    },
-    {
-      "name": "FBE4FD9B 82BF 49D6 ABFA 367230DD9784",
-      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Uploads/Fotos/2026-09/FBE4FD9B-82BF-49D6-ABFA-367230DD9784.jpg"
+      "name": "",
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_18-28-23-2.jpg",
+      "collection": "Photography",
+      "collections": [
+        "Photography"
+      ],
+      "tag": "Photo"
     }
   ]
 }
