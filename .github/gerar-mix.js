@@ -350,6 +350,15 @@ const montar = (arquivos, nomeColecao, info) => {
       Object.keys(cru).forEach((k) => { item[k] = cru[k]; });
       if (Object.keys(cru).length) item.grupo = cru;
     }
+    /* AS OPCOES DO VIDEO (23/09/2026): comecar sozinho, sem som, repetir,
+       controles, previa no card. So saem as que ela mudou, e so em video
+       (subido ou por link). */
+    if ((ehVid || item.videoLink) && d.videoOpcoes && typeof d.videoOpcoes === "object") {
+      const o = d.videoOpcoes, op = {};
+      ["autoplay", "mudo", "repetir", "previa"].forEach((k) => { if (typeof o[k] === "boolean") op[k] = o[k]; });
+      if (["nenhum", "minimos", "completos"].includes(o.controles)) op.controles = o.controles;
+      if (Object.keys(op).length) item.videoOpcoes = op;
+    }
     if (ehVid) {
       item.video = url(a);
       const semExt = a.slice(0, a.length - path.extname(a).length);

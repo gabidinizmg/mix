@@ -481,6 +481,8 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
 .escolha.on { border-color: var(--roxo); background: rgba(124,84,255,.18); color: var(--texto); }
 .escolha.verde.on { border-color: var(--verde); background: color-mix(in srgb, var(--verde) 18%, transparent); }
 .chave-linha { display: flex; align-items: center; gap: 10px; justify-content: flex-start; }
+.op-video { display: grid; gap: 12px; margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--linha); }
+.linha-controles { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 /* O IDIOMA NA MESMA LINGUAGEM DO "Fotos · Coleções · Carrosséis":
    só as três siglas, com um traço embaixo da que está valendo. O que
    cada uma faz mora atrás do "i", como nas seções. */
@@ -1212,6 +1214,7 @@ async function carregar() {
         link: it.link || "",
         videoLink: it.videoLink || "",
         videoAba: it.videoAba === true,
+        videoOpcoes: (it.videoOpcoes && typeof it.videoOpcoes === "object") ? it.videoOpcoes : null,
         tag: it.tag || "",
         /* VARIAS TAGS (23/09/2026): a lista, quando o robo a escreveu */
         tags: Array.isArray(it.tags) ? it.tags.map(String).filter(Boolean) : (it.tag ? [String(it.tag)] : []),
@@ -1455,6 +1458,16 @@ const videoDoLink = (link) => {
   if (/^https?:\/\/\S+\.(mp4|webm|m4v|mov)(\?\S*)?$/i.test(u)) return { tipo: "video", nome: "arquivo de vídeo" };
   if (/^https?:\/\//i.test(u)) return { tipo: "fora", nome: "" };
   return null;
+};
+/* AS OPCOES DE CADA VIDEO (23/09/2026). Ela: "autoplay? aparecer
+   controles? padrao minimo possivel de controles". Ausente = o padrao
+   (o mesmo do BigaMix): comeca sozinho, com som, sem repetir, controles
+   minimos, sem previa. So as que ela muda vao para o arquivo. */
+const opcoesDoVideo = (o) => {
+  const x = (o && typeof o === "object") ? o : {};
+  return { autoplay: x.autoplay !== false, mudo: x.mudo === true, repetir: x.repetir === true,
+    controles: (x.controles === "nenhum" || x.controles === "completos") ? x.controles : "minimos",
+    previa: x.previa === true };
 };
 const videoLigados = new Set();   /* ligou "E video" e ainda nao colou o link */
 const temVideoLink = (it) => !!val(it, "videoLink");
@@ -2665,12 +2678,40 @@ function abrirPainel(caminho) {
       + (!desligada(vSel("noInfo"))) + '" aria-label="Botão de info desta foto"></button>'
       + '<span class="rotulo-campo">Botão de info desta foto</span></div>';
 
-  /* so para foto unica: video subido ja toca, e carrossel tem paginas */
-  const podeVideo = !ehGrupo && !it.video;
+  /* foto unica (vira capa de video por link) ou video subido (so as
+     opcoes); carrossel nao, que tem paginas */
+  const podeVideo = !ehGrupo;
+  const ehSubido = !!it.video;
+  const opV = opcoesDoVideo(val(it, "videoOpcoes"));
+  const chave = (id, rotulo, ligado) => '<div class="chave-linha"><button class="chave" id="' + id
+    + '" role="switch" aria-checked="' + ligado + '" aria-label="' + esc(rotulo) + '"></button>'
+    + '<span class="rotulo-campo">' + esc(rotulo) + '</span></div>';
+  const plataformaDoLink = (videoDoLink(val(it, "videoLink")) || {}).nome || "";
+  const dicaControles = ehSubido
+    ? "Mínimos: clicar no vídeo pausa, um botão de som no canto e uma linha fina de progresso."
+    : /Vimeo/.test(plataformaDoLink) ? "No Vimeo, “Nenhum” só funciona em conta paga (Plus ou acima); “Mínimos” esconde título e autor."
+    : /YouTube/.test(plataformaDoLink) ? "O YouTube não deixa trocar os controles dele: “Mínimos” esconde título e sugestões, “Nenhum” tira a barra."
+    : /Drive/.test(plataformaDoLink) ? "O Google Drive ignora estas opções — toca com o player dele."
+    : "";
+  const corpoOpcoes = '<div class="op-video">'
+    + chave("fOpAuto", "Começa sozinho", opV.autoplay)
+    + chave("fOpMudo", "Começa sem som", opV.mudo)
+    + chave("fOpRep", "Repetir", opV.repetir)
+    + (ehSubido ? chave("fOpPrevia", "Prévia no card — toca sem som ao passar o mouse", opV.previa) : "")
+    + '<div class="linha-controles"><span class="rotulo-campo">Controles</span>'
+    + '<div class="alternador" id="fOpCtrl" role="group" aria-label="Controles">'
+    + [["nenhum", "Nenhum"], ["minimos", "Mínimos"], ["completos", "Completos"]].map((c) =>
+        '<button class="' + (opV.controles === c[0] ? "on" : "") + '" data-c="' + c[0] + '">' + c[1] + '</button>').join("")
+    + '</div></div>'
+    + (dicaControles ? '<p class="dica">' + esc(dicaControles) + '</p>' : "")
+    + '</div>';
+  const resumoOpcoes = [opV.controles === "nenhum" ? "sem controles" : opV.controles === "completos" ? "controles completos" : "",
+    !opV.autoplay ? "não começa sozinho" : "", opV.mudo ? "sem som" : "", opV.repetir ? "repete" : "",
+    opV.previa ? "prévia no card" : ""].filter(Boolean).join(" · ");
   const linkVideo = val(it, "videoLink");
   const videoLigado = podeVideo && (!!linkVideo || videoLigados.has(it.caminho));
   const naAba = abreNaAba(it);
-  const corpoVideo = !podeVideo ? "" :
+  const corpoVideo = !podeVideo ? "" : ehSubido ? corpoOpcoes :
     '<div class="chave-linha"><button class="chave" id="fEhVideo" role="switch" aria-checked="'
       + videoLigado + '" aria-label="É vídeo"></button>'
       + '<span class="rotulo-campo">É vídeo — a foto vira a capa, com o play</span></div>'
@@ -2679,10 +2720,13 @@ function abrirPainel(caminho) {
       + '<p class="dica" id="fVideoQual">' + esc(oQueEOLink(linkVideo, naAba)) + '</p>'
       + '<div class="alternador" id="fVideoModo" role="group" aria-label="Como o vídeo abre">'
       + '<button class="' + (naAba ? "" : "on") + '" data-m="pop">Toca no pop-up</button>'
-      + '<button class="' + (naAba ? "on" : "") + '" data-m="aba">Abre em outra aba</button></div>');
-  const resumoVideo = !videoLigado ? "não"
+      + '<button class="' + (naAba ? "on" : "") + '" data-m="aba">Abre em outra aba</button></div>'
+      + (linkVideo && !naAba ? corpoOpcoes : ""));
+  const resumoVideo = ehSubido ? ("vídeo subido" + (resumoOpcoes ? " · " + resumoOpcoes : ""))
+    : !videoLigado ? "não"
     : !linkVideo ? "falta o link"
-    : ((videoDoLink(linkVideo) || {}).nome || "link") + " · " + (naAba ? "outra aba" : "no pop-up");
+    : ((videoDoLink(linkVideo) || {}).nome || "link") + " · " + (naAba ? "outra aba"
+      : "no pop-up" + (resumoOpcoes ? " · " + resumoOpcoes : ""));
 
   const resumoPagina = (vSel("name") || vSel("phrase") || "sem texto")
     + (desligada(vSel("noInfo")) ? " · sem info" : "");
@@ -2710,7 +2754,8 @@ function abrirPainel(caminho) {
         corpoClasse, !tagsDe(it).length,
         "A fila de cima são as <strong>tags</strong>, os filtros da barra do site — a foto pode ter várias, e aparece em cada uma. A de baixo são as <strong>coleções</strong>, que viram cards na página Mix; a mesma foto pode estar em várias, e em nenhuma ela aparece só no All.")
     + (podeVideo ? secao("video", "Vídeo", resumoVideo, corpoVideo, videoLigado && !linkVideo,
-        "Para vídeo que mora no <strong>YouTube, Vimeo, Loom ou Google Drive</strong>: esta foto vira a capa do card, com o play. <strong>Toca no pop-up</strong> abre o player ali mesmo, com o botão de info; <strong>Abre em outra aba</strong> leva para a plataforma. O <strong>Link</strong> dos textos continua sendo o do botão de info — são dois lugares diferentes.") : "")
+        ehSubido ? "Como este vídeo toca no pop-up do site. O <strong>estilo do play</strong> dos cards se escolhe no painel do Mix, no Figma."
+          : "Para vídeo que mora no <strong>YouTube, Vimeo, Loom ou Google Drive</strong>: esta foto vira a capa do card, com o play. <strong>Toca no pop-up</strong> abre o player ali mesmo, com o botão de info; <strong>Abre em outra aba</strong> leva para a plataforma. O <strong>Link</strong> dos textos continua sendo o do botão de info — são dois lugares diferentes.") : "")
     + (ehGrupo ? secao("pagina", "Foto " + (iSel + 1) + " de " + seq.length + (iSel === 0 ? " · capa" : ""),
         resumoPagina, corpoPagina, false,
         (iSel === 0 ? "Esta é a capa: o texto dela aparece na 1ª página do carrossel. "
@@ -2781,6 +2826,18 @@ function abrirPainel(caminho) {
     };
     $("fVideoLink").onchange = () => { salvar(); abrirPainel(caminho); desenhar(); };
   }
+  const mudaOpcao = (k, v) => {
+    const atual = Object.assign({}, (typeof val(it, "videoOpcoes") === "object" && val(it, "videoOpcoes")) || {});
+    atual[k] = v;
+    editar(it.caminho, "videoOpcoes", atual);
+    salvar(); abrirPainel(caminho); desenhar();
+  };
+  [["fOpAuto", "autoplay"], ["fOpMudo", "mudo"], ["fOpRep", "repetir"], ["fOpPrevia", "previa"]].forEach(([id, k]) => {
+    if ($(id)) $(id).onclick = () => mudaOpcao(k, !opV[k]);
+  });
+  if ($("fOpCtrl")) $("fOpCtrl").querySelectorAll("[data-c]").forEach((b) => {
+    b.onclick = () => mudaOpcao("controles", b.dataset.c);
+  });
   if ($("fVideoModo")) $("fVideoModo").querySelectorAll("[data-m]").forEach((b) => {
     b.onclick = () => { editar(it.caminho, "videoAba", b.dataset.m === "aba"); salvar(); abrirPainel(caminho); desenhar(); };
   });
