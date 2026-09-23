@@ -3,8 +3,7 @@
     "Design",
     "Motion",
     "Draw",
-    "Photo",
-    "3D"
+    "Photo"
   ],
   "tagsVisiveis": 2,
   "collections": [
@@ -46,13 +45,13 @@
   ],
   "items": [
     {
-      "name": "teste 2",
+      "name": "detalhes",
       "phrase": "Teste",
       "year": "2024",
       "link": "https://motionographer.com/",
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/3D/a27b0ad3306f42b26c08e9ff52cfd9e1.jpg",
       "collection": "3D",
-      "tag": "3D"
+      "tag": "Photo"
     },
     {
       "name": "sadsa",
@@ -146,6 +145,10 @@
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/UI/a77f13a310147c55aedcd607693f6937.jpg",
       "collection": "UI",
       "tag": "Design"
+    },
+    {
+      "name": "FBE4FD9B 82BF 49D6 ABFA 367230DD9784",
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Uploads/Fotos/2026-09/FBE4FD9B-82BF-49D6-ABFA-367230DD9784.jpg"
     }
   ]
 }
