@@ -57,6 +57,10 @@
       "year": "2024",
       "link": "https://motionographer.com/",
       "videoLink": "https://www.youtube.com/watch?v=SIBheXeup20",
+      "videoOpcoes": {
+        "autoplay": false,
+        "controles": "minimos"
+      },
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56.jpg",
       "collection": "3D",
       "collections": [
