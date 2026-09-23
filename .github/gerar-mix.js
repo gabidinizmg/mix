@@ -13,6 +13,40 @@
 const fs = require("fs");
 const path = require("path");
 
+/* NO GITHUB, O ROBO GRAVA SOZINHO E TENTA DE NOVO (23/09/2026).
+   Excluir uma foto grava DOIS commits com 1 segundo de diferenca (o
+   arquivo e o mix-info.json). As duas rodadas do robo acharam o ramo
+   andado na hora do push, as duas falharam, e a foto apagada ficou no
+   site. Aqui: busca o ramo de AGORA, monta em cima dele, grava e, se o
+   push for recusado, recomeca (ate 5 vezes). O passo "Salvar se mudou"
+   do workflow encontra tudo gravado e so confirma.
+   Mora aqui e nao no workflow porque a chave do organizador nao pode
+   mexer em .github/workflows (protecao do GitHub). */
+if (process.env.GITHUB_ACTIONS === "true" && !process.env.MIX_SO_GERAR) {
+  const { execFileSync } = require("child_process");
+  const git = (...a) => execFileSync("git", a, { stdio: "inherit" });
+  const ramo = process.env.GITHUB_REF_NAME || "main";
+  git("config", "user.name", "github-actions[bot]");
+  git("config", "user.email", "github-actions[bot]@users.noreply.github.com");
+  for (let vez = 1; vez <= 5; vez++) {
+    git("fetch", "-q", "origin", ramo);
+    git("reset", "-q", "--hard", "origin/" + ramo);
+    /* o gerador que vale e o do ramo de agora: roda de novo, do disco */
+    execFileSync(process.execPath, [__filename], { stdio: "inherit",
+      env: Object.assign({}, process.env, { MIX_SO_GERAR: "1" }) });
+    git("add", "images.json");
+    let mudou = true;
+    try { execFileSync("git", ["diff", "--staged", "--quiet"]); mudou = false; } catch (e) {}
+    if (!mudou) { console.log("images.json: nada mudou"); process.exit(0); }
+    git("commit", "-q", "-m", "images.json atualizado automaticamente");
+    try { git("push", "-q", "origin", "HEAD:" + ramo); process.exit(0); } catch (e) {
+      console.log("o ramo andou no meio, tentando de novo (" + vez + ")");
+      execFileSync("sleep", [String(vez * 3)]);
+    }
+  }
+  process.exit(1);
+}
+
 const RAIZ = process.cwd();
 const REPO = process.env.GITHUB_REPOSITORY || "USUARIO/REPOSITORIO";
 const BRANCH = process.env.GITHUB_REF_NAME || "main";
