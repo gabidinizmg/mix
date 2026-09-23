@@ -9,11 +9,11 @@
   "tagsVisiveis": 2,
   "items": {
     "3D/a27b0ad3306f42b26c08e9ff52cfd9e1.jpg": {
-      "name": "teste 2",
       "year": "2024",
       "link": "https://motionographer.com/",
-      "tag": "3D",
-      "phrase": "Teste"
+      "tag": "Photo",
+      "phrase": "Teste",
+      "name": "detalhes"
     },
     "Drawing/45064a2d95348bde596903e5e6805a4b.jpg": {
       "name": "sadsa"
