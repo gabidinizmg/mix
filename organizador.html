@@ -681,7 +681,7 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
                    stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="4" width="13" height="16" rx="2"/>
               <path d="M4 7v12a2 2 0 0 0 2 2h9"/><path d="M11 12h5"/></svg>
             </button>
-            <button class="acao" id="btLixoSel" title="Mover as marcadas para a lixeira"
+            <button class="acao" id="btLixoSel" title="Mover as marcadas para a lixeira (Delete)"
                     aria-label="Mover as marcadas para a lixeira"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7M6 7l1 13h10l1-13"/><path d="M10 11v5.5M14 11v5.5"/></svg></button>
             <button class="acao" id="btLimparSel" title="Desmarcar" aria-label="Desmarcar tudo">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
@@ -768,7 +768,7 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
       <div class="corpo" id="fCorpo"></div>
       <div class="pe">
         <span class="aviso-pe" id="fAviso">vale no site depois de Salvar</span>
-        <button class="btn lixo" id="fLixo" title="Mover para a lixeira" aria-label="Mover para a lixeira"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7M6 7l1 13h10l1-13"/><path d="M10 11v5.5M14 11v5.5"/></svg></button>
+        <button class="btn lixo" id="fLixo" title="Mover para a lixeira (Delete)" aria-label="Mover para a lixeira"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7M6 7l1 13h10l1-13"/><path d="M10 11v5.5M14 11v5.5"/></svg></button>
         <button class="btn" id="fArquivar">Arquivar</button>
         <button class="btn forte" id="fPronto">Pronto</button>
       </div>
@@ -1130,7 +1130,8 @@ async function lerInfoDoRepo(paraSalvar) {
     if (r.status === 403) throw new Error("A chave não tem permissão de escrita em Contents.");
     if (!r.ok) throw new Error("HTTP " + r.status);
     const j = await r.json();
-    return { dados: lerInfoTexto(deBase64(j.content)), sha: j.sha };
+    const texto = deBase64(j.content);
+    return { dados: lerInfoTexto(texto), sha: j.sha, texto };
   }
   if (paraSalvar) return null;
   const r = await fetch("https://raw.githubusercontent.com/" + alvo.dono + "/" + alvo.repo + "/"
@@ -1490,7 +1491,7 @@ async function apagarDeVez(caminhos) {
   apagando = true;
   mostrarEstado("apagando do GitHub…", "indo");
   try {
-    await gravarCommit(arquivos.map((c) => ({ caminho: c, sha: null })),
+    const shaApagou = await gravarCommit(arquivos.map((c) => ({ caminho: c, sha: null })),
       arquivos.length === 1 ? "Foto excluida pelo organizador: " + arquivos[0].split("/").pop()
         : arquivos.length + " fotos excluidas pelo organizador");
     const fora = new Set(arquivos);
@@ -1500,9 +1501,9 @@ async function apagarDeVez(caminhos) {
     salvar(); desenhar();
     /* as edicoes delas saem do mix-info.json agora, e nao no proximo
        Salvar - senao o arquivo guardaria texto de foto que nao existe */
-    await salvarNoGitHub();
-    mostrarEstado(arquivos.length + (arquivos.length === 1 ? " arquivo apagado" : " arquivos apagados")
-      + " do GitHub", "ok");
+    const rotulo = arquivos.length + (arquivos.length === 1 ? " arquivo apagado" : " arquivos apagados");
+    const shaSalvo = await salvarNoGitHub();
+    if (!shaSalvo) acompanhar(shaApagou, rotulo);
   } catch (e) {
     mostrarEstado("não apaguei: " + e.message, "erro");
   }
@@ -1808,11 +1809,12 @@ async function salvarNoGitHub() {
      daqui. E isso que impede um navegador novo de apagar o que ele nao
      conhece. Devolve o `sha` - a trava do GitHub contra duas gravacoes
      se atropelarem. */
-  let sync = null;
+  let sync = null, textoNoRepo = null;
   const lerEJuntar = async () => {
     const lido = await lerInfoDoRepo(true);
     if (!lido) throw new Error("Não consegui ler o mix-info.json do GitHub.");
     sync = sincronizar(lido.dados);
+    textoNoRepo = lido.texto === undefined ? null : lido.texto;
     salvar();
     return lido.sha;
   };
@@ -1828,7 +1830,19 @@ async function salvarNoGitHub() {
   };
 
   try {
-    let r = await gravar(await lerEJuntar());
+    const shaLido = await lerEJuntar();
+    /* NADA MUDOU, NADA GRAVA (23/09/2026). Gravar o mesmo arquivo criava
+       um commit VAZIO - e commit vazio nao chama o robo. Foi assim que a
+       foto excluida ficou no site: os Salvar seguintes "davam certo" e
+       nada acontecia. */
+    if (textoNoRepo !== null && textoNoRepo === textoDoArquivo()) {
+      ultimoSalvo = Date.now();
+      gravarBase(lerInfoTexto(textoNoRepo));
+      desenhar();
+      mostrarEstado("nada novo para salvar · o GitHub já está assim" + (sync ? resumoSync(sync) : ""), "ok");
+      return null;
+    }
+    let r = await gravar(shaLido);
 
     /* Uma segunda tentativa, automatica, com o sha buscado de novo.
        Quem escreve o mix-info.json e so ela, por esta ferramenta - o
@@ -1855,14 +1869,82 @@ async function salvarNoGitHub() {
     desenhar();
     const n = Object.keys(edicoes).length;
     const nc = colecoesDef ? Object.keys(colecoesDef).length : 0;
-    mostrarEstado("salvo · " + n + (n === 1 ? " foto" : " fotos")
+    let shaCommit = null;
+    try { shaCommit = ((await r.json()).commit || {}).sha || null; } catch (e2) {}
+    acompanhar(shaCommit, "salvo · " + n + (n === 1 ? " foto" : " fotos")
       + (nc ? " · " + nc + (nc === 1 ? " coleção" : " coleções") : "")
-      + " · o robô já está rodando" + (sync ? resumoSync(sync) : ""),
-      sync && sync.conflitos ? "aviso" : "ok");
-    setTimeout(() => mostrarEstado("salvo há pouco", "ok"), 6000);
+      + (sync ? resumoSync(sync) : ""));
+    return shaCommit;
   } catch (e) {
     mostrarEstado(String((e && e.message) || e), "erro");
+    return null;
   }
+}
+
+/* ---------- CHEGOU NO SITE? (23/09/2026) ----------
+   Antes o organizador dizia "salvo, o robo ja esta rodando" e parava ai.
+   Duas vezes o site nao mudou e nada avisou (o CDN velho; o robo que
+   falhou). Agora ele acompanha as duas etapas que existem de verdade:
+     1. o robo do GitHub rodar para ESTE commit (e dar certo)
+     2. o endereco que o site le (raw.githubusercontent) ter a lista nova
+   e so entao diz "ja esta no site". Uma gravacao nova cancela o
+   acompanhamento da anterior - a nova ja cobre as duas. */
+const ROBO = "gerar-mix.yml";
+let acompanhando = 0;
+async function textoAgora(caminho) {
+  const alvo = donoDoRepo();
+  const r = await fetch("https://api.github.com/repos/" + alvo.dono + "/" + alvo.repo + "/contents/"
+    + caminho + "?ref=" + encodeURIComponent(alvo.branch) + "&t=" + Date.now(), {
+    headers: { "Authorization": "Bearer " + lerToken(), "Accept": "application/vnd.github.raw+json",
+               "X-GitHub-Api-Version": "2022-11-28" }, cache: "no-store" });
+  return r.ok ? r.text() : null;
+}
+async function acompanhar(sha, rotulo) {
+  const alvo = donoDoRepo();
+  if (!sha || !alvo || !lerToken()) { mostrarEstado(rotulo, "ok"); return; }
+  const eu = ++acompanhando;
+  const vivo = () => eu === acompanhando;
+  const esp = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  const inicio = Date.now();
+  const LIMITE = (window.__limiteNoAr || 7 * 60) * 1000;
+  const PASSO = window.__passoNoAr || 5000;
+  mostrarEstado(rotulo + " · o robô está montando o site…", "indo");
+  let run = null;
+  while (vivo() && Date.now() - inicio < LIMITE) {
+    try {
+      const r = await gh("GET", "/actions/workflows/" + ROBO + "/runs?per_page=5&head_sha=" + sha + "&t=" + Date.now());
+      if (r.ok) run = ((await r.json()).workflow_runs || [])[0] || null;
+    } catch (e) { /* sem rede por um instante: tenta no proximo passo */ }
+    if (run && run.status === "completed") break;
+    /* commit que nao chama o robo (so images.json, por exemplo): nada a esperar */
+    if (!run && Date.now() - inicio > Math.min(90000, LIMITE / 2)) break;
+    await esp(PASSO);
+  }
+  if (!vivo()) return;
+  if (run && run.status === "completed" && run.conclusion !== "success") {
+    mostrarEstado(rotulo + " · o robô falhou e o site NÃO mudou — salve de novo", "erro");
+    return;
+  }
+  if (run && run.status !== "completed") {
+    mostrarEstado(rotulo + " · o robô está demorando — confira o site daqui a pouco", "aviso");
+    return;
+  }
+  mostrarEstado(rotulo + " · chegando no site…", "indo");
+  const cru = "https://raw.githubusercontent.com/" + alvo.dono + "/" + alvo.repo + "/" + alvo.branch + "/images.json";
+  while (vivo() && Date.now() - inicio < LIMITE) {
+    try {
+      const [agora, noSite] = await Promise.all([
+        textoAgora("images.json"),
+        fetch(cru + "?v=" + Date.now(), { cache: "no-store" }).then((r) => (r.ok ? r.text() : null)),
+      ]);
+      if (agora !== null && noSite !== null && agora.trim() === noSite.trim()) {
+        if (vivo()) mostrarEstado(rotulo + " · ✓ já está no site", "ok");
+        return;
+      }
+    } catch (e) { /* tenta no proximo passo */ }
+    await esp(PASSO * 2);
+  }
+  if (vivo()) mostrarEstado(rotulo + " · o GitHub ainda segura a versão antiga — aparece em até 5 min", "aviso");
 }
 
 /* ---------- EXPORTAR ---------- */
@@ -2215,7 +2297,7 @@ function desenharChips() {
    Os ícones de ação aparecem sozinhos quando existe foto marcada. */
 function atualizarSel() {
   const naLixo = filtro === "__lixo";
-  $("btLixoSel").title = $("btLixoSel").ariaLabel = naLixo ? "Restaurar as marcadas" : "Mover as marcadas para a lixeira";
+  $("btLixoSel").title = $("btLixoSel").ariaLabel = naLixo ? "Restaurar as marcadas" : "Mover as marcadas para a lixeira (Delete)";
   $("contaSel").textContent = selecao.size;
   $("acoesSel").hidden = selecao.size === 0;
 }
@@ -2917,6 +2999,15 @@ document.addEventListener("keydown", (e) => {
     if (selecao.size) { selecao.clear(); desenhar(); }
     return;
   }
+  /* DELETE / BACKSPACE manda para a LIXEIRA - nunca apaga: a lixeira
+     desfaz. Nao vale digitando, nem com pergunta ou menu aberto. */
+  if ((e.key === "Delete" || e.key === "Backspace") && !digitando && !menuAberto
+      && $("veuPergunta").hidden && $("veuConfig").hidden && filtro !== "__lixo") {
+    if (!$("veuFoto").hidden && atual && !ehLixo(atual)) {
+      e.preventDefault(); const c = atual.caminho; fecharPainel(); moverParaLixeira([c]); return;
+    }
+    if ($("veuFoto").hidden && selecao.size) { e.preventDefault(); moverParaLixeira([...selecao]); return; }
+  }
   if ($("veuFoto").hidden || digitando) return;
   if (e.key === "ArrowRight" && !$("fProxima").disabled) $("fProxima").click();
   if (e.key === "ArrowLeft" && !$("fAnterior").disabled) $("fAnterior").click();
@@ -3078,7 +3169,7 @@ async function gravarCommit(entradas, mensagem) {
       if (!rT.ok) throw new Error("HTTP " + rT.status);
       const existe = new Set(((await rT.json()).tree || []).map((x) => x.path));
       lista = entradas.filter((e) => e.sha !== null || existe.has(e.caminho));
-      if (!lista.length) return;
+      if (!lista.length) return null;
     }
     const rArv = await gh("POST", "/git/trees", { base_tree: arvorePai,
       tree: lista.map((e) => ({ path: e.caminho, mode: "100644", type: "blob", sha: e.sha })) });
@@ -3086,8 +3177,9 @@ async function gravarCommit(entradas, mensagem) {
     const rNovo = await gh("POST", "/git/commits",
       { message: mensagem, tree: (await rArv.json()).sha, parents: [pai] });
     if (!rNovo.ok) throw new Error("HTTP " + rNovo.status);
-    const rMove = await gh("PATCH", "/git/refs/" + ramo, { sha: (await rNovo.json()).sha, force: false });
-    if (rMove.ok) return;
+    const shaNovo = (await rNovo.json()).sha;
+    const rMove = await gh("PATCH", "/git/refs/" + ramo, { sha: shaNovo, force: false });
+    if (rMove.ok) return shaNovo;
     if (rMove.status !== 422 && rMove.status !== 409) throw new Error("HTTP " + rMove.status);
     await new Promise((ok) => setTimeout(ok, 1500));
   }
@@ -3156,7 +3248,7 @@ async function subirArquivos(lista) {
     prontas.forEach((l) => { l.estado = "gravando no GitHub…"; });
     pinta();
     try {
-      await gravarCommit(prontas.map((l) => ({ caminho: l.caminho, sha: l.sha })),
+      const shaSubiu = await gravarCommit(prontas.map((l) => ({ caminho: l.caminho, sha: l.sha })),
         prontas.length === 1 ? "Foto nova pelo organizador: " + l0nome(prontas[0])
           : prontas.length + " fotos novas pelo organizador");
       const quando = Date.now();
@@ -3170,8 +3262,7 @@ async function subirArquivos(lista) {
       /* para ela ver as novas: todas as fotos, com as novas na frente */
       mostrar = "fotos"; filtro = ""; filtroCol = "";
       desenhar();
-      mostrarEstado(prontas.length + (prontas.length === 1 ? " foto nova" : " fotos novas")
-        + " · o site mostra em ~1 min", "ok");
+      acompanhar(shaSubiu, prontas.length + (prontas.length === 1 ? " foto nova" : " fotos novas"));
     } catch (e) {
       prontas.forEach((l) => { l.estado = e.message; l.classe = "erro"; });
     }
