@@ -407,6 +407,11 @@ h1 { font: 600 22px/1.1 "Outfit",sans-serif; letter-spacing: -.02em; }
    herdava o corpo de 14px e a cor do texto, e competia com os campos. */
 .dica, .campo .dica { font-size: 11.5px; line-height: 1.5; color: var(--texto-3); font-weight: 400; }
 .dica strong { font-weight: 500; color: var(--texto-2); }
+.espaco-barra { height: 8px; border-radius: 999px; background: var(--painel-2); overflow: hidden; }
+.espaco-barra span { display: block; height: 100%; width: 0; min-width: 4px; border-radius: inherit;
+  background: var(--verde); transition: width .5s var(--mola); }
+.espaco.cheio .espaco-barra span { background: var(--aviso); }
+.espaco.lotado .espaco-barra span { background: var(--erro); }
 .duo { display: flex; gap: 8px; }
 .duo button, .btn {
   height: 38px; padding: 0 16px; border-radius: 11px; border: 1px solid var(--linha);
@@ -780,6 +785,12 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
 <div class="veu" id="veuConfig" hidden>
   <div class="caixa" role="dialog" aria-modal="true" aria-label="Configurações">
     <h2>Configurações</h2>
+    <div class="campo espaco" id="espaco">
+      <label>Espaço no GitHub</label>
+      <div class="espaco-barra" role="progressbar" aria-label="Espaço usado no GitHub"
+           aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="espacoCheio"></span></div>
+      <span class="dica" id="espacoTexto">consultando…</span>
+    </div>
     <div class="campo">
       <label for="url">Link do images.json</label>
       <input id="url" type="text" spellcheck="false">
@@ -2844,6 +2855,44 @@ function abrirConfig(focoNaChave) {
     : "Serve para salvar e para subir fotos ao repositório.";
   $("veuConfig").hidden = false;
   if (focoNaChave) setTimeout(() => $("fChave").focus(), 30);
+  medirEspaco();
+}
+
+/* ESPACO NO GITHUB (23/09/2026). Ela: "onde vejo o espaco?" - o GitHub
+   nao mostra em lugar nenhum. O numero vem da API do repositorio (`size`,
+   em KB; publico, nao precisa de chave). O teto e o que o GitHub PEDE,
+   1 GB - nao e um bloqueio, mas acima disso ele comeca a reclamar.
+   Apagar foto nao devolve espaco: o historico guarda tudo. */
+const TETO_KB = 1024 * 1024;
+const FOTO_KB = 500;      /* foto reduzida pelo organizador, em media */
+const VIDEO_KB = 20 * 1024;
+async function medirEspaco() {
+  const alvo = donoDoRepo();
+  const txt = $("espacoTexto");
+  if (!alvo) { txt.textContent = "confira o link do images.json"; return; }
+  try {
+    const r = await fetch("https://api.github.com/repos/" + alvo.dono + "/" + alvo.repo + "?t=" + Date.now(),
+      { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const kb = Number((await r.json()).size) || 0;
+    const fracao = Math.min(1, kb / TETO_KB);
+    const pct = fracao * 100;
+    const mb = (k) => k < 1024 ? Math.max(1, Math.round(k)) + " KB"
+      : k < 1024 * 1024 ? (k / 1024).toFixed(1).replace(".", ",") + " MB"
+      : (k / 1024 / 1024).toFixed(2).replace(".", ",") + " GB";
+    const livre = Math.max(0, TETO_KB - kb);
+    const fmt = (n) => n.toLocaleString("pt-BR");
+    $("espacoCheio").style.width = pct.toFixed(2) + "%";
+    $("espaco").querySelector(".espaco-barra").setAttribute("aria-valuenow", pct.toFixed(1));
+    $("espaco").classList.toggle("cheio", fracao >= 0.7 && fracao < 0.9);
+    $("espaco").classList.toggle("lotado", fracao >= 0.9);
+    txt.innerHTML = "<strong>" + mb(kb) + "</strong> de 1 GB · "
+      + (pct < 1 ? "menos de 1%" : Math.round(pct) + "%")
+      + "<br>cabem ~" + fmt(Math.floor(livre / FOTO_KB)) + " fotos ou ~" + fmt(Math.floor(livre / VIDEO_KB))
+      + " vídeos de 20 MB · excluir não devolve espaço";
+  } catch (e) {
+    txt.textContent = "não consegui consultar agora (" + e.message + ")";
+  }
 }
 function fecharConfig() { $("veuConfig").hidden = true; }
 
