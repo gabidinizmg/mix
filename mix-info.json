@@ -147,7 +147,11 @@
         "Photo"
       ],
       "videoLink": "https://www.youtube.com/watch?v=SIBheXeup20",
-      "videoAba": false
+      "videoAba": false,
+      "videoOpcoes": {
+        "autoplay": false,
+        "controles": "minimos"
+      }
     },
     "Uploads/Fotos/2026-09/FBE4FD9B-82BF-49D6-ABFA-367230DD9784.jpg": {
       "archived": true
