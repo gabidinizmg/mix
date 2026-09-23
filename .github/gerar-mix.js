@@ -339,9 +339,19 @@ const pastas = fs.readdirSync(RAIZ)
   .filter((n) => !ignorar(n) && fs.statSync(path.join(RAIZ, n)).isDirectory())
   .sort();
 
+/* AS FOTOS SUBIDAS PELO ORGANIZADOR (23/09/2026) moram em
+   Uploads/Fotos|Videos|Gifs/AAAA-MM/ - arrumacao para ela achar no GitHub,
+   nao colecao. Entram como as soltas na raiz: so no All, sem tag, ate ela
+   escolher colecao e tag no organizador. */
+const PASTA_SUBIDAS = "Uploads";
+
 for (const pasta of pastas) {
   const arquivos = listar(path.join(RAIZ, pasta), pasta);
   if (!arquivos.length) continue;
+  if (pasta === PASTA_SUBIDAS) {
+    montar(arquivos, "", lerInfo(path.join(RAIZ, pasta)));
+    continue;
+  }
   const antes = itens.length;
   montar(arquivos, pasta, lerInfo(path.join(RAIZ, pasta)));
   const conf = config.collections[pasta] || {};

@@ -261,6 +261,36 @@ h1 { font: 600 22px/1.1 "Outfit",sans-serif; letter-spacing: -.02em; }
 }
 .selo.sem { background: var(--amarelo); color: #17150b; }
 .selo.arq { background: rgba(179,38,30,.85); color: #fff; }
+.selo.nova { background: var(--verde); color: #08210f; }
+
+/* ---------- SUBIR FOTOS ---------- */
+.soltar-fotos {
+  position: fixed; inset: 12px 12px 12px 264px; z-index: 60; pointer-events: none;
+  border: 2px dashed var(--roxo); border-radius: 20px;
+  background: color-mix(in srgb, var(--roxo) 12%, color-mix(in srgb, var(--fundo) 70%, transparent));
+  display: grid; place-items: center;
+}
+.soltar-fotos[hidden] { display: none; }
+.soltar-miolo { display: grid; justify-items: center; gap: 10px; color: var(--texto); font-size: 15px; font-weight: 500; }
+.soltar-miolo svg { color: var(--roxo); }
+.subindo {
+  position: fixed; right: 20px; bottom: 20px; z-index: 55; width: min(340px, calc(100vw - 40px));
+  background: var(--painel); border: 1px solid var(--linha); border-radius: 16px;
+  box-shadow: 0 18px 48px -16px var(--sombra); padding: 12px 14px 10px;
+}
+.subindo[hidden] { display: none; }
+.subindo-cabeca { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+.subindo-fechar { width: 24px; height: 24px; border-radius: 6px; color: var(--texto-3); font-size: 17px; line-height: 1; }
+.subindo-fechar:hover { color: var(--texto); background: var(--painel-2); }
+.subindo ul { list-style: none; display: grid; gap: 7px; max-height: 42vh; overflow-y: auto; }
+.subindo li { display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 10px; align-items: center; }
+.subindo li img, .subindo li .mini { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; background: var(--painel-2); }
+.subindo .arq-nome { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subindo .arq-estado { font-size: 11.5px; color: var(--texto-3); }
+.subindo li.ok .arq-estado { color: var(--ok); }
+.subindo li.erro .arq-estado { color: var(--erro); }
+@media (max-width: 760px) { .soltar-fotos { inset: 12px; } }
 .marca-sel {
   position: absolute; top: 8px; right: 8px; z-index: 5;
   width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
@@ -655,6 +685,13 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
                  stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           </button>
         </div>
+        <button class="acao" id="btSubir" title="Subir fotos (ou arraste para cá)" aria-label="Subir fotos">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/>
+          <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+        </button>
+        <input type="file" id="arqSubir" multiple hidden
+               accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/svg+xml,image/heic,image/heif,.heic,.heif,video/mp4,video/webm,video/quicktime,.m4v,.ogv">
       </div>
     </div>
 
@@ -666,6 +703,23 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
 </div>
 
 <div class="pop-col" id="popColecoes" role="dialog" aria-label="Pôr nas coleções"></div>
+
+<!-- ---------- SUBIR FOTOS ---------- -->
+<div class="soltar-fotos" id="soltarFotos" hidden aria-hidden="true">
+  <div class="soltar-miolo">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+         stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/>
+    <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+    <span>Solte para subir ao GitHub</span>
+  </div>
+</div>
+<div class="subindo" id="subindo" hidden role="status" aria-live="polite">
+  <div class="subindo-cabeca">
+    <span id="subindoTitulo">Subindo</span>
+    <button class="subindo-fechar" id="subindoFechar" aria-label="Fechar">×</button>
+  </div>
+  <ul id="subindoLista"></ul>
+</div>
 
 <!-- ---------- PERGUNTA CURTA (criar coleção, juntar carrossel) ---------- -->
 <div class="veu" id="veuPergunta" hidden>
@@ -719,7 +773,7 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
     <div class="campo">
       <label for="fChave">Chave do GitHub</label>
       <input id="fChave" type="password" placeholder="ghp_… (fica só neste navegador)" autocomplete="off" spellcheck="false">
-      <span class="dica" id="dicaChave">Serve para o botão Salvar escrever no repositório.</span>
+      <span class="dica" id="dicaChave">Serve para salvar e para subir fotos ao repositório.</span>
     </div>
     <div class="duo">
       <button type="button" id="btApagarChave">Apagar chave</button>
@@ -1130,6 +1184,7 @@ async function carregar() {
         collections: Array.isArray(it.collections) ? it.collections.map(String) : null,
       };
     });
+    juntarSubidas();
     /* AS COLECOES como o robo publicou. As `criada` semeiam a lista deste
        navegador SO se ele nunca teve uma - senao uma colecao que ela
        acabou de apagar voltaria sozinha ate o robo rodar. */
@@ -1965,7 +2020,7 @@ function visiveis() {
       return txt.toLowerCase().includes(t);
     });
   }
-  return l;
+  return l.filter((x) => x.nova).concat(l.filter((x) => !x.nova));
 }
 function desenharAlternador() {
   const base = baseDaVista();
@@ -2122,6 +2177,7 @@ function desenharGrade() {
       + ' aria-label="Marcar">' + SVG_CHECK + '</span>';
     const selo = ehArq(it) ? '<span class="selo arq">arquivada</span>'
       : ehGrupo ? '<span class="selo">' + seq.length + ' fotos</span>'
+      : it.nova ? '<span class="selo nova">nova</span>'
       : (!t ? '<span class="selo sem">sem tag</span>' : "");
     const corpo = ehGrupo
       ? '<div class="folha f1">' + midia(seq[1].url, "") + '</div>'
@@ -2152,7 +2208,10 @@ function desenharGrade() {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrirPainel(caminho); }
     };
     mold.ondragstart = (e) => { e.dataTransfer.setData("text/plain", "foto:" + caminho); e.dataTransfer.effectAllowed = "move"; };
-    mold.ondragover = (e) => { e.preventDefault(); mold.classList.add("solta"); };
+    mold.ondragover = (e) => {
+      if (temArquivos(e)) return;
+      e.preventDefault(); mold.classList.add("solta");
+    };
     mold.ondragleave = () => mold.classList.remove("solta");
     mold.ondrop = (e) => {
       e.preventDefault(); mold.classList.remove("solta");
@@ -2520,7 +2579,7 @@ function abrirConfig(focoNaChave) {
   $("qtdVis").textContent = tagsVisiveis;
   $("dicaChave").textContent = lerToken()
     ? "Já há uma chave guardada neste navegador. Cole outra para trocar."
-    : "Serve para o botão Salvar escrever no repositório.";
+    : "Serve para salvar e para subir fotos ao repositório.";
   $("veuConfig").hidden = false;
   if (focoNaChave) setTimeout(() => $("fChave").focus(), 30);
 }
@@ -2676,6 +2735,283 @@ document.addEventListener("keydown", (e) => {
   if ($("veuFoto").hidden || digitando) return;
   if (e.key === "ArrowRight" && !$("fProxima").disabled) $("fProxima").click();
   if (e.key === "ArrowLeft" && !$("fAnterior").disabled) $("fAnterior").click();
+});
+
+/* ---------- SUBIR FOTOS (23/09/2026) ----------
+   Ela: "gostaria de arrastar uma imagem ou varias".
+   Vão para Uploads/Fotos|Videos|Gifs/AAAA-MM/ - o robô não faz dessa pasta
+   uma coleção: a foto nasce só no All, sem tag, e ela organiza aqui.
+   TODAS NUM COMMIT SÓ (API de blobs/árvore): um commit por foto dispararia
+   o robô uma vez por foto, e duas rodadas juntas brigam no push.
+   Até o robô publicar, a foto não está no images.json - por isso a lista
+   `subidas` a mantém na grade, inclusive depois de recarregar a página. */
+const PASTA_SUBIDAS = "Uploads";
+const LIMITE_CDN = 20 * 1024 * 1024;   /* o jsDelivr não entrega arquivo maior que isto */
+const LADO_MAX = 2560;
+const REDUZ_ACIMA = 1.5 * 1024 * 1024;
+const CHAVE_SUBIDAS = "mix-organizador-subidas";
+const EXT_FOTO = /\.(jpe?g|png|webp|avif|svg|gif|heic|heif)$/i;
+const EXT_VIDEO = /\.(mp4|webm|mov|m4v|ogv)$/i;
+const previas = {};   /* caminho -> blob: da própria foto, só nesta aba */
+
+let subidas = (() => {
+  try {
+    const v = JSON.parse(localStorage.getItem(CHAVE_SUBIDAS) || "[]");
+    /* uma semana sem o robô publicar = o arquivo saiu do repositório */
+    return Array.isArray(v) ? v.filter((s) => s && s.caminho && Date.now() - (s.quando || 0) < 7 * 864e5) : [];
+  } catch (e) { return []; }
+})();
+const gravarSubidas = () => { try { localStorage.setItem(CHAVE_SUBIDAS, JSON.stringify(subidas)); } catch (e) {} };
+
+function temArquivos(e) {
+  const t = e.dataTransfer && e.dataTransfer.types;
+  return !!t && Array.prototype.indexOf.call(t, "Files") >= 0;
+}
+
+/* o mesmo título que o robô tira do nome do arquivo */
+const tituloDoArquivo = (nome) => nome.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ")
+  .replace(/\s+/g, " ").trim().replace(/^\w/, (c) => c.toUpperCase());
+/* Nome começando com "." ou "_" o robô ignora (é a convenção de rascunho) */
+const limparNome = (nome) => nome.normalize("NFC").replace(/[\\/:*?"<>|#%{}^~`[\]]+/g, "-")
+  .replace(/\s+/g, " ").replace(/^[._\s-]+/, "").trim();
+const tamanho = (n) => n < 1048576 ? Math.max(1, Math.round(n / 1024)) + " KB"
+  : (n / 1048576).toFixed(1).replace(".", ",") + " MB";
+
+function itemDaSubida(s) {
+  const alvo = donoDoRepo();
+  const cru = alvo ? "https://raw.githubusercontent.com/" + alvo.dono + "/" + alvo.repo + "/"
+    + alvo.branch + "/" + s.caminho.split("/").map(encodeURIComponent).join("/") : "";
+  const u = previas[s.caminho] || cru;
+  return {
+    i: itens.length, image: s.video ? "" : u, video: s.video ? u : "", caminho: s.caminho,
+    name: tituloDoArquivo(s.caminho.split("/").pop()), phrase: "", year: "", link: "", tag: "",
+    archived: false, images: [], grupo: {}, pt: {}, es: {}, collection: "", collections: null, nova: true,
+  };
+}
+/* chamada pelo carregar(): o que o robô já publicou sai da lista */
+function juntarSubidas() {
+  const tem = new Set(itens.map((x) => x.caminho));
+  const antes = subidas.length;
+  subidas = subidas.filter((s) => !tem.has(s.caminho));
+  if (subidas.length !== antes) gravarSubidas();
+  subidas.forEach((s) => itens.push(itemDaSubida(s)));
+}
+
+const bytesParaBase64 = (buf) => {
+  const bytes = new Uint8Array(buf);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(bin);
+};
+
+/* Foto grande é reduzida ANTES de subir: a de celular tem 4000px e 8 MB, e
+   o card mais largo do site não passa de 2560px. GIF nunca passa por aqui
+   (perderia a animação); PNG e WebP saem em WebP, que guarda a transparência. */
+async function preparar(arq) {
+  const nome = arq.name || "foto";
+  const ext = ((/\.([^.]+)$/.exec(nome) || [])[1] || "").toLowerCase();
+  const base = limparNome(nome.replace(/\.[^.]+$/, "")) || "foto";
+  const ehVideo = EXT_VIDEO.test(nome) || /^video\//.test(arq.type);
+  const ehFoto = EXT_FOTO.test(nome) || /^image\//.test(arq.type);
+  if (!ehVideo && !ehFoto) throw new Error("não é foto nem vídeo");
+  const original = (tipo) => {
+    if (arq.size > LIMITE_CDN) {
+      throw new Error(tamanho(arq.size) + " — o site só entrega arquivos até 20 MB");
+    }
+    return { blob: arq, nome: base + "." + (ext || (ehVideo ? "mp4" : "jpg")), tipo,
+             video: tipo === "Videos", nota: tamanho(arq.size) };
+  };
+  if (ehVideo) return original("Videos");
+  if (ext === "gif") return original("Gifs");
+  if (ext === "svg" || ext === "avif") return original("Fotos");
+  const heic = ext === "heic" || ext === "heif" || /hei[cf]/i.test(arq.type);
+  let bmp = null;
+  try { bmp = await createImageBitmap(arq, { imageOrientation: "from-image" }); } catch (e) {}
+  if (!bmp) {
+    if (heic) throw new Error("HEIC não abre neste navegador — exporte em JPG, ou use o Safari");
+    return original("Fotos");
+  }
+  const lado = Math.max(bmp.width, bmp.height);
+  if (!heic && arq.size <= REDUZ_ACIMA && lado <= LADO_MAX) { bmp.close(); return original("Fotos"); }
+  const k = Math.min(1, LADO_MAX / lado);
+  const w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
+  const cv = document.createElement("canvas");
+  cv.width = w; cv.height = h;
+  const cx = cv.getContext("2d");
+  const transparente = ext === "png" || ext === "webp";
+  if (!transparente) { cx.fillStyle = "#fff"; cx.fillRect(0, 0, w, h); }
+  cx.imageSmoothingQuality = "high";
+  cx.drawImage(bmp, 0, 0, w, h);
+  bmp.close();
+  const blob = await new Promise((ok) => cv.toBlob(ok, transparente ? "image/webp" : "image/jpeg",
+                                                    transparente ? 0.9 : 0.86));
+  /* o navegador que não sabe gravar WebP devolve PNG - se não ficou menor,
+     vai o original */
+  if (!blob || (!heic && blob.size >= arq.size)) return original("Fotos");
+  if (blob.size > LIMITE_CDN) throw new Error(tamanho(blob.size) + " — o site só entrega arquivos até 20 MB");
+  const saida = blob.type === "image/webp" ? "webp" : blob.type === "image/png" ? "png" : "jpg";
+  return { blob, nome: base + "." + saida, tipo: "Fotos", video: false,
+           nota: tamanho(arq.size) + " → " + tamanho(blob.size) };
+}
+
+async function gh(metodo, rota, corpo) {
+  const alvo = donoDoRepo();
+  const headers = { "Authorization": "Bearer " + lerToken(), "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28" };
+  if (corpo) headers["Content-Type"] = "application/json";
+  const r = await fetch("https://api.github.com/repos/" + alvo.dono + "/" + alvo.repo + rota,
+    { method: metodo, headers, cache: "no-store", body: corpo ? JSON.stringify(corpo) : undefined });
+  if (r.status === 401) throw new Error("a chave não foi aceita — guarde uma nova em Configurações");
+  if (r.status === 403) throw new Error("a chave não tem permissão de escrita em Contents");
+  return r;
+}
+async function nomesNaPasta(pasta) {
+  const r = await gh("GET", "/contents/" + pasta.split("/").map(encodeURIComponent).join("/")
+    + "?ref=" + encodeURIComponent(donoDoRepo().branch) + "&t=" + Date.now());
+  if (r.status === 404) return new Set();
+  if (!r.ok) throw new Error("não consegui ler a pasta (HTTP " + r.status + ")");
+  const j = await r.json();
+  return new Set((Array.isArray(j) ? j : []).map((x) => String(x.name).toLowerCase()));
+}
+/* Um commit com todos os arquivos. Se o robô (ou o Salvar) gravou no meio
+   do caminho, o ramo andou e o GitHub recusa: refaz em cima do novo. */
+async function gravarCommit(entradas, mensagem) {
+  const ramo = "heads/" + donoDoRepo().branch;
+  for (let vez = 0; vez < 4; vez++) {
+    const rRef = await gh("GET", "/git/ref/" + ramo);
+    if (!rRef.ok) throw new Error("não achei o ramo (HTTP " + rRef.status + ")");
+    const pai = (await rRef.json()).object.sha;
+    const rPai = await gh("GET", "/git/commits/" + pai);
+    if (!rPai.ok) throw new Error("HTTP " + rPai.status);
+    const arvorePai = (await rPai.json()).tree.sha;
+    const rArv = await gh("POST", "/git/trees", { base_tree: arvorePai,
+      tree: entradas.map((e) => ({ path: e.caminho, mode: "100644", type: "blob", sha: e.sha })) });
+    if (!rArv.ok) throw new Error("HTTP " + rArv.status);
+    const rNovo = await gh("POST", "/git/commits",
+      { message: mensagem, tree: (await rArv.json()).sha, parents: [pai] });
+    if (!rNovo.ok) throw new Error("HTTP " + rNovo.status);
+    const rMove = await gh("PATCH", "/git/refs/" + ramo, { sha: (await rNovo.json()).sha, force: false });
+    if (rMove.ok) return;
+    if (rMove.status !== 422 && rMove.status !== 409) throw new Error("HTTP " + rMove.status);
+    await new Promise((ok) => setTimeout(ok, 1500));
+  }
+  throw new Error("o GitHub estava ocupado — tente de novo");
+}
+
+let subindoAgora = false;
+async function subirArquivos(lista) {
+  const arqs = Array.from(lista || []);
+  if (!arqs.length) return;
+  if (subindoAgora) { mostrarEstado("espere a subida anterior terminar", "aviso"); return; }
+  if (!donoDoRepo()) { abrirConfig(); return; }
+  if (!lerToken()) {
+    abrirConfig(true);
+    mostrarEstado("para subir fotos, guarde a chave do GitHub", "aviso");
+    return;
+  }
+  subindoAgora = true;
+  const linhas = arqs.map((a) => ({
+    arq: a, nome: a.name, estado: "na fila", classe: "",
+    mini: /^image\//.test(a.type) && !/hei[cf]/i.test(a.type) ? URL.createObjectURL(a) : "",
+  }));
+  const pinta = () => {
+    const ok = linhas.filter((l) => l.classe === "ok").length;
+    const erro = linhas.filter((l) => l.classe === "erro").length;
+    $("subindoTitulo").textContent = subindoAgora
+      ? "Subindo " + linhas.length + (linhas.length === 1 ? " arquivo" : " arquivos")
+      : (ok ? ok + " no GitHub" : "") + (ok && erro ? " · " : "") + (erro ? erro + " não " + (erro === 1 ? "subiu" : "subiram") : "");
+    $("subindoFechar").hidden = subindoAgora;
+    $("subindoLista").innerHTML = linhas.map((l) => '<li class="' + l.classe + '">'
+      + (l.mini ? '<img src="' + esc(l.mini) + '" alt="">' : '<span class="mini"></span>')
+      + '<div style="min-width:0"><div class="arq-nome">' + esc(l.caminho ? l.caminho.split("/").pop() : l.nome)
+      + '</div><div class="arq-estado">' + esc(l.estado) + '</div></div></li>').join("");
+  };
+  $("subindo").hidden = false;
+  pinta();
+  const d = new Date();
+  const mes = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+  const usados = {};
+  const prontas = [];
+  for (const l of linhas) {
+    try {
+      l.estado = "preparando…"; pinta();
+      const p = await preparar(l.arq);
+      const pasta = PASTA_SUBIDAS + "/" + p.tipo + "/" + mes;
+      if (!usados[pasta]) usados[pasta] = await nomesNaPasta(pasta);
+      const semExt = p.nome.replace(/\.[^.]+$/, ""), ext = p.nome.slice(semExt.length);
+      let nome = p.nome, n = 2;
+      while (usados[pasta].has(nome.toLowerCase())) nome = semExt + "-" + (n++) + ext;
+      usados[pasta].add(nome.toLowerCase());
+      l.caminho = pasta + "/" + nome;
+      l.estado = "enviando · " + p.nota + "…"; pinta();
+      const rB = await gh("POST", "/git/blobs",
+        { content: bytesParaBase64(await p.blob.arrayBuffer()), encoding: "base64" });
+      if (!rB.ok) throw new Error("não subiu (HTTP " + rB.status + ")");
+      Object.assign(l, { sha: (await rB.json()).sha, blob: p.blob, video: p.video, nota: p.nota,
+                         estado: "esperando as outras…" });
+      prontas.push(l);
+    } catch (e) {
+      l.estado = e.message; l.classe = "erro";
+    }
+    pinta();
+  }
+  if (prontas.length) {
+    prontas.forEach((l) => { l.estado = "gravando no GitHub…"; });
+    pinta();
+    try {
+      await gravarCommit(prontas.map((l) => ({ caminho: l.caminho, sha: l.sha })),
+        prontas.length === 1 ? "Foto nova pelo organizador: " + l0nome(prontas[0])
+          : prontas.length + " fotos novas pelo organizador");
+      const quando = Date.now();
+      prontas.forEach((l) => {
+        previas[l.caminho] = URL.createObjectURL(l.blob);
+        subidas.push({ caminho: l.caminho, video: l.video, quando });
+        if (!itens.some((x) => x.caminho === l.caminho)) itens.push(itemDaSubida({ caminho: l.caminho, video: l.video }));
+        l.estado = "no GitHub · " + l.nota; l.classe = "ok";
+      });
+      gravarSubidas();
+      /* para ela ver as novas: todas as fotos, com as novas na frente */
+      mostrar = "fotos"; filtro = ""; filtroCol = "";
+      desenhar();
+      mostrarEstado(prontas.length + (prontas.length === 1 ? " foto nova" : " fotos novas")
+        + " · o site mostra em ~1 min", "ok");
+    } catch (e) {
+      prontas.forEach((l) => { l.estado = e.message; l.classe = "erro"; });
+    }
+  }
+  subindoAgora = false;
+  pinta();
+}
+const l0nome = (l) => l.caminho.split("/").pop();
+
+$("btSubir").onclick = () => $("arqSubir").click();
+$("arqSubir").onchange = () => { const f = $("arqSubir").files; subirArquivos(f); $("arqSubir").value = ""; };
+$("subindoFechar").onclick = () => { $("subindo").hidden = true; };
+let camadasArrasto = 0;
+window.addEventListener("dragenter", (e) => {
+  if (!temArquivos(e)) return;
+  camadasArrasto++;
+  $("soltarFotos").hidden = false;
+});
+window.addEventListener("dragleave", (e) => {
+  if (!temArquivos(e)) return;
+  camadasArrasto = Math.max(0, camadasArrasto - 1);
+  if (!camadasArrasto) $("soltarFotos").hidden = true;
+});
+window.addEventListener("dragover", (e) => {
+  if (!temArquivos(e)) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "copy";
+});
+window.addEventListener("drop", (e) => {
+  if (!temArquivos(e)) return;
+  e.preventDefault();
+  camadasArrasto = 0;
+  $("soltarFotos").hidden = true;
+  document.querySelectorAll(".solta, .alvo").forEach((x) => x.classList.remove("solta", "alvo"));
+  subirArquivos(e.dataTransfer.files);
 });
 
 /* ---------- INÍCIO ---------- */
