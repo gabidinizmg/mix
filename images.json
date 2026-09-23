@@ -3,7 +3,8 @@
     "Design",
     "Motion",
     "Draw",
-    "Photo"
+    "Photo",
+    "3D"
   ],
   "tagsVisiveis": 2,
   "collections": [
@@ -53,7 +54,15 @@
   "items": [
     {
       "name": "",
-      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-09/2026-09-23_17-05-25.jpg"
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-09/2026-09-23_17-05-25.jpg",
+      "tag": "Draw",
+      "tags": [
+        "Draw",
+        "Photo",
+        "3D",
+        "Motion",
+        "Design"
+      ]
     },
     {
       "name": "detalhes",
