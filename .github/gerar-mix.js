@@ -197,6 +197,9 @@ const montar = (arquivos, nomeColecao, info) => {
        isto o agrupamento nao tiraria nada da grade, so acrescentaria
        uma lista repetida. */
     if (d.carrosselDe) continue;
+    /* NA LIXEIRA DO ORGANIZADOR (23/09/2026): o arquivo ainda existe, mas
+       ela excluiu - nao vai para o site. Restaurar tira a marca. */
+    if (d.lixeira === true) continue;
     /* o nome sai do ARQUIVO por padrao: renomear a foto ja resolve o
        titulo, sem abrir arquivo nenhum. O `_info.json` so entra quando
        ela quiser um nome diferente do nome do arquivo. */

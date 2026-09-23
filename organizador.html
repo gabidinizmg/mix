@@ -415,6 +415,14 @@ h1 { font: 600 22px/1.1 "Outfit",sans-serif; letter-spacing: -.02em; }
 .duo button { flex: 1; }
 .duo button:hover, .btn:hover:not(:disabled) { background: var(--painel-2); }
 .btn:disabled { opacity: .45; cursor: default; }
+.btn.lixo { padding: 0 12px; color: var(--texto-2); }
+.btn.lixo:hover:not(:disabled), .btn.perigo:hover:not(:disabled) { color: var(--erro);
+  border-color: color-mix(in srgb, var(--erro) 45%, transparent); background: color-mix(in srgb, var(--erro) 12%, transparent); }
+.btn.perigo { color: var(--erro); }
+.limpar-lixo { align-self: center; font-size: 12.5px; color: var(--erro); padding: 4px 11px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--erro) 40%, transparent); }
+.limpar-lixo:hover { background: color-mix(in srgb, var(--erro) 14%, transparent); }
+.limpar-lixo[hidden] { display: none; }
 .btn.forte, .duo button.forte { background: var(--roxo); border-color: var(--roxo); color: #fff; }
 .btn.forte:hover:not(:disabled) { filter: brightness(1.12); }
 .pergunta { width: min(410px,100%); }
@@ -578,6 +586,9 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
     <button class="item" data-vista="arquivadas">
       <span class="rotulo">Arquivadas</span><span class="qtd" id="qtdArq">0</span>
     </button>
+    <button class="item" data-vista="lixeira">
+      <span class="rotulo">Lixeira</span><span class="qtd" id="qtdLixo">0</span>
+    </button>
 
     <button class="secao-bt" id="btDobraCol" aria-expanded="false" aria-controls="dobraCol">
       <span class="seta" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"
@@ -626,6 +637,7 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
       <div class="titulo-linha">
         <h1 id="tituloVista">Todas as fotos</h1>
         <span class="conta" id="conta"></span>
+        <button class="limpar-lixo" id="btLimparLixo" hidden>Limpar lixeira</button>
       </div>
       <div class="ferramentas">
         <div class="alternador" id="alternador" role="group" aria-label="O que mostrar"></div>
@@ -669,6 +681,8 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
                    stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="4" width="13" height="16" rx="2"/>
               <path d="M4 7v12a2 2 0 0 0 2 2h9"/><path d="M11 12h5"/></svg>
             </button>
+            <button class="acao" id="btLixoSel" title="Mover as marcadas para a lixeira"
+                    aria-label="Mover as marcadas para a lixeira"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7M6 7l1 13h10l1-13"/><path d="M10 11v5.5M14 11v5.5"/></svg></button>
             <button class="acao" id="btLimparSel" title="Desmarcar" aria-label="Desmarcar tudo">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                    stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -754,6 +768,7 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
       <div class="corpo" id="fCorpo"></div>
       <div class="pe">
         <span class="aviso-pe" id="fAviso">vale no site depois de Salvar</span>
+        <button class="btn lixo" id="fLixo" title="Mover para a lixeira" aria-label="Mover para a lixeira"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7M6 7l1 13h10l1-13"/><path d="M10 11v5.5M14 11v5.5"/></svg></button>
         <button class="btn" id="fArquivar">Arquivar</button>
         <button class="btn forte" id="fPronto">Pronto</button>
       </div>
@@ -1263,10 +1278,10 @@ async function carregar() {
 
 
 /* ---------- HELPERS DA GRADE E DO CARROSSEL ---------- */
-function ativa(x) { return !ehArq(x) && !ehSeguidora(x); }
+function ativa(x) { return !ehArq(x) && !ehSeguidora(x) && !ehLixo(x); }
 function contarTag(t) { return itens.filter((x) => ativa(x) && tagsDe(x).includes(t)).length; }
 function semTag() { return itens.filter((x) => ativa(x) && !tagsDe(x).length).length; }
-function contarArq() { return itens.filter(ehArq).length + arquivadasOrfas().length; }
+function contarArq() { return itens.filter((x) => ehArq(x) && !ehLixo(x)).length + arquivadasOrfas().length; }
 function contarAtivas() { return itens.filter(ativa).length; }
 
 /* Arquivada. `val` devolve "" quando o campo nao existe, entao basta
@@ -1386,6 +1401,7 @@ function arquivadasOrfas() {
   Object.keys(edicoes).forEach((c) => {
     const e = edicoes[c] || {};
     if (e.archived !== true && e.archived !== "true") return;
+    if (e.lixeira === true) return;
     if (itens.some((x) => x.caminho === c)) return;
     fora.push({
       i: -1, caminho: c, image: urlDe(c, ref), video: "",
@@ -1402,7 +1418,95 @@ function arquivadasOrfas() {
 function acharItem(caminho) {
   return itens.find((x) => x.caminho === caminho)
     || arquivadasOrfas().find((x) => x.caminho === caminho)
+    || lixeiraOrfas().find((x) => x.caminho === caminho)
     || null;
+}
+
+/* ---------- LIXEIRA (23/09/2026) ----------
+   Ela: "um botao de excluir a imagem, e lado direito do mouse ter a opcao
+   excluir. Uma lixeira na interface, e botao limpar lixeira".
+   DOIS PASSOS, de proposito:
+     1. Excluir  -> marca `lixeira: true`. Some da grade e, depois de
+        Salvar, do site (o robo pula). O arquivo continua no GitHub, e
+        Restaurar traz tudo de volta como estava.
+     2. Limpar a lixeira (ou "excluir para sempre") -> apaga os ARQUIVOS
+        do GitHub num commit so e tira as edicoes deles do mix-info.json.
+   Carrossel vai inteiro: e um card so na grade, entao sai e volta junto. */
+const ehLixo = (it) => val(it, "lixeira") === true;
+/* Depois que o robo publica, a foto da lixeira sai do images.json - sem
+   reconstruir aqui, ela sumiria da propria lixeira (mesma armadilha das
+   arquivadas orfas). */
+function lixeiraOrfas() {
+  const ref = (itens[0] && (itens[0].image || itens[0].video)) || "";
+  const fora = [];
+  Object.keys(edicoes).forEach((c) => {
+    const e = edicoes[c] || {};
+    if (e.lixeira !== true || e.carrosselDe) return;
+    if (itens.some((x) => x.caminho === c)) return;
+    const video = /\.(mp4|webm|mov|m4v|ogv)$/i.test(c);
+    fora.push({
+      i: -1, caminho: c, image: video ? "" : urlDe(c, ref), video: video ? urlDe(c, ref) : "",
+      name: e.name || "", phrase: e.phrase || "", year: e.year || "",
+      link: e.link || "", tag: e.tag || "", tags: Array.isArray(e.tags) ? e.tags : [],
+      collection: "", images: [], grupo: {}, pt: {}, es: {}, orfa: true,
+    });
+  });
+  return fora;
+}
+function naLixeira() {
+  return itens.filter((x) => ehLixo(x) && !ehSeguidora(x)).concat(lixeiraOrfas());
+}
+/* todos os arquivos de um card: a capa e as paginas */
+const arquivosDoCard = (c) => {
+  const it = acharItem(c);
+  return it ? [...new Set(paginas(it).map((p) => p.caminho))] : [c];
+};
+function moverParaLixeira(caminhos) {
+  let n = 0;
+  caminhos.forEach((c) => { arquivosDoCard(c).forEach((a) => editar(a, "lixeira", true)); n++; });
+  caminhos.forEach((c) => selecao.delete(c));
+  salvar(); desenhar();
+  mostrarEstado(n + (n === 1 ? " foto na lixeira" : " fotos na lixeira") + " · sai do site depois de Salvar", "ok");
+}
+function restaurar(caminhos) {
+  let n = 0;
+  caminhos.forEach((c) => { arquivosDoCard(c).forEach((a) => editar(a, "lixeira", "")); n++; });
+  caminhos.forEach((c) => selecao.delete(c));
+  salvar(); desenhar();
+  mostrarEstado(n + (n === 1 ? " foto restaurada" : " fotos restauradas") + " · volta ao site depois de Salvar", "ok");
+}
+let apagando = false;
+async function apagarDeVez(caminhos) {
+  if (apagando || !caminhos.length) return;
+  const arquivos = [...new Set(caminhos.flatMap(arquivosDoCard))];
+  const n = caminhos.length;
+  const ok = await perguntar(
+    n === 1 ? "Excluir esta foto para sempre?" : "Excluir " + n + " fotos para sempre?",
+    "Os arquivos" + (arquivos.length > n ? " (" + arquivos.length + ", contando as páginas dos carrosséis)" : "")
+      + " são apagados do GitHub e somem do organizador. Não dá para desfazer por aqui.",
+    null, "Excluir para sempre");
+  if (!ok) return;
+  if (!lerToken()) { abrirConfig(true); mostrarEstado("para excluir, guarde a chave do GitHub", "aviso"); return; }
+  apagando = true;
+  mostrarEstado("apagando do GitHub…", "indo");
+  try {
+    await gravarCommit(arquivos.map((c) => ({ caminho: c, sha: null })),
+      arquivos.length === 1 ? "Foto excluida pelo organizador: " + arquivos[0].split("/").pop()
+        : arquivos.length + " fotos excluidas pelo organizador");
+    const fora = new Set(arquivos);
+    arquivos.forEach((c) => { delete edicoes[c]; selecao.delete(c); });
+    itens = itens.filter((x) => !fora.has(x.caminho));
+    subidas = subidas.filter((x) => !fora.has(x.caminho)); gravarSubidas();
+    salvar(); desenhar();
+    /* as edicoes delas saem do mix-info.json agora, e nao no proximo
+       Salvar - senao o arquivo guardaria texto de foto que nao existe */
+    await salvarNoGitHub();
+    mostrarEstado(arquivos.length + (arquivos.length === 1 ? " arquivo apagado" : " arquivos apagados")
+      + " do GitHub", "ok");
+  } catch (e) {
+    mostrarEstado("não apaguei: " + e.message, "erro");
+  }
+  apagando = false;
 }
 
 /* ---------- COLECOES: a que colecoes cada foto pertence ----------
@@ -1827,14 +1931,14 @@ const SVG_CHECK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" s
 /* ---------- uma pergunta curta, com ou sem campo ----------
    Devolve o texto (ou true), ou null se ela desistir. Substitui o
    `prompt`/`confirm` do navegador, que não dá para explicar nem estilizar. */
-function perguntar(titulo, texto, campo) {
+function perguntar(titulo, texto, campo, rotuloSim) {
   return new Promise((ok) => {
     $("pgTitulo").textContent = titulo;
     $("pgTexto").textContent = texto || "";
     $("pgCampo").hidden = !campo;
     $("pgInput").value = "";
     if (campo) $("pgInput").placeholder = campo.dica || "";
-    $("pgSim").textContent = campo ? "Criar" : "Sim";
+    $("pgSim").textContent = rotuloSim || (campo ? "Criar" : "Sim");
     $("veuPergunta").hidden = false;
     if (campo) setTimeout(() => $("pgInput").focus(), 30);
     const fim = (v) => {
@@ -1944,11 +2048,12 @@ function desenharLado() {
   $("qtdTodas").textContent = contarAtivas();
   $("qtdSemTag").textContent = semTag();
   $("qtdArq").textContent = contarArq();
+  $("qtdLixo").textContent = naLixeira().length;
   document.querySelectorAll("[data-vista]").forEach((b) => {
     const v = b.dataset.vista;
     b.classList.toggle("on", !filtroCol
       && ((v === "todas" && filtro === "") || (v === "semtag" && filtro === "__sem")
-          || (v === "arquivadas" && filtro === "__arq")));
+          || (v === "arquivadas" && filtro === "__arq") || (v === "lixeira" && filtro === "__lixo")));
   });
 
   const lista = todasColecoes();
@@ -2038,15 +2143,16 @@ function desenharLado() {
 
 /* ---------- BARRA DE CIMA ---------- */
 function baseDaVista() {
-  if (filtro === "__arq") return itens.filter(ehArq).concat(arquivadasOrfas());
-  const vivas = itens.filter((x) => !ehArq(x) && !ehSeguidora(x));
+  if (filtro === "__lixo") return naLixeira();
+  if (filtro === "__arq") return itens.filter((x) => ehArq(x) && !ehLixo(x)).concat(arquivadasOrfas());
+  const vivas = itens.filter((x) => !ehArq(x) && !ehSeguidora(x) && !ehLixo(x));
   return filtroCol ? vivas.filter((x) => colecoesDe(x).includes(filtroCol)) : vivas;
 }
 function visiveis() {
   let l = baseDaVista();
   if (mostrar === "carrosseis") l = l.filter((x) => paginas(x).length > 1);
   if (filtro === "__sem") l = l.filter((x) => !tagsDe(x).length);
-  else if (filtro && filtro !== "__arq") l = l.filter((x) => tagsDe(x).includes(filtro));
+  else if (filtro && filtro !== "__arq" && filtro !== "__lixo") l = l.filter((x) => tagsDe(x).includes(filtro));
   const t = busca.trim().toLowerCase();
   if (t) {
     l = l.filter((x) => {
@@ -2062,9 +2168,10 @@ function desenharAlternador() {
   const nCar = base.filter((x) => paginas(x).length > 1).length;
   const nCol = todasColecoes().length;
   const op = [["fotos", "Fotos", base.length]];
-  if (!filtroCol && filtro !== "__arq") op.push(["colecoes", "Coleções", nCol]);
+  const especial = filtro === "__arq" || filtro === "__lixo";
+  if (!filtroCol && !especial) op.push(["colecoes", "Coleções", nCol]);
   op.push(["carrosseis", "Carrosséis", nCar]);
-  if (mostrar === "colecoes" && (filtroCol || filtro === "__arq")) mostrar = "fotos";
+  if (mostrar === "colecoes" && (filtroCol || especial)) mostrar = "fotos";
   $("alternador").innerHTML = op.map(([k, r, n]) =>
     '<button class="' + (mostrar === k ? "on" : "") + '" data-m="' + k + '" aria-pressed="' + (mostrar === k) + '">'
     + r + ' <span class="n">' + n + '</span></button>').join("");
@@ -2073,6 +2180,8 @@ function desenharAlternador() {
   });
 }
 function desenharChips() {
+  /* na lixeira nao ha filtro: clicar numa tag sairia dela sem aviso */
+  if (filtro === "__lixo") { $("chips").innerHTML = ""; return; }
   const base = baseDaVista();
   const conta = (t) => base.filter((x) => tagsDe(x).includes(t)).length;
   const nSem = base.filter((x) => !tagsDe(x).length).length;
@@ -2105,6 +2214,8 @@ function desenharChips() {
    Ela: "se você clicar na bolinha de cada imagem já dá a função dele".
    Os ícones de ação aparecem sozinhos quando existe foto marcada. */
 function atualizarSel() {
+  const naLixo = filtro === "__lixo";
+  $("btLixoSel").title = $("btLixoSel").ariaLabel = naLixo ? "Restaurar as marcadas" : "Mover as marcadas para a lixeira";
   $("contaSel").textContent = selecao.size;
   $("acoesSel").hidden = selecao.size === 0;
 }
@@ -2173,7 +2284,8 @@ function desenharGrade() {
   $("btMais").disabled = zoom === ZOOMS.length - 1;
 
   /* --- as coleções, em mosaico --- */
-  if (mostrar === "colecoes" && !filtroCol && filtro !== "__arq") {
+  $("btLimparLixo").hidden = !(filtro === "__lixo" && naLixeira().length);
+  if (mostrar === "colecoes" && !filtroCol && filtro !== "__arq" && filtro !== "__lixo") {
     const cs = todasColecoes();
     $("tituloVista").textContent = "Todas as coleções";
     $("conta").textContent = cs.length + (cs.length === 1 ? " coleção" : " coleções");
@@ -2194,6 +2306,7 @@ function desenharGrade() {
   const l = visiveis();
   $("tituloVista").textContent = filtroCol ? filtroCol
     : filtro === "__arq" ? "Arquivadas"
+    : filtro === "__lixo" ? "Lixeira"
     : filtro === "__sem" ? "Sem tag"
     : mostrar === "carrosseis" ? "Todos os carrosséis" : "Todas as fotos";
   $("conta").textContent = l.length + (l.length === 1 ? " foto" : " fotos")
@@ -2228,7 +2341,7 @@ function desenharGrade() {
       + '<div class="meta"><span class="ponto"></span>' + esc(t || "sem tag")
       + (ano ? " · " + esc(ano) : "")
       + (colecoesDe(it).length ? " · " + esc(colecoesDe(it).join(", ")) : "") + '</div></div>';
-  }).join("") : '<div class="vazio">Nada aqui com esse filtro.</div>';
+  }).join("") : '<div class="vazio">' + (filtro === "__lixo" ? "A lixeira está vazia." : "Nada aqui com esse filtro.") + '</div>';
 
   $("grade").querySelectorAll("[data-foto]").forEach((c) => {
     const caminho = c.dataset.foto;
@@ -2258,6 +2371,15 @@ function desenharGrade() {
       e.preventDefault();
       const it = acharItem(caminho);
       if (!it) return;
+      if (ehLixo(it)) {
+        abrirMenu(e, [
+          { id: "abrir", rotulo: "Abrir", faz: () => abrirPainel(caminho) },
+          { id: "rest", rotulo: "Restaurar", faz: () => restaurar([caminho]) },
+          "-",
+          { id: "apaga", rotulo: "Excluir para sempre", perigo: true, faz: () => apagarDeVez([caminho]) },
+        ]);
+        return;
+      }
       const cols = colecoesDe(it);
       abrirMenu(e, [
         { id: "abrir", rotulo: "Abrir", faz: () => abrirPainel(caminho) },
@@ -2267,7 +2389,8 @@ function desenharGrade() {
         .concat(paginas(it).length > 1 ? [{ id: "desagrupa", rotulo: "Desfazer o carrossel",
           faz: () => { selecao.clear(); selecao.add(caminho); desagrupar(); } }] : [])
         .concat(["-", { id: "arq", rotulo: ehArq(it) ? "Desarquivar" : "Arquivar", perigo: !ehArq(it),
-          faz: () => { editar(caminho, "archived", ehArq(it) ? false : true); salvar(); desenhar(); } }]));
+          faz: () => { editar(caminho, "archived", ehArq(it) ? false : true); salvar(); desenhar(); } },
+          { id: "lixo", rotulo: "Excluir", perigo: true, faz: () => moverParaLixeira([caminho]) }]));
     };
   });
 }
@@ -2548,8 +2671,21 @@ function abrirPainel(caminho) {
       };
     });
   }
-  $("fArquivar").textContent = ehArq(it) ? "Desarquivar" : "Arquivar";
-  $("fArquivar").onclick = () => {
+  const lixo = ehLixo(it);
+  $("fLixo").hidden = lixo;
+  $("fLixo").onclick = () => { fecharPainel(); moverParaLixeira([it.caminho]); };
+  $("fArquivar").classList.toggle("perigo", lixo);
+  if (lixo) {
+    $("fArquivar").textContent = "Excluir para sempre";
+    $("fArquivar").onclick = () => { fecharPainel(); apagarDeVez([it.caminho]); };
+    $("fPronto").textContent = "Restaurar";
+    $("fPronto").onclick = () => { fecharPainel(); restaurar([it.caminho]); };
+  } else {
+    $("fPronto").textContent = "Pronto";
+    $("fPronto").onclick = fecharPainel;
+  }
+  if (!lixo) $("fArquivar").textContent = ehArq(it) ? "Desarquivar" : "Arquivar";
+  if (!lixo) $("fArquivar").onclick = () => {
     editar(it.caminho, "archived", ehArq(it) ? false : true);
     salvar(); desenhar();
     mostrarEstado(ehArq(it) ? "arquivada" : "de volta", "ok");
@@ -2646,8 +2782,9 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (ev) => {
 document.querySelectorAll("[data-vista]").forEach((b) => {
   b.onclick = () => {
     filtroCol = "";
-    filtro = b.dataset.vista === "todas" ? "" : b.dataset.vista === "semtag" ? "__sem" : "__arq";
-    if (filtro === "__arq") mostrar = "fotos";
+    const v = b.dataset.vista;
+    filtro = v === "todas" ? "" : v === "semtag" ? "__sem" : v === "lixeira" ? "__lixo" : "__arq";
+    if (filtro === "__arq" || filtro === "__lixo") mostrar = "fotos";
     desenhar();
   };
 });
@@ -2705,6 +2842,11 @@ $("btMenos").onclick = () => { zoom = Math.max(0, zoom - 1); desenharGrade(); };
 $("btLimparSel").onclick = () => { selecao.clear(); desenhar(); };
 $("btCriarColSel").onclick = criarColecaoDasMarcadas;
 $("btCriarCar").onclick = agruparCarrossel;
+$("btLixoSel").onclick = () => {
+  const cs = [...selecao];
+  if (filtro === "__lixo") restaurar(cs); else moverParaLixeira(cs);
+};
+$("btLimparLixo").onclick = () => apagarDeVez(naLixeira().map((x) => x.caminho));
 $("btDesagrupar").onclick = desagrupar;
 $("btTagAcao").onclick = (e) => {
   e.stopPropagation();
@@ -2929,8 +3071,17 @@ async function gravarCommit(entradas, mensagem) {
     const rPai = await gh("GET", "/git/commits/" + pai);
     if (!rPai.ok) throw new Error("HTTP " + rPai.status);
     const arvorePai = (await rPai.json()).tree.sha;
+    let lista = entradas;
+    if (entradas.some((e) => e.sha === null)) {
+      /* apagar um caminho que nao existe faz o GitHub recusar tudo */
+      const rT = await gh("GET", "/git/trees/" + arvorePai + "?recursive=1");
+      if (!rT.ok) throw new Error("HTTP " + rT.status);
+      const existe = new Set(((await rT.json()).tree || []).map((x) => x.path));
+      lista = entradas.filter((e) => e.sha !== null || existe.has(e.caminho));
+      if (!lista.length) return;
+    }
     const rArv = await gh("POST", "/git/trees", { base_tree: arvorePai,
-      tree: entradas.map((e) => ({ path: e.caminho, mode: "100644", type: "blob", sha: e.sha })) });
+      tree: lista.map((e) => ({ path: e.caminho, mode: "100644", type: "blob", sha: e.sha })) });
     if (!rArv.ok) throw new Error("HTTP " + rArv.status);
     const rNovo = await gh("POST", "/git/commits",
       { message: mensagem, tree: (await rArv.json()).sha, parents: [pai] });
