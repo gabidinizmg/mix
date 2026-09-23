@@ -309,6 +309,14 @@ const montar = (arquivos, nomeColecao, info) => {
 
     }
     if (d.link) item.link = String(d.link);
+    /* VIDEO POR LINK (23/09/2026): a foto e a CAPA, o link (YouTube,
+       Vimeo...) e o que toca no pop-up. So em imagem: video subido ja
+       toca sozinho. */
+    if (!ehVid && typeof d.videoLink === "string" && d.videoLink.trim()) {
+      item.videoLink = d.videoLink.trim();
+      /* ela escolheu "abrir em outra aba" em vez de tocar no pop-up */
+      if (d.videoAba === true) item.videoAba = true;
+    }
     /* DEPOIS do link, de proposito: a linha acima grava o link da FOTO
        da capa, e num carrossel quem manda no card e o GRUPO. Posto
        antes, o link do grupo era desfeito na linha seguinte.

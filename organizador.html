@@ -1210,6 +1210,8 @@ async function carregar() {
           ? (it.ano === undefined || it.ano === null ? "" : String(it.ano))
           : String(it.year),
         link: it.link || "",
+        videoLink: it.videoLink || "",
+        videoAba: it.videoAba === true,
         tag: it.tag || "",
         /* VARIAS TAGS (23/09/2026): a lista, quando o robo a escreveu */
         tags: Array.isArray(it.tags) ? it.tags.map(String).filter(Boolean) : (it.tag ? [String(it.tag)] : []),
@@ -1433,6 +1435,38 @@ function acharItem(caminho) {
     || lixeiraOrfas().find((x) => x.caminho === caminho)
     || null;
 }
+
+/* ---------- VIDEO POR LINK (23/09/2026) ----------
+   Ela: "eu subo a imagem, seleciono que e video, e coloco o link" - e
+   depois: "quero dois lugares para o link; posso querer que abra numa
+   outra aba". A foto vira a CAPA; `videoLink` e o video; `videoAba`
+   escolhe entre tocar no pop-up e abrir na plataforma. O Link de sempre
+   continua sendo o do botao de info.
+   O MESMO reconhecimento mora no BigaMix: aqui ele so diz a ela se o
+   link foi entendido. */
+const videoDoLink = (link) => {
+  const u = String(link || "").trim();
+  if (!u) return null;
+  let m = /(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([\w-]{11})/i.exec(u);
+  if (m) return { tipo: "iframe", nome: /\/shorts\//i.test(u) ? "YouTube Shorts" : "YouTube" };
+  if (/vimeo\.com\/(?:channels\/[\w-]+\/|groups\/[\w-]+\/videos\/|video\/)?\d+/i.test(u)) return { tipo: "iframe", nome: "Vimeo" };
+  if (/loom\.com\/(?:share|embed)\/[\da-f]+/i.test(u)) return { tipo: "iframe", nome: "Loom" };
+  if (/drive\.google\.com\/file\/d\/[\w-]+/i.test(u)) return { tipo: "iframe", nome: "Google Drive" };
+  if (/^https?:\/\/\S+\.(mp4|webm|m4v|mov)(\?\S*)?$/i.test(u)) return { tipo: "video", nome: "arquivo de vídeo" };
+  if (/^https?:\/\//i.test(u)) return { tipo: "fora", nome: "" };
+  return null;
+};
+const videoLigados = new Set();   /* ligou "E video" e ainda nao colou o link */
+const temVideoLink = (it) => !!val(it, "videoLink");
+const abreNaAba = (it) => { const v = val(it, "videoAba"); return v === true || v === "true"; };
+const oQueEOLink = (link, aba) => {
+  const v = videoDoLink(link);
+  if (!link) return "Cole o link do vídeo. O Link de cima continua sendo o do botão de info.";
+  if (!v) return "Isto não parece um link — tem que começar com https://";
+  if (aba) return (v.nome ? v.nome + " ✓ · " : "") + "o play abre o vídeo numa aba nova";
+  if (v.tipo === "fora") return "Não reconheci a plataforma: o play vai abrir o link numa aba nova.";
+  return v.nome + " ✓ · toca dentro do pop-up";
+};
 
 /* ---------- LIXEIRA (23/09/2026) ----------
    Ela: "um botao de excluir a imagem, e lado direito do mouse ter a opcao
@@ -2425,6 +2459,7 @@ function desenharGrade() {
     const selo = ehArq(it) ? '<span class="selo arq">arquivada</span>'
       : ehGrupo ? '<span class="selo">' + seq.length + ' fotos</span>'
       : it.nova ? '<span class="selo nova">nova</span>'
+      : temVideoLink(it) ? '<span class="selo">▶ vídeo</span>'
       : (!t ? '<span class="selo sem">sem tag</span>' : "");
     const corpo = ehGrupo
       ? '<div class="folha f1">' + midia(seq[1].url, "") + '</div>'
@@ -2630,6 +2665,25 @@ function abrirPainel(caminho) {
       + (!desligada(vSel("noInfo"))) + '" aria-label="Botão de info desta foto"></button>'
       + '<span class="rotulo-campo">Botão de info desta foto</span></div>';
 
+  /* so para foto unica: video subido ja toca, e carrossel tem paginas */
+  const podeVideo = !ehGrupo && !it.video;
+  const linkVideo = val(it, "videoLink");
+  const videoLigado = podeVideo && (!!linkVideo || videoLigados.has(it.caminho));
+  const naAba = abreNaAba(it);
+  const corpoVideo = !podeVideo ? "" :
+    '<div class="chave-linha"><button class="chave" id="fEhVideo" role="switch" aria-checked="'
+      + videoLigado + '" aria-label="É vídeo"></button>'
+      + '<span class="rotulo-campo">É vídeo — a foto vira a capa, com o play</span></div>'
+    + (!videoLigado ? "" :
+      campoTexto("fVideoLink", "Link do vídeo — YouTube, Vimeo, Loom, Google Drive…", linkVideo, false)
+      + '<p class="dica" id="fVideoQual">' + esc(oQueEOLink(linkVideo, naAba)) + '</p>'
+      + '<div class="alternador" id="fVideoModo" role="group" aria-label="Como o vídeo abre">'
+      + '<button class="' + (naAba ? "" : "on") + '" data-m="pop">Toca no pop-up</button>'
+      + '<button class="' + (naAba ? "on" : "") + '" data-m="aba">Abre em outra aba</button></div>');
+  const resumoVideo = !videoLigado ? "não"
+    : !linkVideo ? "falta o link"
+    : ((videoDoLink(linkVideo) || {}).nome || "link") + " · " + (naAba ? "outra aba" : "no pop-up");
+
   const resumoPagina = (vSel("name") || vSel("phrase") || "sem texto")
     + (desligada(vSel("noInfo")) ? " · sem info" : "");
 
@@ -2654,7 +2708,9 @@ function abrirPainel(caminho) {
     + secao("classe", "Tag e coleções",
         (tagsDe(it).join(", ") || "sem tag") + (minhas.length ? " · " + minhas.join(", ") : ""),
         corpoClasse, !tagsDe(it).length,
-        "A fila de cima é a <strong>tag</strong>, o filtro da barra do site — uma por foto. A de baixo são as <strong>coleções</strong>, que viram cards na página Mix; a mesma foto pode estar em várias, e em nenhuma ela aparece só no All.")
+        "A fila de cima são as <strong>tags</strong>, os filtros da barra do site — a foto pode ter várias, e aparece em cada uma. A de baixo são as <strong>coleções</strong>, que viram cards na página Mix; a mesma foto pode estar em várias, e em nenhuma ela aparece só no All.")
+    + (podeVideo ? secao("video", "Vídeo", resumoVideo, corpoVideo, videoLigado && !linkVideo,
+        "Para vídeo que mora no <strong>YouTube, Vimeo, Loom ou Google Drive</strong>: esta foto vira a capa do card, com o play. <strong>Toca no pop-up</strong> abre o player ali mesmo, com o botão de info; <strong>Abre em outra aba</strong> leva para a plataforma. O <strong>Link</strong> dos textos continua sendo o do botão de info — são dois lugares diferentes.") : "")
     + (ehGrupo ? secao("pagina", "Foto " + (iSel + 1) + " de " + seq.length + (iSel === 0 ? " · capa" : ""),
         resumoPagina, corpoPagina, false,
         (iSel === 0 ? "Esta é a capa: o texto dela aparece na 1ª página do carrossel. "
@@ -2703,6 +2759,30 @@ function abrirPainel(caminho) {
 
   $("fIdiomas").querySelectorAll("[data-lg]").forEach((b) => {
     b.onclick = () => { idioma = b.dataset.lg; abrirPainel(caminho); };
+  });
+  if ($("fEhVideo")) $("fEhVideo").onclick = () => {
+    if (videoLigado) {
+      videoLigados.delete(it.caminho);
+      editar(it.caminho, "videoLink", null);
+      editar(it.caminho, "videoAba", "");
+    } else {
+      videoLigados.add(it.caminho);
+      abertas.add("video");
+    }
+    salvar(); abrirPainel(caminho); desenhar();
+    if ($("fVideoLink")) $("fVideoLink").focus();
+  };
+  if ($("fVideoLink")) {
+    $("fVideoLink").oninput = () => {
+      const v = $("fVideoLink").value.trim();
+      /* apagar o link e "sem video de proposito": null, e nao a ausencia */
+      editar(it.caminho, "videoLink", v || null);
+      $("fVideoQual").textContent = oQueEOLink(v, abreNaAba(it));
+    };
+    $("fVideoLink").onchange = () => { salvar(); abrirPainel(caminho); desenhar(); };
+  }
+  if ($("fVideoModo")) $("fVideoModo").querySelectorAll("[data-m]").forEach((b) => {
+    b.onclick = () => { editar(it.caminho, "videoAba", b.dataset.m === "aba"); salvar(); abrirPainel(caminho); desenhar(); };
   });
   $("fInfoCard").onclick = () => {
     const marca = marcaInfo(!infoCardLigada);
@@ -3140,7 +3220,7 @@ const bytesParaBase64 = (buf) => {
 /* Foto grande é reduzida ANTES de subir: a de celular tem 4000px e 8 MB, e
    o card mais largo do site não passa de 2560px. GIF nunca passa por aqui
    (perderia a animação); PNG e WebP saem em WebP, que guarda a transparência. */
-async function preparar(arq, base) {
+async function preparar(arq, base, aoAndar) {
   const nome = arq.name || "foto";
   let ext = ((/\.([^.]+)$/.exec(nome) || [])[1] || "").toLowerCase();
   if (ext === "jpeg") ext = "jpg";
@@ -3154,7 +3234,25 @@ async function preparar(arq, base) {
     return { blob: arq, nome: base + "." + (ext || (ehVideo ? "mp4" : "jpg")), tipo,
              video: tipo === "Videos", nota: tamanho(arq.size) };
   };
-  if (ehVideo) return original("Videos");
+  if (ehVideo) {
+    /* MP4 pequeno sobe como esta; o resto passa pelo conversor */
+    if ((ext === "mp4" || ext === "m4v") && arq.size <= CONVERTE_ACIMA) return original("Videos");
+    try {
+      const c = await converterVideo(arq, aoAndar);
+      if (c.blob.size > LIMITE_CDN) throw new Error("mesmo convertido ficou com " + tamanho(c.blob.size));
+      return { blob: c.blob, nome: base + ".mp4", tipo: "Videos", video: true,
+               nota: tamanho(arq.size) + " → " + tamanho(c.blob.size) + " · " + Math.min(c.largura, c.altura) + "p"
+                 + (c.semSom ? " · SEM SOM (o navegador não converteu o áudio)" : "") };
+    } catch (e) {
+      /* se nao deu para converter mas o original ja serve, sobe o original */
+      if (/^(mp4|m4v|webm)$/.test(ext) && arq.size <= LIMITE_CDN) {
+        const o = original("Videos");
+        o.nota += " · sem converter (" + e.message + ")";
+        return o;
+      }
+      throw e;
+    }
+  }
   if (ext === "gif") return original("Gifs");
   if (ext === "svg" || ext === "avif") return original("Imagens");
   const heic = ext === "heic" || ext === "heif" || /hei[cf]/i.test(arq.type);
@@ -3185,6 +3283,65 @@ async function preparar(arq, base) {
   const saida = blob.type === "image/webp" ? "webp" : blob.type === "image/png" ? "png" : "jpg";
   return { blob, nome: base + "." + saida, tipo: "Imagens", video: false,
            nota: tamanho(arq.size) + " → " + tamanho(blob.size) };
+}
+
+/* CONVERSOR DE VIDEO (23/09/2026). Ela: "quero o conversor 1080".
+   Todo video que nao e um MP4 pequeno passa por aqui ANTES de subir:
+   H.264 + AAC em MP4, 1080 no lado menor (horizontal 1920x1080, vertical
+   1080x1920), sem aumentar o que ja e menor. Isso tambem resolve o MOV do
+   iPhone, que o Chrome nao toca.
+   O TAMANHO MANDA: o jsDelivr nao entrega acima de 20 MB, entao a
+   qualidade (bitrate) sai da duracao - cabe em ~18 MB. Video longo desce
+   para 720p (fica mais nitido que 1080p apertado); longo demais, recusa e
+   aponta o YouTube/Vimeo.
+   Quem converte e o proprio navegador (WebCodecs, com a aceleracao de
+   video do Mac), pela biblioteca Mediabunny - carregada so na hora. */
+const MEDIABUNNY = "https://cdn.jsdelivr.net/npm/mediabunny@1.59.1/dist/bundles/mediabunny.min.mjs";
+const CONVERTE_ACIMA = 3 * 1024 * 1024;
+const ORCAMENTO_BITS = 18 * 1024 * 1024 * 8;
+let conversor = null;
+const carregarConversor = () => conversor || (conversor = import(MEDIABUNNY).catch((e) => {
+  conversor = null;
+  throw new Error("não consegui carregar o conversor (" + e.message + ")");
+}));
+const duracaoTexto = (s) => s >= 60 ? Math.floor(s / 60) + " min " + Math.round(s % 60) + " s" : Math.round(s) + " s";
+async function converterVideo(arq, aoAndar) {
+  if (typeof VideoEncoder === "undefined") {
+    throw new Error("este navegador não converte vídeo — use o Chrome, o Arc ou o Safari atualizado");
+  }
+  const MB = await carregarConversor();
+  const input = new MB.Input({ source: new MB.BlobSource(arq), formats: MB.ALL_FORMATS });
+  const trilha = await input.getPrimaryVideoTrack();
+  if (!trilha) throw new Error("não achei imagem neste vídeo");
+  if (!(await trilha.canDecode())) throw new Error("este navegador não lê o formato deste vídeo");
+  const dur = await input.computeDuration();
+  const som = await input.getPrimaryAudioTrack();
+  const w = trilha.displayWidth, h = trilha.displayHeight;
+  const curto = Math.min(w, h);
+  const audioBps = som ? 128000 : 0;
+  const orcamento = Math.floor(ORCAMENTO_BITS / Math.max(dur, 1)) - audioBps;
+  let alvo = Math.min(1080, curto);
+  let bps = Math.min(alvo >= 1080 ? 5e6 : 3e6, orcamento);
+  if (bps < 1.2e6 && alvo > 720) { alvo = 720; bps = Math.min(2.5e6, orcamento); }
+  if (bps < 5e5) {
+    throw new Error("tem " + duracaoTexto(dur) + " — longo demais para 20 MB. Suba uma foto de capa e use "
+      + "“É vídeo” com o link do YouTube ou do Vimeo");
+  }
+  const k = alvo / curto;
+  const par = (x) => Math.max(2, Math.round(x * k / 2) * 2);
+  const output = new MB.Output({ format: new MB.Mp4OutputFormat({ fastStart: "in-memory" }), target: new MB.BufferTarget() });
+  const conv = await MB.Conversion.init({ input, output, showWarnings: false,
+    video: { width: par(w), height: par(h), fit: "fill", codec: "avc", bitrate: Math.round(bps), forceTranscode: true },
+    audio: { bitrate: 128000 } });
+  const perdeu = (tipo) => conv.discardedTracks.some((d) => d.track && d.track.type === tipo);
+  if (!conv.isValid || perdeu("video")) {
+    throw new Error("este navegador não consegue converter este vídeo ("
+      + conv.discardedTracks.map((d) => d.reason).join(", ") + ")");
+  }
+  conv.onProgress = (p) => { if (aoAndar) aoAndar(p); };
+  await conv.execute();
+  return { blob: new Blob([output.target.buffer], { type: "video/mp4" }),
+           largura: par(w), altura: par(h), semSom: !!som && perdeu("audio") };
 }
 
 async function gh(metodo, rota, corpo) {
@@ -3279,7 +3436,13 @@ async function subirArquivos(lista) {
   for (const l of linhas) {
     try {
       l.estado = "preparando…"; pinta();
-      const p = await preparar(l.arq, base);
+      let ultimoPct = -1;
+      const p = await preparar(l.arq, base, (fracao) => {
+        const pct = Math.floor(fracao * 100);
+        if (pct === ultimoPct) return;
+        ultimoPct = pct;
+        l.estado = "convertendo para 1080p · " + pct + "%"; pinta();
+      });
       const pasta = p.tipo + "/" + mes;
       if (!usados[pasta]) usados[pasta] = await nomesNaPasta(pasta);
       const semExt = p.nome.replace(/\.[^.]+$/, ""), ext = p.nome.slice(semExt.length);
