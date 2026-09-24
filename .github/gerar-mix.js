@@ -213,9 +213,13 @@ const montar = (arquivos, nomeColecao, info) => {
     }
   }
 
+  /* VERSAO 720p (23/09/2026): "video-720p.mp4" ao lado de "video.mp4" e
+     a qualidade menor do MESMO video - entra no card dele, nao vira outro */
+  const ehVariante = (a) => /-720p\.mp4$/i.test(a) && arquivos.includes(a.replace(/-720p\.mp4$/i, ".mp4"));
   const conf = config.collections[nomeColecao] || {};
   for (const a of arquivos) {
     if (posters.has(a)) continue;
+    if (ehVariante(a)) continue;
     const ehVid = EXT_VID.test(a);
     /* TRES fontes, da mais fraca para a mais forte:
          1. o nome do arquivo e a pasta   (nada a digitar)
@@ -361,6 +365,11 @@ const montar = (arquivos, nomeColecao, info) => {
     }
     if (ehVid) {
       item.video = url(a);
+      /* LEGENDA: "video.vtt" ao lado do video (o organizador sobe) */
+      const semExtV = a.slice(0, a.length - path.extname(a).length);
+      if (fs.existsSync(path.join(RAIZ, semExtV + ".vtt"))) item.legenda = url(semExtV + ".vtt");
+      const v720 = semExtV + "-720p.mp4";
+      if (arquivos.includes(v720)) item.qualidades = [{ rotulo: "1080p", src: url(a) }, { rotulo: "720p", src: url(v720) }];
       const semExt = a.slice(0, a.length - path.extname(a).length);
       const capa = [...posters].find(
         (b) => b.slice(0, b.length - path.extname(b).length) === semExt

@@ -146,6 +146,8 @@ img, video { display: block; }
 .estado { font-size: 11.5px; color: var(--texto-3); text-align: center; min-height: 17px;
   display: flex; align-items: center; justify-content: center; gap: 7px; line-height: 1.4; }
 .estado.ok { color: var(--ok); }
+.estado.no-site { font-size: 11px; min-height: 0; margin-top: -2px; }
+.estado.no-site .girando { width: 9px; height: 9px; border-width: 1.5px; }
 .estado.erro { color: var(--erro); }
 .estado.aviso { color: var(--aviso); }
 .girando { width: 12px; height: 12px; border: 2px solid var(--linha);
@@ -481,6 +483,9 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
 .escolha.on { border-color: var(--roxo); background: rgba(124,84,255,.18); color: var(--texto); }
 .escolha.verde.on { border-color: var(--verde); background: color-mix(in srgb, var(--verde) 18%, transparent); }
 .chave-linha { display: flex; align-items: center; gap: 10px; justify-content: flex-start; }
+.mini-bt { font-size: 12px; color: var(--texto-2); padding: 3px 10px; border-radius: 999px; border: 1px solid var(--linha); }
+.mini-bt:hover { color: var(--texto); background: var(--painel-2); }
+.mini-bt.perigo:hover { color: var(--erro); border-color: color-mix(in srgb, var(--erro) 45%, transparent); }
 .op-video { display: grid; gap: 12px; margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--linha); }
 .linha-controles { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 /* O IDIOMA NA MESMA LINGUAGEM DO "Fotos · Coleções · Carrosséis":
@@ -635,6 +640,7 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
       </button>
       <button class="salvar" id="btSalvar">Salvar no GitHub</button>
       <div class="estado" id="estado"></div>
+      <div class="estado no-site" id="noSite"></div>
     </div>
   </aside>
 
@@ -1215,6 +1221,8 @@ async function carregar() {
         videoLink: it.videoLink || "",
         videoAba: it.videoAba === true,
         videoOpcoes: (it.videoOpcoes && typeof it.videoOpcoes === "object") ? it.videoOpcoes : null,
+        legenda: it.legenda || "",
+        qualidades: Array.isArray(it.qualidades) ? it.qualidades : [],
         tag: it.tag || "",
         /* VARIAS TAGS (23/09/2026): a lista, quando o robo a escreveu */
         tags: Array.isArray(it.tags) ? it.tags.map(String).filter(Boolean) : (it.tag ? [String(it.tag)] : []),
@@ -1466,7 +1474,7 @@ const videoDoLink = (link) => {
 const opcoesDoVideo = (o) => {
   const x = (o && typeof o === "object") ? o : {};
   return { autoplay: x.autoplay !== false, mudo: x.mudo === true, repetir: x.repetir === true,
-    controles: (x.controles === "nenhum" || x.controles === "completos") ? x.controles : "minimos",
+    controles: ["nenhum", "minimos", "favoritos", "completos"].includes(x.controles) ? x.controles : "minimos",
     previa: x.previa === true };
 };
 const videoLigados = new Set();   /* ligou "E video" e ainda nao colou o link */
@@ -1520,6 +1528,13 @@ const arquivosDoCard = (c) => {
   const it = acharItem(c);
   return it ? [...new Set(paginas(it).map((p) => p.caminho))] : [c];
 };
+/* para APAGAR: o video leva junto a legenda e a 720p (o commit ignora o que
+   nao existe) */
+const arquivosParaApagar = (c) => {
+  const base = arquivosDoCard(c);
+  return base.concat(base.filter((x) => /\.(mp4|webm|mov|m4v)$/i.test(x))
+    .flatMap((x) => [x.replace(/\.[^./]+$/, ".vtt"), x.replace(/\.[^./]+$/, "-720p.mp4")]));
+};
 function moverParaLixeira(caminhos) {
   let n = 0;
   caminhos.forEach((c) => { arquivosDoCard(c).forEach((a) => editar(a, "lixeira", true)); n++; });
@@ -1537,7 +1552,7 @@ function restaurar(caminhos) {
 let apagando = false;
 async function apagarDeVez(caminhos) {
   if (apagando || !caminhos.length) return;
-  const arquivos = [...new Set(caminhos.flatMap(arquivosDoCard))];
+  const arquivos = [...new Set(caminhos.flatMap(arquivosParaApagar))];
   const n = caminhos.length;
   const ok = await perguntar(
     n === 1 ? "Excluir esta foto para sempre?" : "Excluir " + n + " fotos para sempre?",
@@ -1898,6 +1913,7 @@ async function salvarNoGitHub() {
       gravarBase(lerInfoTexto(textoNoRepo));
       desenhar();
       mostrarEstado("nada novo para salvar · o GitHub já está assim" + (sync ? resumoSync(sync) : ""), "ok");
+      noSite("");
       return null;
     }
     let r = await gravar(shaLido);
@@ -1957,16 +1973,41 @@ async function textoAgora(caminho) {
                "X-GitHub-Api-Version": "2022-11-28" }, cache: "no-store" });
   return r.ok ? r.text() : null;
 }
+/* A LINHA DO SITE (23/09/2026). Ela: "clico salvar e fica demorando muito;
+   recarrego e clico e fala que ta tudo ok". O Salvar terminava em 1 s - o
+   que girava era o acompanhamento do site, no lugar do "salvo". Agora o
+   "salvo ✓" fica na mensagem de cima, e o caminho ate o site anda nesta
+   linha menor, sem prender nada. */
+const noSite = (texto, tipo) => {
+  const el = $("noSite");
+  if (!texto) { el.innerHTML = ""; el.className = "estado no-site"; return; }
+  el.className = "estado no-site" + (tipo ? " " + tipo : "");
+  el.innerHTML = (tipo === "indo" ? '<span class="girando"></span>' : "") + '<span>' + esc(texto) + '</span>';
+};
+/* o que o SITE le (BigaMix mix-76): a API do GitHub, sem chave. Volta o
+   texto do images.json, ou null. */
+async function listaQueOSiteLe() {
+  const alvo = donoDoRepo();
+  const rota = "https://api.github.com/repos/" + alvo.dono + "/" + alvo.repo + "/contents/images.json?ref="
+    + encodeURIComponent(alvo.branch) + "&v=" + Date.now();
+  let r = await fetch(rota, { cache: "no-store" });
+  /* sem chave o limite e 60 por hora: se acabou, a mesma leitura com a chave */
+  if (!r.ok) r = await fetch(rota, { cache: "no-store", headers: { "Authorization": "Bearer " + lerToken() } });
+  if (!r.ok) return null;
+  const j = await r.json();
+  return j && j.content ? deBase64(j.content) : null;
+}
 async function acompanhar(sha, rotulo) {
   const alvo = donoDoRepo();
-  if (!sha || !alvo || !lerToken()) { mostrarEstado(rotulo, "ok"); return; }
+  mostrarEstado(rotulo + " ✓", "ok");
+  if (!sha || !alvo || !lerToken()) { noSite(""); return; }
   const eu = ++acompanhando;
   const vivo = () => eu === acompanhando;
   const esp = (ms) => new Promise((ok) => setTimeout(ok, ms));
   const inicio = Date.now();
-  const LIMITE = (window.__limiteNoAr || 7 * 60) * 1000;
-  const PASSO = window.__passoNoAr || 5000;
-  mostrarEstado(rotulo + " · o robô está montando o site…", "indo");
+  const LIMITE = (window.__limiteNoAr || 5 * 60) * 1000;
+  const PASSO = window.__passoNoAr || 4000;
+  noSite("no site: o robô está montando…", "indo");
   let run = null;
   while (vivo() && Date.now() - inicio < LIMITE) {
     try {
@@ -1980,35 +2021,31 @@ async function acompanhar(sha, rotulo) {
       if (r.ok) run = ((await r.json()).workflow_runs || [])[0] || null;
     } catch (e) { /* sem rede por um instante: tenta no proximo passo */ }
     if (run && run.status === "completed") break;
-    /* commit que nao chama o robo (so images.json, por exemplo): nada a esperar */
+    /* commit que nao chama o robo: nada a esperar */
     if (!run && Date.now() - inicio > Math.min(90000, LIMITE / 2)) break;
     await esp(PASSO);
   }
   if (!vivo()) return;
   if (run && run.status === "completed" && run.conclusion !== "success") {
-    mostrarEstado(rotulo + " · o robô falhou e o site NÃO mudou — salve de novo", "erro");
+    noSite("o robô falhou e o site NÃO mudou — salve de novo", "erro");
     return;
   }
   if (run && run.status !== "completed") {
-    mostrarEstado(rotulo + " · o robô está demorando — confira o site daqui a pouco", "aviso");
+    noSite("o robô está demorando — confira o site daqui a pouco", "aviso");
     return;
   }
-  mostrarEstado(rotulo + " · chegando no site…", "indo");
-  const cru = "https://raw.githubusercontent.com/" + alvo.dono + "/" + alvo.repo + "/" + alvo.branch + "/images.json";
+  noSite("no site: chegando…", "indo");
   while (vivo() && Date.now() - inicio < LIMITE) {
     try {
-      const [agora, noSite] = await Promise.all([
-        textoAgora("images.json"),
-        fetch(cru + "?v=" + Date.now(), { cache: "no-store" }).then((r) => (r.ok ? r.text() : null)),
-      ]);
-      if (agora !== null && noSite !== null && agora.trim() === noSite.trim()) {
-        if (vivo()) mostrarEstado(rotulo + " · ✓ já está no site", "ok");
+      const [agora, noSiteAgora] = await Promise.all([textoAgora("images.json"), listaQueOSiteLe()]);
+      if (agora !== null && noSiteAgora !== null && agora.trim() === noSiteAgora.trim()) {
+        if (vivo()) noSite("✓ já está no site", "ok");
         return;
       }
     } catch (e) { /* tenta no proximo passo */ }
     await esp(PASSO * 2);
   }
-  if (vivo()) mostrarEstado(rotulo + " · o GitHub ainda segura a versão antiga — aparece em até 5 min", "aviso");
+  if (vivo()) noSite("o GitHub ainda segura a versão antiga — aparece em instantes", "aviso");
 }
 
 /* ---------- EXPORTAR ---------- */
@@ -2688,7 +2725,9 @@ function abrirPainel(caminho) {
     + '<span class="rotulo-campo">' + esc(rotulo) + '</span></div>';
   const plataformaDoLink = (videoDoLink(val(it, "videoLink")) || {}).nome || "";
   const dicaControles = ehSubido
-    ? "Mínimos: clicar no vídeo pausa, um botão de som no canto e uma linha fina de progresso."
+    ? (opV.controles === "favoritos"
+        ? "Favoritos: play, barra, volume, legenda e qualidade — as duas últimas só aparecem quando o vídeo tem. Somem com o mouse parado (o tempo é no painel do Mix)."
+        : "Mínimos: clicar no vídeo pausa, um botão de som no canto e uma linha fina de progresso.")
     : /Vimeo/.test(plataformaDoLink) ? "No Vimeo, “Nenhum” só funciona em conta paga (Plus ou acima); “Mínimos” esconde título e autor."
     : /YouTube/.test(plataformaDoLink) ? "O YouTube não deixa trocar os controles dele: “Mínimos” esconde título e sugestões, “Nenhum” tira a barra."
     : /Drive/.test(plataformaDoLink) ? "O Google Drive ignora estas opções — toca com o player dele."
@@ -2698,14 +2737,26 @@ function abrirPainel(caminho) {
     + chave("fOpMudo", "Começa sem som", opV.mudo)
     + chave("fOpRep", "Repetir", opV.repetir)
     + (ehSubido ? chave("fOpPrevia", "Prévia no card — toca sem som ao passar o mouse", opV.previa) : "")
+    + (ehSubido ? '<div class="linha-controles"><span class="rotulo-campo">Legenda</span>'
+        + (temLegenda(it)
+            ? '<span class="dica">✓ tem</span><button class="mini-bt" id="fLegTroca" type="button">trocar</button>'
+              + '<button class="mini-bt perigo" id="fLegTira" type="button">tirar</button>'
+            : '<button class="mini-bt" id="fLegAdd" type="button">+ .srt ou .vtt</button>')
+        + '</div>'
+        + '<div class="linha-controles"><span class="rotulo-campo">Qualidade</span>'
+        + (tem720(it)
+            ? '<span class="dica">1080p + 720p ✓</span><button class="mini-bt perigo" id="fQualTira" type="button">tirar 720p</button>'
+            : '<button class="mini-bt" id="fQualAdd" type="button">+ criar versão 720p</button>')
+        + '</div>' : "")
     + '<div class="linha-controles"><span class="rotulo-campo">Controles</span>'
     + '<div class="alternador" id="fOpCtrl" role="group" aria-label="Controles">'
-    + [["nenhum", "Nenhum"], ["minimos", "Mínimos"], ["completos", "Completos"]].map((c) =>
+    + [["nenhum", "Nenhum"], ["minimos", "Mínimos"], ["favoritos", "Favoritos"], ["completos", "Completos"]].map((c) =>
         '<button class="' + (opV.controles === c[0] ? "on" : "") + '" data-c="' + c[0] + '">' + c[1] + '</button>').join("")
     + '</div></div>'
     + (dicaControles ? '<p class="dica">' + esc(dicaControles) + '</p>' : "")
     + '</div>';
-  const resumoOpcoes = [opV.controles === "nenhum" ? "sem controles" : opV.controles === "completos" ? "controles completos" : "",
+  const resumoOpcoes = [opV.controles === "nenhum" ? "sem controles" : opV.controles === "completos" ? "controles completos"
+      : opV.controles === "favoritos" ? "controles favoritos" : "",
     !opV.autoplay ? "não começa sozinho" : "", opV.mudo ? "sem som" : "", opV.repetir ? "repete" : "",
     opV.previa ? "prévia no card" : ""].filter(Boolean).join(" · ");
   const linkVideo = val(it, "videoLink");
@@ -2826,6 +2877,11 @@ function abrirPainel(caminho) {
     };
     $("fVideoLink").onchange = () => { salvar(); abrirPainel(caminho); desenhar(); };
   }
+  if ($("fLegAdd")) $("fLegAdd").onclick = () => escolherLegenda(it);
+  if ($("fLegTroca")) $("fLegTroca").onclick = () => escolherLegenda(it);
+  if ($("fLegTira")) $("fLegTira").onclick = () => tirarExtra(it, "legenda");
+  if ($("fQualAdd")) $("fQualAdd").onclick = () => criar720(it);
+  if ($("fQualTira")) $("fQualTira").onclick = () => tirarExtra(it, "720p");
   const mudaOpcao = (k, v) => {
     const atual = Object.assign({}, (typeof val(it, "videoOpcoes") === "object" && val(it, "videoOpcoes")) || {});
     atual[k] = v;
@@ -3362,7 +3418,7 @@ const carregarConversor = () => conversor || (conversor = import(MEDIABUNNY).cat
   throw new Error("não consegui carregar o conversor (" + e.message + ")");
 }));
 const duracaoTexto = (s) => s >= 60 ? Math.floor(s / 60) + " min " + Math.round(s % 60) + " s" : Math.round(s) + " s";
-async function converterVideo(arq, aoAndar) {
+async function converterVideo(arq, aoAndar, maxCurto) {
   if (typeof VideoEncoder === "undefined") {
     throw new Error("este navegador não converte vídeo — use o Chrome, o Arc ou o Safari atualizado");
   }
@@ -3377,7 +3433,7 @@ async function converterVideo(arq, aoAndar) {
   const curto = Math.min(w, h);
   const audioBps = som ? 128000 : 0;
   const orcamento = Math.floor(ORCAMENTO_BITS / Math.max(dur, 1)) - audioBps;
-  let alvo = Math.min(1080, curto);
+  let alvo = Math.min(maxCurto || 1080, curto);
   let bps = Math.min(alvo >= 1080 ? 5e6 : 3e6, orcamento);
   if (bps < 1.2e6 && alvo > 720) { alvo = 720; bps = Math.min(2.5e6, orcamento); }
   if (bps < 5e5) {
@@ -3399,6 +3455,82 @@ async function converterVideo(arq, aoAndar) {
   await conv.execute();
   return { blob: new Blob([output.target.buffer], { type: "video/mp4" }),
            largura: par(w), altura: par(h), semSom: !!som && perdeu("audio") };
+}
+
+/* ---------- LEGENDA E VERSAO 720p (23/09/2026) ----------
+   Ela: "controle favorito: qualidade, barra, play, legendas e volume".
+   A legenda mora ao lado do video ("video.vtt"); a versao menor tambem
+   ("video-720p.mp4"). O robo junta os dois no card do video. Ate o robo
+   publicar, este navegador lembra o que foi feito (extrasFeitos). */
+const extrasFeitos = {};   /* caminho -> { legenda: true|false, "720p": true|false } */
+const semExtensao = (c) => c.replace(/\.[^./]+$/, "");
+const temLegenda = (it) => { const x = (extrasFeitos[it.caminho] || {}).legenda; return x !== undefined ? x : !!it.legenda; };
+const tem720 = (it) => { const x = (extrasFeitos[it.caminho] || {})["720p"]; return x !== undefined ? x : !!(it.qualidades && it.qualidades.length > 1); };
+const marcaExtra = (it, k, v) => { extrasFeitos[it.caminho] = Object.assign({}, extrasFeitos[it.caminho], { [k]: v }); };
+/* .srt -> .vtt: o cabecalho e a virgula dos milesimos */
+const srtParaVtt = (t) => "WEBVTT\n\n" + String(t).replace(/\r/g, "").replace(/^\uFEFF/, "")
+  .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2").trim() + "\n";
+async function subirUmArquivo(caminho, blob, mensagem) {
+  const rB = await gh("POST", "/git/blobs", { content: bytesParaBase64(await blob.arrayBuffer()), encoding: "base64" });
+  if (!rB.ok) throw new Error("não subiu (HTTP " + rB.status + ")");
+  return gravarCommit([{ caminho, sha: (await rB.json()).sha }], mensagem);
+}
+function escolherLegenda(it) {
+  if (!lerToken()) { abrirConfig(true); return; }
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = ".srt,.vtt,text/vtt";
+  inp.onchange = async () => {
+    const f = inp.files && inp.files[0];
+    if (!f) return;
+    try {
+      let t = await f.text();
+      if (!/^\uFEFF?WEBVTT/.test(t.trim())) t = srtParaVtt(t);
+      if (!/-->/.test(t)) throw new Error("o arquivo não parece uma legenda");
+      mostrarEstado("subindo a legenda…", "indo");
+      const sha = await subirUmArquivo(semExtensao(it.caminho) + ".vtt", new Blob([t], { type: "text/vtt" }),
+        "Legenda pelo organizador: " + it.caminho.split("/").pop());
+      marcaExtra(it, "legenda", true);
+      abrirPainel(it.caminho);
+      acompanhar(sha, "legenda no GitHub");
+    } catch (e) { mostrarEstado("não subi a legenda: " + e.message, "erro"); }
+  };
+  inp.click();
+}
+async function criar720(it) {
+  if (!lerToken()) { abrirConfig(true); return; }
+  const alvo = donoDoRepo();
+  try {
+    mostrarEstado("baixando o vídeo para criar a 720p…", "indo");
+    const cru = "https://raw.githubusercontent.com/" + alvo.dono + "/" + alvo.repo + "/" + alvo.branch + "/"
+      + it.caminho.split("/").map(encodeURIComponent).join("/");
+    const r = await fetch(cru, { cache: "no-store" });
+    if (!r.ok) throw new Error("não consegui baixar o vídeo (HTTP " + r.status + ")");
+    const blob = await r.blob();
+    const c = await converterVideo(new File([blob], "v.mp4", { type: "video/mp4" }),
+      (f) => mostrarEstado("criando a 720p · " + Math.floor(f * 100) + "%", "indo"), 720);
+    /* o conversor nao aumenta: se saiu menor que 720, o original ja era */
+    if (Math.min(c.largura, c.altura) < 720) throw new Error("o vídeo já tem 720p ou menos — não precisa");
+    mostrarEstado("subindo a 720p · " + tamanho(c.blob.size) + "…", "indo");
+    const sha = await subirUmArquivo(semExtensao(it.caminho) + "-720p.mp4", c.blob,
+      "Versao 720p pelo organizador: " + it.caminho.split("/").pop());
+    marcaExtra(it, "720p", true);
+    abrirPainel(it.caminho);
+    acompanhar(sha, "720p no GitHub · " + tamanho(c.blob.size));
+  } catch (e) { mostrarEstado("não criei a 720p: " + e.message, "erro"); }
+}
+async function tirarExtra(it, k) {
+  const caminho = semExtensao(it.caminho) + (k === "legenda" ? ".vtt" : "-720p.mp4");
+  const ok = await perguntar(k === "legenda" ? "Tirar a legenda?" : "Tirar a versão 720p?",
+    "O arquivo sai do GitHub. O vídeo continua como está.", null, "Tirar");
+  if (!ok) return;
+  try {
+    mostrarEstado("tirando…", "indo");
+    const sha = await gravarCommit([{ caminho, sha: null }], (k === "legenda" ? "Legenda" : "Versao 720p")
+      + " tirada pelo organizador: " + it.caminho.split("/").pop());
+    marcaExtra(it, k, false);
+    abrirPainel(it.caminho);
+    acompanhar(sha, k === "legenda" ? "legenda tirada" : "720p tirada");
+  } catch (e) { mostrarEstado("não tirei: " + e.message, "erro"); }
 }
 
 async function gh(metodo, rota, corpo) {
