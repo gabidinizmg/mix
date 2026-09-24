@@ -198,6 +198,44 @@ const listar = (dir, base) => {
 const itens = [];
 const colecoes = [];
 
+/* O VIDEO DE UMA FOTO OU DE UM ARQUIVO, num lugar so (23/09/2026).
+   Era escrito so no CARD: num carrossel, o video da capa virava do grupo
+   inteiro e o pop-up mostrava a foto parada. Agora cada pagina leva o
+   dela - o card e as paginas usam as mesmas tres funcoes. */
+const semExtDe = (a) => a.slice(0, a.length - path.extname(a).length);
+/* o video subido: o arquivo, a capa de mesmo nome, a legenda e o 720p */
+const midiaDoVideo = (a) => {
+  const r = { video: url(a) };
+  const base = semExtDe(a);
+  const capa = [".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif"]
+    .map((e) => base + e).find((b) => fs.existsSync(path.join(RAIZ, b)));
+  if (capa) r.image = url(capa);
+  if (fs.existsSync(path.join(RAIZ, base + ".vtt"))) r.legenda = url(base + ".vtt");
+  if (fs.existsSync(path.join(RAIZ, base + "-720p.mp4"))) {
+    r.qualidades = [{ rotulo: "1080p", src: url(a) }, { rotulo: "720p", src: url(base + "-720p.mp4") }];
+  }
+  return r;
+};
+/* o video por link de uma FOTO (a foto e a capa) */
+const linkDoVideo = (d) => {
+  const r = {};
+  if (typeof d.videoLink === "string" && d.videoLink.trim()) {
+    r.videoLink = d.videoLink.trim();
+    if (d.videoAba === true) r.videoAba = true;
+  }
+  return r;
+};
+/* comecar sozinho, sem som, repetir, controles, previa: so o que ela mudou */
+const opcoesDoVideo = (d) => {
+  const o = (d && d.videoOpcoes && typeof d.videoOpcoes === "object") ? d.videoOpcoes : null;
+  if (!o) return null;
+  const op = {};
+  ["autoplay", "mudo", "repetir", "previa"].forEach((k) => { if (typeof o[k] === "boolean") op[k] = o[k]; });
+  /* "favoritos" faltava aqui: o organizador gravava e o robo jogava fora */
+  if (["nenhum", "minimos", "favoritos", "completos"].includes(o.controles)) op.controles = o.controles;
+  return Object.keys(op).length ? op : null;
+};
+
 const montar = (arquivos, nomeColecao, info) => {
   /* CAPA DE VIDEO por nome igual: "reel.mp4" + "reel.jpg" viram UM item
      com poster, nao dois. Sem isto a capa apareceria como se fosse uma
@@ -281,7 +319,7 @@ const montar = (arquivos, nomeColecao, info) => {
        texto da capa - que e exatamente como estava antes, entao nada
        muda de aparencia sozinho. */
     if (Array.isArray(d.carrossel) && d.carrossel.length) {
-      const infoDe = (fonte, alvoSrc) => {
+      const infoDe = (fonte, alvoSrc, chave) => {
         const pg = { src: alvoSrc };
         const nome = fonte.name || fonte.nome;
         const frase = fonte.phrase || fonte.frase || fonte.description;
@@ -298,14 +336,32 @@ const montar = (arquivos, nomeColecao, info) => {
         if (fonte.link) pg.link = String(fonte.link);
         if (semInfo(fonte)) pg.noInfo = true;
         Object.assign(pg, traducoes(fonte));
+        /* O VIDEO DA PAGINA (23/09/2026). Ela juntou um video com fotos
+           num carrossel e o pop-up mostrou so as fotos. Pagina que e video
+           subido leva o arquivo (e a capa vira o `src`); foto com "e video"
+           leva o link. */
+        let temVideo = false;
+        if (EXT_VID.test(chave)) {
+          const m = midiaDoVideo(chave);
+          pg.src = m.image || m.video;
+          pg.video = m.video;
+          if (m.legenda) pg.legenda = m.legenda;
+          if (m.qualidades) pg.qualidades = m.qualidades;
+          temVideo = true;
+        } else {
+          const l = linkDoVideo(fonte);
+          if (l.videoLink) { Object.assign(pg, l); temVideo = true; }
+        }
+        const op = temVideo ? opcoesDoVideo(fonte) : null;
+        if (op) pg.videoOpcoes = op;
         return pg;
       };
-      /* a capa entra so quando ela e imagem: card de video usa o proprio
-         video como capa, e ai nao ha foto para virar pagina */
-      const paginas = (ehVid ? [] : [infoDe(d, url(a))])
+      /* a capa entra SEMPRE, inclusive quando e video: antes o video da
+         capa ficava de fora e o carrossel so tinha as fotos */
+      const paginas = [infoDe(d, url(a), a.split(path.sep).join("/"))]
         .concat(d.carrossel.map((c) => {
           const chave = String(c);
-          return infoDe(ferramenta.items[chave] || {}, url(chave));
+          return infoDe(ferramenta.items[chave] || {}, url(chave), chave);
         }))
         .filter((x) => x.src);
       if (paginas.length) item.images = paginas;
@@ -316,11 +372,7 @@ const montar = (arquivos, nomeColecao, info) => {
     /* VIDEO POR LINK (23/09/2026): a foto e a CAPA, o link (YouTube,
        Vimeo...) e o que toca no pop-up. So em imagem: video subido ja
        toca sozinho. */
-    if (!ehVid && typeof d.videoLink === "string" && d.videoLink.trim()) {
-      item.videoLink = d.videoLink.trim();
-      /* ela escolheu "abrir em outra aba" em vez de tocar no pop-up */
-      if (d.videoAba === true) item.videoAba = true;
-    }
+    if (!ehVid) Object.assign(item, linkDoVideo(d));
     /* DEPOIS do link, de proposito: a linha acima grava o link da FOTO
        da capa, e num carrossel quem manda no card e o GRUPO. Posto
        antes, o link do grupo era desfeito na linha seguinte.
@@ -357,11 +409,9 @@ const montar = (arquivos, nomeColecao, info) => {
     /* AS OPCOES DO VIDEO (23/09/2026): comecar sozinho, sem som, repetir,
        controles, previa no card. So saem as que ela mudou, e so em video
        (subido ou por link). */
-    if ((ehVid || item.videoLink) && d.videoOpcoes && typeof d.videoOpcoes === "object") {
-      const o = d.videoOpcoes, op = {};
-      ["autoplay", "mudo", "repetir", "previa"].forEach((k) => { if (typeof o[k] === "boolean") op[k] = o[k]; });
-      if (["nenhum", "minimos", "completos"].includes(o.controles)) op.controles = o.controles;
-      if (Object.keys(op).length) item.videoOpcoes = op;
+    if (ehVid || item.videoLink) {
+      const op = opcoesDoVideo(d);
+      if (op) item.videoOpcoes = op;
     }
     if (ehVid) {
       item.video = url(a);
