@@ -2761,15 +2761,28 @@ function abrirPainel(caminho) {
 
   /* foto unica (vira capa de video por link) ou video subido (so as
      opcoes); carrossel nao, que tem paginas */
-  const podeVideo = !ehGrupo;
-  const ehSubido = !!it.video;
-  const opV = opcoesDoVideo(val(it, "videoOpcoes"));
+  /* O VIDEO E DA FOTO, e nao do card (24/09/2026). Ela: "aqui em carrossel
+     era para aparecer as configuracoes de video, certo?" - a secao sumia no
+     carrossel. Agora ela vale para a foto escolhida nas miniaturas, igual
+     aos textos da pagina; o site toca cada pagina que e video no lugar dela. */
+  /* as paginas (menos a capa) nao estao em `itens` - o images.json so
+     lista os cards. Para elas, a pagina publicada dentro do card (o robo
+     escreve o video de cada uma) mais o caminho; as edicoes vem pelo `val`. */
+  const vAlvo = !ehGrupo ? it : selPag || (() => {
+    const pub = (Array.isArray(it.images) ? it.images : []).find((p) => p && typeof p === "object"
+      && decodeURIComponent(String(p.video || p.src || "")).endsWith(pgSel.caminho)) || {};
+    const ehVid = /\.(mp4|webm|mov|m4v|ogv)$/i.test(pgSel.caminho || "");
+    return Object.assign({}, pub, { caminho: pgSel.caminho || it.caminho, video: ehVid ? (pub.video || pgSel.url || "") : "" });
+  })();
+  const podeVideo = true;
+  const ehSubido = !!vAlvo.video;
+  const opV = opcoesDoVideo(val(vAlvo, "videoOpcoes"));
   /* o que ESTE video escolheu; vazio = segue o padrao das Configuracoes */
-  const ctrlProprio = ((val(it, "videoOpcoes") || {}).controles) || "";
+  const ctrlProprio = ((val(vAlvo, "videoOpcoes") || {}).controles) || "";
   const chave = (id, rotulo, ligado) => '<div class="chave-linha"><button class="chave" id="' + id
     + '" role="switch" aria-checked="' + ligado + '" aria-label="' + esc(rotulo) + '"></button>'
     + '<span class="rotulo-campo">' + esc(rotulo) + '</span></div>';
-  const plataformaDoLink = (videoDoLink(val(it, "videoLink")) || {}).nome || "";
+  const plataformaDoLink = (videoDoLink(val(vAlvo, "videoLink")) || {}).nome || "";
   const nomeCtrl = { nenhum: "Nenhum", minimos: "Mínimos", favoritos: "Favoritos", completos: "Originais" };
   const dicaControles = (!ctrlProprio ? "Padrão = " + nomeCtrl[opV.controles] + " (Configurações › Vídeos no site). " : "")
     + (opV.controles === "completos"
@@ -2788,13 +2801,13 @@ function abrirPainel(caminho) {
     + chave("fOpRep", "Repetir", opV.repetir)
     + (ehSubido ? chave("fOpPrevia", "Prévia no card — toca sem som ao passar o mouse", opV.previa) : "")
     + (ehSubido ? '<div class="linha-controles"><span class="rotulo-campo">Legenda</span>'
-        + (temLegenda(it)
+        + (temLegenda(vAlvo)
             ? '<span class="dica">✓ tem</span><button class="mini-bt" id="fLegTroca" type="button">trocar</button>'
               + '<button class="mini-bt perigo" id="fLegTira" type="button">tirar</button>'
             : '<button class="mini-bt" id="fLegAdd" type="button">+ .srt ou .vtt</button>')
         + '</div>'
         + '<div class="linha-controles"><span class="rotulo-campo">Qualidade</span>'
-        + (tem720(it)
+        + (tem720(vAlvo)
             ? '<span class="dica">1080p + 720p ✓</span><button class="mini-bt perigo" id="fQualTira" type="button">tirar 720p</button>'
             : '<button class="mini-bt" id="fQualAdd" type="button">+ criar versão 720p</button>')
         + '</div>' : "")
@@ -2809,13 +2822,13 @@ function abrirPainel(caminho) {
       : opV.controles === "favoritos" ? "controles favoritos" : "",
     !opV.autoplay ? "não começa sozinho" : "", opV.mudo ? "sem som" : "", opV.repetir ? "repete" : "",
     opV.previa ? "prévia no card" : ""].filter(Boolean).join(" · ");
-  const linkVideo = val(it, "videoLink");
-  const videoLigado = podeVideo && (!!linkVideo || videoLigados.has(it.caminho));
-  const naAba = abreNaAba(it);
+  const linkVideo = val(vAlvo, "videoLink");
+  const videoLigado = podeVideo && (!!linkVideo || videoLigados.has(vAlvo.caminho));
+  const naAba = abreNaAba(vAlvo);
   const corpoVideo = !podeVideo ? "" : ehSubido ? corpoOpcoes :
     '<div class="chave-linha"><button class="chave" id="fEhVideo" role="switch" aria-checked="'
       + videoLigado + '" aria-label="É vídeo"></button>'
-      + '<span class="rotulo-campo">É vídeo — a foto vira a capa, com o play</span></div>'
+      + '<span class="rotulo-campo">' + (ehGrupo ? "É vídeo — esta página do carrossel toca o vídeo" : "É vídeo — a foto vira a capa, com o play") + '</span></div>'
     + (!videoLigado ? "" :
       campoTexto("fVideoLink", "Link do vídeo — YouTube, Vimeo, Loom, Google Drive…", linkVideo, false)
       + '<p class="dica" id="fVideoQual">' + esc(oQueEOLink(linkVideo, naAba)) + '</p>'
@@ -2832,6 +2845,13 @@ function abrirPainel(caminho) {
   const resumoPagina = (vSel("name") || vSel("phrase") || "sem texto")
     + (desligada(vSel("noInfo")) ? " · sem info" : "");
 
+  const secaoVideo = secao("video", ehGrupo ? "Vídeo da foto " + (iSel + 1) : "Vídeo", resumoVideo, corpoVideo,
+    videoLigado && !linkVideo,
+    ehSubido ? "Como este vídeo toca no pop-up do site. O padrão de todos os vídeos, o <strong>estilo do play</strong> e o tempo dos controles ficam em <strong>Configurações › Vídeos no site</strong>."
+      : "Para vídeo que mora no <strong>YouTube, Vimeo, Loom ou Google Drive</strong>: "
+        + (ehGrupo ? "esta foto vira o vídeo, e ele toca no lugar dela dentro do carrossel. Cada foto do carrossel tem o seu. "
+                   : "esta foto vira a capa do card, com o play. ")
+        + "<strong>Toca no pop-up</strong> abre o player ali mesmo, com o botão de info; <strong>Abre em outra aba</strong> leva para a plataforma. O <strong>Link</strong> dos textos continua sendo o do botão de info — são dois lugares diferentes.");
   const corpo = '<div class="linha-idioma"><div class="alternador" id="fIdiomas" role="group"'
     + ' aria-label="Idioma dos textos">' + IDIOMAS.map((lg) =>
       '<button class="' + (idioma === lg[0] ? "on" : "") + '" data-lg="' + lg[0] + '">'
@@ -2854,14 +2874,14 @@ function abrirPainel(caminho) {
         (tagsDe(it).join(", ") || "sem tag") + (minhas.length ? " · " + minhas.join(", ") : ""),
         corpoClasse, !tagsDe(it).length,
         "A fila de cima são as <strong>tags</strong>, os filtros da barra do site — a foto pode ter várias, e aparece em cada uma. A de baixo são as <strong>coleções</strong>, que viram cards na página Mix; a mesma foto pode estar em várias, e em nenhuma ela aparece só no All.")
-    + (podeVideo ? secao("video", "Vídeo", resumoVideo, corpoVideo, videoLigado && !linkVideo,
-        ehSubido ? "Como este vídeo toca no pop-up do site. O padrão de todos os vídeos, o <strong>estilo do play</strong> e o tempo dos controles ficam em <strong>Configurações › Vídeos no site</strong>."
-          : "Para vídeo que mora no <strong>YouTube, Vimeo, Loom ou Google Drive</strong>: esta foto vira a capa do card, com o play. <strong>Toca no pop-up</strong> abre o player ali mesmo, com o botão de info; <strong>Abre em outra aba</strong> leva para a plataforma. O <strong>Link</strong> dos textos continua sendo o do botão de info — são dois lugares diferentes.") : "")
+    + (!ehGrupo ? secaoVideo : "")
     + (ehGrupo ? secao("pagina", "Foto " + (iSel + 1) + " de " + seq.length + (iSel === 0 ? " · capa" : ""),
         resumoPagina, corpoPagina, false,
         (iSel === 0 ? "Esta é a capa: o texto dela aparece na 1ª página do carrossel. "
                     : "O texto aparece quando esta foto está na tela, dentro do carrossel. ")
         + "Arraste as miniaturas para mudar a ordem; a primeira é sempre a capa.") : "")
+    /* no carrossel o video e DA FOTO escolhida: mora logo abaixo dela */
+    + (ehGrupo ? secaoVideo : "")
     + (ehSeguidora(it) && !ehArq(it)
         ? '<div class="dica">Esta foto é uma página de outro card. Para tirar do site, arquive o card que a contém, ou desfaça o carrossel.</div>'
         : "");
@@ -2908,11 +2928,11 @@ function abrirPainel(caminho) {
   });
   if ($("fEhVideo")) $("fEhVideo").onclick = () => {
     if (videoLigado) {
-      videoLigados.delete(it.caminho);
-      editar(it.caminho, "videoLink", null);
-      editar(it.caminho, "videoAba", "");
+      videoLigados.delete(vAlvo.caminho);
+      editar(vAlvo.caminho, "videoLink", null);
+      editar(vAlvo.caminho, "videoAba", "");
     } else {
-      videoLigados.add(it.caminho);
+      videoLigados.add(vAlvo.caminho);
       abertas.add("video");
     }
     salvar(); abrirPainel(caminho); desenhar();
@@ -2922,20 +2942,20 @@ function abrirPainel(caminho) {
     $("fVideoLink").oninput = () => {
       const v = $("fVideoLink").value.trim();
       /* apagar o link e "sem video de proposito": null, e nao a ausencia */
-      editar(it.caminho, "videoLink", v || null);
-      $("fVideoQual").textContent = oQueEOLink(v, abreNaAba(it));
+      editar(vAlvo.caminho, "videoLink", v || null);
+      $("fVideoQual").textContent = oQueEOLink(v, abreNaAba(vAlvo));
     };
     $("fVideoLink").onchange = () => { salvar(); abrirPainel(caminho); desenhar(); };
   }
-  if ($("fLegAdd")) $("fLegAdd").onclick = () => escolherLegenda(it);
-  if ($("fLegTroca")) $("fLegTroca").onclick = () => escolherLegenda(it);
-  if ($("fLegTira")) $("fLegTira").onclick = () => tirarExtra(it, "legenda");
-  if ($("fQualAdd")) $("fQualAdd").onclick = () => criar720(it);
-  if ($("fQualTira")) $("fQualTira").onclick = () => tirarExtra(it, "720p");
+  if ($("fLegAdd")) $("fLegAdd").onclick = () => escolherLegenda(vAlvo);
+  if ($("fLegTroca")) $("fLegTroca").onclick = () => escolherLegenda(vAlvo);
+  if ($("fLegTira")) $("fLegTira").onclick = () => tirarExtra(vAlvo, "legenda");
+  if ($("fQualAdd")) $("fQualAdd").onclick = () => criar720(vAlvo);
+  if ($("fQualTira")) $("fQualTira").onclick = () => tirarExtra(vAlvo, "720p");
   const mudaOpcao = (k, v) => {
-    const atual = Object.assign({}, (typeof val(it, "videoOpcoes") === "object" && val(it, "videoOpcoes")) || {});
+    const atual = Object.assign({}, (typeof val(vAlvo, "videoOpcoes") === "object" && val(vAlvo, "videoOpcoes")) || {});
     if (v === "padrao") delete atual[k]; else atual[k] = v;
-    editar(it.caminho, "videoOpcoes", atual);
+    editar(vAlvo.caminho, "videoOpcoes", atual);
     salvar(); abrirPainel(caminho); desenhar();
   };
   [["fOpAuto", "autoplay"], ["fOpMudo", "mudo"], ["fOpRep", "repetir"], ["fOpPrevia", "previa"]].forEach(([id, k]) => {
@@ -2945,7 +2965,7 @@ function abrirPainel(caminho) {
     b.onclick = () => mudaOpcao("controles", b.dataset.c);
   });
   if ($("fVideoModo")) $("fVideoModo").querySelectorAll("[data-m]").forEach((b) => {
-    b.onclick = () => { editar(it.caminho, "videoAba", b.dataset.m === "aba"); salvar(); abrirPainel(caminho); desenhar(); };
+    b.onclick = () => { editar(vAlvo.caminho, "videoAba", b.dataset.m === "aba"); salvar(); abrirPainel(caminho); desenhar(); };
   });
   $("fInfoCard").onclick = () => {
     const marca = marcaInfo(!infoCardLigada);
