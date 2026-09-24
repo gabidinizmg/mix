@@ -58,7 +58,8 @@
       "link": "https://motionographer.com/",
       "videoLink": "https://vimeo.com/265567437?fl=pl&fe=sh",
       "videoOpcoes": {
-        "autoplay": false
+        "autoplay": false,
+        "controles": "nenhum"
       },
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56.jpg",
       "collection": "3D",
