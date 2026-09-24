@@ -483,6 +483,28 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
 .escolha.on { border-color: var(--roxo); background: rgba(124,84,255,.18); color: var(--texto); }
 .escolha.verde.on { border-color: var(--verde); background: color-mix(in srgb, var(--verde) 18%, transparent); }
 .chave-linha { display: flex; align-items: center; gap: 10px; justify-content: flex-start; }
+.cfg-linha { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+.campo input.cfg-num { width: 84px; flex: 0 0 84px; }
+.cfg-num { width: 84px; height: 32px; border-radius: 9px; border: 1px solid var(--linha); background: var(--painel-2);
+  color: var(--texto); padding: 0 10px; font: inherit; font-size: 13px; }
+.pv-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+.pv-op { display: grid; gap: 5px; justify-items: center; padding: 6px 4px 5px; border-radius: 10px; border: 1px solid transparent; }
+.pv-op:hover { background: var(--painel-2); }
+.pv-op.on { border-color: var(--roxo); background: color-mix(in srgb, var(--roxo) 14%, transparent); }
+.pv-fundo { position: relative; width: 64px; height: 42px; border-radius: 8px; display: grid; place-items: center;
+  background: linear-gradient(135deg, #6b5fa0, #2a2340); overflow: hidden; }
+.pv-nome { font-size: 10.5px; color: var(--texto-2); text-align: center; line-height: 1.2; }
+.pv { color: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 3px; font-size: 9px; font-weight: 600; }
+.pv-vidro, .pv-quadrado { width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,.22); border: 1px solid rgba(255,255,255,.5); }
+.pv-quadrado { border-radius: 28%; width: 22px; height: 22px; }
+.pv-anel { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.9); }
+.pv-branco { width: 24px; height: 24px; border-radius: 50%; background: #fff; color: #141218; }
+.pv-escuro { width: 24px; height: 24px; border-radius: 50%; background: rgba(12,10,16,.5); }
+.pv-pilula { height: 16px; padding: 0 6px; border-radius: 999px; background: rgba(255,255,255,.22); border: 1px solid rgba(255,255,255,.5); }
+.pv-palavra { letter-spacing: .25em; font-size: 8.5px; }
+.pv-canto { position: absolute; left: 5px; bottom: 5px; width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,.25); border: 1px solid rgba(255,255,255,.5); }
+.pv-canto svg { width: 7px; height: 7px; }
+.pv-nada { color: rgba(255,255,255,.5); font-size: 13px; }
 .mini-bt { font-size: 12px; color: var(--texto-2); padding: 3px 10px; border-radius: 999px; border: 1px solid var(--linha); }
 .mini-bt:hover { color: var(--texto); background: var(--painel-2); }
 .mini-bt.perigo:hover { color: var(--erro); border-color: color-mix(in srgb, var(--erro) 45%, transparent); }
@@ -799,6 +821,10 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
            aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="espacoCheio"></span></div>
       <span class="dica" id="espacoTexto">consultando…</span>
     </div>
+    <div class="campo" id="cfgVideos">
+      <label>Vídeos no site</label>
+      <div id="cfgVideosCorpo"></div>
+    </div>
     <div class="campo">
       <label for="url">Link do images.json</label>
       <input id="url" type="text" spellcheck="false">
@@ -859,6 +885,11 @@ let ultimoSalvo = 0;
    `colecoesPub`: a lista como o robo publicou no images.json.
    `filtroCol`: a coleção que a grade esta mostrando ("" = todas). */
 let colecoesDef = null;
+/* AS CONFIGURACOES DE VIDEO DO SITE (23/09/2026). Ela: "quero tudo
+   modificavel no organizador". Vao para o mix-info.json (`site`), o robo
+   publica, e o BigaMix usa por cima do painel do Figma. null = este
+   navegador ainda nao leu do GitHub. */
+let siteCfg = null;
 let colecoesPub = [];
 let filtroCol = "";
 
@@ -900,7 +931,7 @@ const salvar = () => {
   ultimaEdicao = Date.now();
   try {
     localStorage.setItem(CHAVE, JSON.stringify({
-      url: $("url").value, edicoes, ordemTags, tagsVisiveis, colecoesDef
+      url: $("url").value, edicoes, ordemTags, tagsVisiveis, colecoesDef, siteCfg
     }));
   } catch (e) {
     /* NAO PODE FALHAR CALADO.
@@ -1128,7 +1159,7 @@ const lerInfoTexto = (txt) => {
   const d = JSON.parse(txt || "{}");
   const obj = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
   return { items: obj(d.items), collections: obj(d.collections),
-           tags: Array.isArray(d.tags) ? d.tags.map(String) : [] };
+           tags: Array.isArray(d.tags) ? d.tags.map(String) : [], site: obj(d.site) };
 };
 /* Com a chave: pela API (sempre o AGORA, e traz o `sha` para salvar).
    Sem a chave: pelo endereco publico do arquivo (pode atrasar uns minutos
@@ -1166,7 +1197,15 @@ function sincronizar(repo) {
   const b = juntar3(base && base.collections, colecoesDef || {}, repo.collections);
   edicoes = a.out;
   if (colecoesDef !== null || Object.keys(b.out).length) colecoesDef = b.out;
-  gravarBase({ items: repo.items, collections: repo.collections });
+  /* as configuracoes do site: navegador que nunca leu pega as do GitHub;
+     depois, a mesma regra das fotos (mudou so aqui, vale o daqui) */
+  const siteRepo = repo.site || {};
+  if (siteCfg === null) siteCfg = Object.assign({}, siteRepo);
+  else {
+    const c = juntar3(base ? { v: base.site } : null, { v: siteCfg }, { v: siteRepo });
+    siteCfg = Object.assign({}, c.out.v || {});
+  }
+  gravarBase({ items: repo.items, collections: repo.collections, site: siteRepo });
   return { trazidos: a.trazidos + b.trazidos, conflitos: a.conflitos + b.conflitos };
 }
 const resumoSync = (s) => (s.trazidos
@@ -1473,8 +1512,9 @@ const videoDoLink = (link) => {
    minimos, sem previa. So as que ela muda vao para o arquivo. */
 const opcoesDoVideo = (o) => {
   const x = (o && typeof o === "object") ? o : {};
+  const padrao = ((siteCfg || {}).controlesPadrao) || "minimos";
   return { autoplay: x.autoplay !== false, mudo: x.mudo === true, repetir: x.repetir === true,
-    controles: ["nenhum", "minimos", "favoritos", "completos"].includes(x.controles) ? x.controles : "minimos",
+    controles: ["nenhum", "minimos", "favoritos", "completos"].includes(x.controles) ? x.controles : padrao,
     previa: x.previa === true };
 };
 const videoLigados = new Set();   /* ligou "E video" e ainda nao colou o link */
@@ -2058,6 +2098,10 @@ function textoDoArquivo() {
     Object.keys(colecoesDef).sort().forEach((c) => { saida.collections[c] = colecoesDef[c]; });
   }
   Object.keys(edicoes).sort().forEach((c) => { saida.items[c] = edicoes[c]; });
+  if (siteCfg && Object.keys(siteCfg).length) {
+    saida.site = {};
+    Object.keys(siteCfg).sort().forEach((k) => { saida.site[k] = siteCfg[k]; });
+  }
   return JSON.stringify(saida, null, 2) + "\n";
 }
 
@@ -2720,18 +2764,24 @@ function abrirPainel(caminho) {
   const podeVideo = !ehGrupo;
   const ehSubido = !!it.video;
   const opV = opcoesDoVideo(val(it, "videoOpcoes"));
+  /* o que ESTE video escolheu; vazio = segue o padrao das Configuracoes */
+  const ctrlProprio = ((val(it, "videoOpcoes") || {}).controles) || "";
   const chave = (id, rotulo, ligado) => '<div class="chave-linha"><button class="chave" id="' + id
     + '" role="switch" aria-checked="' + ligado + '" aria-label="' + esc(rotulo) + '"></button>'
     + '<span class="rotulo-campo">' + esc(rotulo) + '</span></div>';
   const plataformaDoLink = (videoDoLink(val(it, "videoLink")) || {}).nome || "";
-  const dicaControles = ehSubido
-    ? (opV.controles === "favoritos"
-        ? "Favoritos: play, barra, volume, legenda e qualidade — as duas últimas só aparecem quando o vídeo tem. Somem com o mouse parado (o tempo é no painel do Mix)."
-        : "Mínimos: clicar no vídeo pausa, um botão de som no canto e uma linha fina de progresso.")
-    : /Vimeo/.test(plataformaDoLink) ? "No Vimeo, “Nenhum” só funciona em conta paga (Plus ou acima); “Mínimos” esconde título e autor."
-    : /YouTube/.test(plataformaDoLink) ? "O YouTube não deixa trocar os controles dele: “Mínimos” esconde título e sugestões, “Nenhum” tira a barra."
-    : /Drive/.test(plataformaDoLink) ? "O Google Drive ignora estas opções — toca com o player dele."
-    : "";
+  const nomeCtrl = { nenhum: "Nenhum", minimos: "Mínimos", favoritos: "Favoritos", completos: "Originais" };
+  const dicaControles = (!ctrlProprio ? "Padrão = " + nomeCtrl[opV.controles] + " (Configurações › Vídeos no site). " : "")
+    + (opV.controles === "completos"
+        ? (ehSubido ? "Originais: os controles do navegador."
+          : "Originais: os menus do próprio " + (plataformaDoLink || "player") + ", como ele é (o painel dele fica uns 4 s).")
+      : opV.controles === "favoritos"
+        ? "Favoritos: play, barra, volume" + (ehSubido ? ", legenda e qualidade quando o vídeo tem." : " e legenda.")
+          + " Somem com o mouse parado."
+      : opV.controles === "minimos"
+        ? "Mínimos: clicar no vídeo pausa, um botão de som e uma linha que dá para arrastar."
+        : "Nenhum: só clicar no vídeo pausa e continua.")
+    + (/Drive|Loom/.test(plataformaDoLink) ? " O " + plataformaDoLink + " toca sempre com o player dele." : "");
   const corpoOpcoes = '<div class="op-video">'
     + chave("fOpAuto", "Começa sozinho", opV.autoplay)
     + chave("fOpMudo", "Começa sem som", opV.mudo)
@@ -2750,12 +2800,12 @@ function abrirPainel(caminho) {
         + '</div>' : "")
     + '<div class="linha-controles"><span class="rotulo-campo">Controles</span>'
     + '<div class="alternador" id="fOpCtrl" role="group" aria-label="Controles">'
-    + [["nenhum", "Nenhum"], ["minimos", "Mínimos"], ["favoritos", "Favoritos"], ["completos", "Completos"]].map((c) =>
-        '<button class="' + (opV.controles === c[0] ? "on" : "") + '" data-c="' + c[0] + '">' + c[1] + '</button>').join("")
+    + [["padrao", "Padrão"], ["nenhum", "Nenhum"], ["minimos", "Mínimos"], ["favoritos", "Favoritos"], ["completos", "Originais"]].map((c) =>
+        '<button class="' + ((ctrlProprio || "padrao") === c[0] ? "on" : "") + '" data-c="' + c[0] + '">' + c[1] + '</button>').join("")
     + '</div></div>'
     + (dicaControles ? '<p class="dica">' + esc(dicaControles) + '</p>' : "")
     + '</div>';
-  const resumoOpcoes = [opV.controles === "nenhum" ? "sem controles" : opV.controles === "completos" ? "controles completos"
+  const resumoOpcoes = [opV.controles === "nenhum" ? "sem controles" : opV.controles === "completos" ? "controles originais"
       : opV.controles === "favoritos" ? "controles favoritos" : "",
     !opV.autoplay ? "não começa sozinho" : "", opV.mudo ? "sem som" : "", opV.repetir ? "repete" : "",
     opV.previa ? "prévia no card" : ""].filter(Boolean).join(" · ");
@@ -2805,7 +2855,7 @@ function abrirPainel(caminho) {
         corpoClasse, !tagsDe(it).length,
         "A fila de cima são as <strong>tags</strong>, os filtros da barra do site — a foto pode ter várias, e aparece em cada uma. A de baixo são as <strong>coleções</strong>, que viram cards na página Mix; a mesma foto pode estar em várias, e em nenhuma ela aparece só no All.")
     + (podeVideo ? secao("video", "Vídeo", resumoVideo, corpoVideo, videoLigado && !linkVideo,
-        ehSubido ? "Como este vídeo toca no pop-up do site. O <strong>estilo do play</strong> dos cards se escolhe no painel do Mix, no Figma."
+        ehSubido ? "Como este vídeo toca no pop-up do site. O padrão de todos os vídeos, o <strong>estilo do play</strong> e o tempo dos controles ficam em <strong>Configurações › Vídeos no site</strong>."
           : "Para vídeo que mora no <strong>YouTube, Vimeo, Loom ou Google Drive</strong>: esta foto vira a capa do card, com o play. <strong>Toca no pop-up</strong> abre o player ali mesmo, com o botão de info; <strong>Abre em outra aba</strong> leva para a plataforma. O <strong>Link</strong> dos textos continua sendo o do botão de info — são dois lugares diferentes.") : "")
     + (ehGrupo ? secao("pagina", "Foto " + (iSel + 1) + " de " + seq.length + (iSel === 0 ? " · capa" : ""),
         resumoPagina, corpoPagina, false,
@@ -2884,7 +2934,7 @@ function abrirPainel(caminho) {
   if ($("fQualTira")) $("fQualTira").onclick = () => tirarExtra(it, "720p");
   const mudaOpcao = (k, v) => {
     const atual = Object.assign({}, (typeof val(it, "videoOpcoes") === "object" && val(it, "videoOpcoes")) || {});
-    atual[k] = v;
+    if (v === "padrao") delete atual[k]; else atual[k] = v;
     editar(it.caminho, "videoOpcoes", atual);
     salvar(); abrirPainel(caminho); desenhar();
   };
@@ -3049,6 +3099,78 @@ function abrirConfig(focoNaChave) {
   $("veuConfig").hidden = false;
   if (focoNaChave) setTimeout(() => $("fChave").focus(), 30);
   medirEspaco();
+  desenharCfgVideos();
+}
+
+/* ---------- VIDEOS NO SITE (23/09/2026) ----------
+   O que ela escolhe aqui vence o painel do Figma. Campo vazio / "do Figma"
+   = vale o painel. Os estilos tem previa: sao os mesmos 12 do BigaMix. */
+const ESTILOS_PLAY = [[0, "Nenhum"], [1, "Vidro"], [2, "Só o triângulo"], [3, "Anel fino"], [4, "Círculo branco"],
+  [5, "Círculo escuro"], [6, "Pílula Play"], [7, "Palavra PLAY"], [8, "Quadrado de vidro"], [9, "Triângulo vazado"],
+  [10, "Canto discreto"], [11, "Duração"], [12, "Play + duração"]];
+const TRI = '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 5.6a1 1 0 0 1 1.52-.85l7.2 4.4a1 1 0 0 1 0 1.7l-7.2 4.4a1 1 0 0 1-1.52-.85z" transform="translate(0 1.35)"/></svg>';
+const TRI_VAZADO = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M8.5 5.6a1 1 0 0 1 1.52-.85l7.2 4.4a1 1 0 0 1 0 1.7l-7.2 4.4a1 1 0 0 1-1.52-.85z" transform="translate(0 1.35)"/></svg>';
+const previaPlay = (e) => {
+  const c = (cls, dentro) => '<span class="pv ' + cls + '">' + dentro + '</span>';
+  switch (e) {
+    case 0: return c("pv-nada", "—");
+    case 2: return c("pv-so", TRI);
+    case 3: return c("pv-anel", TRI);
+    case 4: return c("pv-branco", TRI);
+    case 5: return c("pv-escuro", TRI);
+    case 6: return c("pv-pilula", TRI + "Play");
+    case 7: return c("pv-palavra", "PLAY");
+    case 8: return c("pv-quadrado", TRI);
+    case 9: return c("pv-so", TRI_VAZADO);
+    case 10: return c("pv-canto", TRI);
+    case 11: return c("pv-pilula", "0:12");
+    case 12: return c("pv-pilula", TRI + "0:12");
+    default: return c("pv-vidro", TRI);
+  }
+};
+function desenharCfgVideos() {
+  const cfg = siteCfg || {};
+  const ctrl = cfg.controlesPadrao;
+  const alt = (id, lista, atual) => '<div class="alternador" id="' + id + '" role="group">'
+    + lista.map((o) => '<button class="' + (atual === o[0] ? "on" : "") + '" data-v="' + o[0] + '">' + o[1] + '</button>').join("")
+    + '</div>';
+  const temAlgo = Object.keys(cfg).length > 0;
+  $("cfgVideosCorpo").innerHTML =
+    '<div class="cfg-linha"><span class="rotulo-campo">Controles</span>'
+    + alt("cfgCtrl", [["nenhum", "Nenhum"], ["minimos", "Mínimos"], ["favoritos", "Favoritos"], ["completos", "Originais"]], ctrl || "")
+    + '</div>'
+    + '<p class="dica">' + (ctrl === "completos" ? "Originais: os menus do próprio YouTube/Vimeo (e do navegador, no vídeo subido)."
+        : ctrl ? "Os controles do site, por cima de qualquer vídeo. Cada vídeo pode ter o seu, na seção Vídeo."
+        : "Nada escolhido: vale o do painel do Figma (Mínimos).") + '</p>'
+    + '<div class="cfg-linha"><span class="rotulo-campo">Estilo do play</span></div>'
+    + '<div class="pv-grade" id="cfgEstilo">' + ESTILOS_PLAY.map((e) =>
+        '<button type="button" class="pv-op' + (cfg.playEstilo === e[0] ? " on" : "") + '" data-v="' + e[0] + '" title="' + e[1] + '">'
+        + '<span class="pv-fundo">' + previaPlay(e[0]) + '</span><span class="pv-nome">' + e[1] + '</span></button>').join("")
+    + '</div>'
+    + '<div class="cfg-linha"><span class="rotulo-campo">Posição</span>'
+    + alt("cfgPos", [[1, "Centro"], [2, "Canto de baixo"], [3, "Canto de cima"]].map((o) => [String(o[0]), o[1]]),
+        cfg.playPosicao !== undefined ? String(cfg.playPosicao) : "")
+    + '</div>'
+    + '<div class="cfg-linha"><span class="rotulo-campo">Tamanho do play</span>'
+    + '<input class="cfg-num" id="cfgTam" type="number" min="24" max="160" step="2" placeholder="Figma" value="'
+    + (cfg.playTamanho !== undefined ? cfg.playTamanho : "") + '"><span class="dica">px</span></div>'
+    + '<div class="cfg-linha"><span class="rotulo-campo">Controles somem após</span>'
+    + '<input class="cfg-num" id="cfgApos" type="number" min="0" max="10" step="0.5" placeholder="Figma" value="'
+    + (cfg.videoEsconderApos !== undefined ? cfg.videoEsconderApos : "") + '"><span class="dica">s · 0 = nunca</span></div>'
+    + '<p class="dica">Vale no site depois de Salvar, e vence o painel do Figma.'
+    + (temAlgo ? ' <button class="mini-bt" id="cfgLimpar" type="button">voltar tudo ao do Figma</button>' : '') + '</p>';
+  const muda = (k, v) => {
+    if (siteCfg === null) siteCfg = {};
+    if (v === undefined || v === "" || (typeof v === "number" && !isFinite(v))) delete siteCfg[k]; else siteCfg[k] = v;
+    salvar(); desenharCfgVideos();
+    mostrarEstado("vídeos no site: falta Salvar", "aviso");
+  };
+  $("cfgCtrl").querySelectorAll("[data-v]").forEach((b) => { b.onclick = () => muda("controlesPadrao", b.dataset.v === ctrl ? "" : b.dataset.v); });
+  $("cfgEstilo").querySelectorAll("[data-v]").forEach((b) => { b.onclick = () => { const v = Number(b.dataset.v); muda("playEstilo", cfg.playEstilo === v ? "" : v); }; });
+  $("cfgPos").querySelectorAll("[data-v]").forEach((b) => { b.onclick = () => { const v = Number(b.dataset.v); muda("playPosicao", cfg.playPosicao === v ? "" : v); }; });
+  $("cfgTam").onchange = () => { const v = $("cfgTam").value.trim(); muda("playTamanho", v === "" ? "" : Math.min(160, Math.max(24, Number(v)))); };
+  $("cfgApos").onchange = () => { const v = $("cfgApos").value.trim(); muda("videoEsconderApos", v === "" ? "" : Math.min(10, Math.max(0, Number(v)))); };
+  if ($("cfgLimpar")) $("cfgLimpar").onclick = () => { siteCfg = {}; salvar(); desenharCfgVideos(); mostrarEstado("vídeos no site: do Figma · falta Salvar", "aviso"); };
 }
 
 /* ESPACO NO GITHUB (23/09/2026). Ela: "onde vejo o espaco?" - o GitHub
@@ -3716,6 +3838,7 @@ window.addEventListener("drop", (e) => {
   ordemTags = g.ordemTags || ["Design", "Motion", "Draw", "Photo", "3D"];
   tagsVisiveis = g.tagsVisiveis === undefined ? 2 : g.tagsVisiveis;
   colecoesDef = g.colecoesDef && typeof g.colecoesDef === "object" ? g.colecoesDef : null;
+  siteCfg = g.siteCfg && typeof g.siteCfg === "object" ? g.siteCfg : null;
   desenhar();
   carregar();
 })();

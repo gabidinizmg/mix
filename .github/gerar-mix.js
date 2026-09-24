@@ -542,6 +542,21 @@ const tags = ferramenta.tags.filter((t) => usadas.includes(t));
 for (const t of usadas) if (!tags.includes(t)) tags.push(t);
 
 const saida = { tags, tagsVisiveis: ferramenta.tagsVisiveis, collections: colecoes, items: itens };
+/* AS CONFIGURACOES DE VIDEO DO ORGANIZADOR (23/09/2026): estilo, posicao e
+   tamanho do play, tempo dos controles e os controles padrao. Vencem o
+   painel do Figma. So sai quando ela mexeu. */
+{
+  let bruto = {};
+  try { bruto = JSON.parse(fs.readFileSync(caminhoFerr, "utf8")).site || {}; } catch (e) {}
+  const site = {};
+  const num = (v, a, b) => (typeof v === "number" && isFinite(v)) ? Math.min(b, Math.max(a, v)) : undefined;
+  const e = num(bruto.playEstilo, 0, 12); if (e !== undefined) site.playEstilo = Math.round(e);
+  const po = num(bruto.playPosicao, 1, 3); if (po !== undefined) site.playPosicao = Math.round(po);
+  const t = num(bruto.playTamanho, 24, 160); if (t !== undefined) site.playTamanho = t;
+  const a = num(bruto.videoEsconderApos, 0, 10); if (a !== undefined) site.videoEsconderApos = a;
+  if (["nenhum", "minimos", "favoritos", "completos"].includes(bruto.controlesPadrao)) site.controlesPadrao = bruto.controlesPadrao;
+  if (Object.keys(site).length) saida.site = site;
+}
 fs.writeFileSync(path.join(RAIZ, "images.json"), JSON.stringify(saida, null, 2) + "\n");
 
 console.log("images.json: " + itens.length + " itens em " + colecoes.length + " colecoes");
