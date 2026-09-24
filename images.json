@@ -9,7 +9,7 @@
   "collections": [
     {
       "name": "UI",
-      "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-8.jpg",
+      "cover": "",
       "link": "",
       "criada": true
     },
@@ -55,6 +55,21 @@
       "name": "detalhes",
       "phrase": "Teste",
       "year": "2024",
+      "images": [
+        {
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56.jpg",
+          "name": "detalhes",
+          "phrase": "Teste",
+          "year": "2024",
+          "link": "https://motionographer.com/"
+        },
+        {
+          "src": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-8.jpg",
+          "phrase": "Arte conceitual",
+          "year": "2025",
+          "noInfo": true
+        }
+      ],
       "link": "https://motionographer.com/",
       "videoLink": "https://vimeo.com/265567437?fl=pl&fe=sh",
       "videoOpcoes": {
@@ -67,18 +82,6 @@
         "3D"
       ],
       "tag": "Photo"
-    },
-    {
-      "name": "",
-      "phrase": "Arte conceitual",
-      "year": "2025",
-      "noInfo": true,
-      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-8.jpg",
-      "collection": "UI",
-      "collections": [
-        "UI"
-      ],
-      "tag": "Design"
     },
     {
       "name": "teste 4",
