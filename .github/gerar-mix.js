@@ -225,6 +225,9 @@ const linkDoVideo = (d) => {
   }
   return r;
 };
+/* as pecas dos controles, na ordem do site; o que nao for peca conhecida sai */
+const PECAS = ["clique", "play", "barra", "som", "volume", "legenda", "qualidade"];
+const pecasValidas = (v) => Array.isArray(v) ? PECAS.filter((k) => v.includes(k)) : null;
 /* comecar sozinho, sem som, repetir, controles, previa: so o que ela mudou */
 const opcoesDoVideo = (d) => {
   const o = (d && d.videoOpcoes && typeof d.videoOpcoes === "object") ? d.videoOpcoes : null;
@@ -232,7 +235,12 @@ const opcoesDoVideo = (d) => {
   const op = {};
   ["autoplay", "mudo", "repetir", "previa"].forEach((k) => { if (typeof o[k] === "boolean") op[k] = o[k]; });
   /* "favoritos" faltava aqui: o organizador gravava e o robo jogava fora */
-  if (["nenhum", "minimos", "favoritos", "completos"].includes(o.controles)) op.controles = o.controles;
+  if (["nenhum", "minimos", "favoritos", "completos", "personalizado"].includes(o.controles)) op.controles = o.controles;
+  /* AS PECAS (26/09/2026): com "personalizado", a lista que ela montou */
+  const pecas = pecasValidas(o.pecas);
+  if (op.controles === "personalizado") {
+    if (pecas) op.pecas = pecas; else delete op.controles;
+  }
   return Object.keys(op).length ? op : null;
 };
 
@@ -604,7 +612,11 @@ const saida = { tags, tagsVisiveis: ferramenta.tagsVisiveis, collections: coleco
   const po = num(bruto.playPosicao, 1, 3); if (po !== undefined) site.playPosicao = Math.round(po);
   const t = num(bruto.playTamanho, 24, 160); if (t !== undefined) site.playTamanho = t;
   const a = num(bruto.videoEsconderApos, 0, 10); if (a !== undefined) site.videoEsconderApos = a;
-  if (["nenhum", "minimos", "favoritos", "completos"].includes(bruto.controlesPadrao)) site.controlesPadrao = bruto.controlesPadrao;
+  if (["nenhum", "minimos", "favoritos", "completos", "personalizado"].includes(bruto.controlesPadrao)) site.controlesPadrao = bruto.controlesPadrao;
+  if (site.controlesPadrao === "personalizado") {
+    const pp = pecasValidas(bruto.pecasPadrao);
+    if (pp) site.pecasPadrao = pp; else delete site.controlesPadrao;
+  }
   if (Object.keys(site).length) saida.site = site;
 }
 fs.writeFileSync(path.join(RAIZ, "images.json"), JSON.stringify(saida, null, 2) + "\n");

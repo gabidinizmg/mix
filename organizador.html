@@ -477,6 +477,7 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
 .rotulo-campo { font-size: 11.5px; color: var(--texto-2); display: block; }
 .dois-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .escolhas { display: flex; flex-wrap: wrap; gap: 7px; }
+.escolhas.pecas { margin: 10px 0 2px; }
 .escolha { height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--linha);
   font-size: 12.5px; color: var(--texto-2); }
 .escolha:hover { color: var(--texto); border-color: color-mix(in srgb, var(--texto-3) 60%, transparent); }
@@ -1510,12 +1511,53 @@ const videoDoLink = (link) => {
    controles? padrao minimo possivel de controles". Ausente = o padrao
    (o mesmo do BigaMix): comeca sozinho, com som, sem repetir, controles
    minimos, sem previa. So as que ela muda vao para o arquivo. */
+/* AS PECAS DOS CONTROLES (26/09/2026). Ela: "minimo, favorito e etc
+   poderia virar toggles para escolher, e presets... mas legal ter todas as
+   escolhas". Cada peca liga e desliga; os presets sao atalhos para um
+   conjunto delas. Conjunto que bate com um preset e gravado como o preset;
+   o resto e "personalizado", com a lista. Originais = o player da propria
+   plataforma, sem pecas nossas. O site (BigaMix) le igual. */
+const PECAS = [["clique", "Clicar pausa"], ["play", "Play"], ["barra", "Barra"], ["som", "Som"],
+  ["volume", "Volume"], ["legenda", "Legenda"], ["qualidade", "Qualidade"]];
+const CHAVES_PECAS = PECAS.map((x) => x[0]);
+const PECAS_DE = { nenhum: ["clique"], minimos: ["clique", "barra", "som"], favoritos: CHAVES_PECAS, completos: [] };
+const PRESETS = [["nenhum", "Nenhum"], ["minimos", "Mínimos"], ["favoritos", "Favoritos"], ["completos", "Originais"]];
+const MODOS = ["nenhum", "minimos", "favoritos", "completos", "personalizado"];
+const pecasValidas = (v) => Array.isArray(v) ? CHAVES_PECAS.filter((k) => v.includes(k)) : null;
+const pecasDe = (controles, pecas) => controles === "personalizado"
+  ? (pecasValidas(pecas) || PECAS_DE.minimos) : (PECAS_DE[controles] || PECAS_DE.minimos);
+/* ligar/desligar uma peca: o conjunto novo, ja como preset quando bate.
+   Sem Play e sem clique nao haveria como tocar - o clique volta sozinho. */
+const alternarPeca = (lista, k) => {
+  let nova = lista.includes(k) ? lista.filter((x) => x !== k) : lista.concat(k);
+  if (!nova.includes("clique") && !nova.includes("play")) nova = nova.concat("clique");
+  nova = CHAVES_PECAS.filter((x) => nova.includes(x));
+  const pre = ["nenhum", "minimos", "favoritos"].find((m) => PECAS_DE[m].length === nova.length && PECAS_DE[m].every((x) => nova.includes(x)));
+  return pre ? { controles: pre } : { controles: "personalizado", pecas: nova };
+};
+const nomeDosControles = (controles, pecas) => controles === "personalizado"
+  ? "Personalizado (" + pecasDe(controles, pecas).map((k) => PECAS.find((x) => x[0] === k)[1]).join(", ") + ")"
+  : ((PRESETS.find((x) => x[0] === controles) || [])[1] || "Mínimos");
+/* os controles e as pecas, iguais no video e nas Configuracoes */
+const htmlControles = (idPre, idPecas, presets, atual, pecas, mostrarPecas) =>
+  '<div class="linha-controles"><span class="rotulo-campo">Controles</span>'
+  + '<div class="alternador" id="' + idPre + '" role="group" aria-label="Controles">'
+  + presets.map((c) => '<button class="' + (atual === c[0] ? "on" : "") + '" data-c="' + c[0] + '" data-v="' + c[0] + '">' + c[1] + '</button>').join("")
+  + '</div></div>'
+  + (mostrarPecas ? '<div class="escolhas pecas" id="' + idPecas + '" role="group" aria-label="Peças dos controles">'
+    + PECAS.map((x) => '<button class="escolha' + (pecas.includes(x[0]) ? " on" : "") + '" type="button" data-p="' + x[0]
+      + '" aria-pressed="' + pecas.includes(x[0]) + '">' + x[1] + '</button>').join("") + '</div>' : "");
 const opcoesDoVideo = (o) => {
   const x = (o && typeof o === "object") ? o : {};
-  const padrao = ((siteCfg || {}).controlesPadrao) || "minimos";
+  const cfg = siteCfg || {};
+  let controles = MODOS.includes(x.controles) && !(x.controles === "personalizado" && !pecasValidas(x.pecas)) ? x.controles : "";
+  let pecas = controles ? pecasDe(controles, x.pecas) : null;
+  if (!controles) {
+    controles = MODOS.includes(cfg.controlesPadrao) ? cfg.controlesPadrao : "minimos";
+    pecas = pecasDe(controles, cfg.pecasPadrao);
+  }
   return { autoplay: x.autoplay !== false, mudo: x.mudo === true, repetir: x.repetir === true,
-    controles: ["nenhum", "minimos", "favoritos", "completos"].includes(x.controles) ? x.controles : padrao,
-    previa: x.previa === true };
+    controles, pecas, previa: x.previa === true };
 };
 const videoLigados = new Set();   /* ligou "E video" e ainda nao colou o link */
 const temVideoLink = (it) => !!val(it, "videoLink");
@@ -2783,9 +2825,11 @@ function abrirPainel(caminho) {
     + '" role="switch" aria-checked="' + ligado + '" aria-label="' + esc(rotulo) + '"></button>'
     + '<span class="rotulo-campo">' + esc(rotulo) + '</span></div>';
   const plataformaDoLink = (videoDoLink(val(vAlvo, "videoLink")) || {}).nome || "";
-  const nomeCtrl = { nenhum: "Nenhum", minimos: "Mínimos", favoritos: "Favoritos", completos: "Originais" };
-  const dicaControles = (!ctrlProprio ? "Padrão = " + nomeCtrl[opV.controles] + " (Configurações › Vídeos no site). " : "")
-    + (opV.controles === "completos"
+  const dicaControles = (!ctrlProprio ? "Padrão = " + nomeDosControles(opV.controles, opV.pecas) + " (Configurações › Vídeos no site). " : "")
+    + (opV.controles === "personalizado"
+        ? "Liga e desliga cada peça; os nomes de cima são atalhos. Legenda e Qualidade só aparecem quando o vídeo tem."
+          + (!opV.pecas.includes("play") ? " Sem Play, o clique no vídeo fica ligado, senão não haveria como tocar." : "")
+      : opV.controles === "completos"
         ? (ehSubido ? "Originais: os controles do navegador."
           : "Originais: os menus do próprio " + (plataformaDoLink || "player") + ", como ele é (o painel dele fica uns 4 s).")
       : opV.controles === "favoritos"
@@ -2811,15 +2855,13 @@ function abrirPainel(caminho) {
             ? '<span class="dica">1080p + 720p ✓</span><button class="mini-bt perigo" id="fQualTira" type="button">tirar 720p</button>'
             : '<button class="mini-bt" id="fQualAdd" type="button">+ criar versão 720p</button>')
         + '</div>' : "")
-    + '<div class="linha-controles"><span class="rotulo-campo">Controles</span>'
-    + '<div class="alternador" id="fOpCtrl" role="group" aria-label="Controles">'
-    + [["padrao", "Padrão"], ["nenhum", "Nenhum"], ["minimos", "Mínimos"], ["favoritos", "Favoritos"], ["completos", "Originais"]].map((c) =>
-        '<button class="' + ((ctrlProprio || "padrao") === c[0] ? "on" : "") + '" data-c="' + c[0] + '">' + c[1] + '</button>').join("")
-    + '</div></div>'
+    + htmlControles("fOpCtrl", "fOpPecas", [["padrao", "Padrão"]].concat(PRESETS), ctrlProprio || "padrao",
+        opV.pecas, opV.controles !== "completos")
     + (dicaControles ? '<p class="dica">' + esc(dicaControles) + '</p>' : "")
     + '</div>';
   const resumoOpcoes = [opV.controles === "nenhum" ? "sem controles" : opV.controles === "completos" ? "controles originais"
-      : opV.controles === "favoritos" ? "controles favoritos" : "",
+      : opV.controles === "favoritos" ? "controles favoritos"
+      : opV.controles === "personalizado" ? "controles: " + opV.pecas.map((k) => PECAS.find((x) => x[0] === k)[1].toLowerCase()).join(", ") : "",
     !opV.autoplay ? "não começa sozinho" : "", opV.mudo ? "sem som" : "", opV.repetir ? "repete" : "",
     opV.previa ? "prévia no card" : ""].filter(Boolean).join(" · ");
   const linkVideo = val(vAlvo, "videoLink");
@@ -2961,8 +3003,19 @@ function abrirPainel(caminho) {
   [["fOpAuto", "autoplay"], ["fOpMudo", "mudo"], ["fOpRep", "repetir"], ["fOpPrevia", "previa"]].forEach(([id, k]) => {
     if ($(id)) $(id).onclick = () => mudaOpcao(k, !opV[k]);
   });
+  /* controles e pecas andam juntos: preset apaga a lista; "Padrao" apaga os dois */
+  const mudaControles = (obj) => {
+    const atual = Object.assign({}, (typeof val(vAlvo, "videoOpcoes") === "object" && val(vAlvo, "videoOpcoes")) || {});
+    delete atual.controles; delete atual.pecas;
+    if (obj) Object.assign(atual, obj);
+    editar(vAlvo.caminho, "videoOpcoes", atual);
+    salvar(); abrirPainel(caminho); desenhar();
+  };
   if ($("fOpCtrl")) $("fOpCtrl").querySelectorAll("[data-c]").forEach((b) => {
-    b.onclick = () => mudaOpcao("controles", b.dataset.c);
+    b.onclick = () => mudaControles(b.dataset.c === "padrao" ? null : { controles: b.dataset.c });
+  });
+  if ($("fOpPecas")) $("fOpPecas").querySelectorAll("[data-p]").forEach((b) => {
+    b.onclick = () => mudaControles(alternarPeca(opV.pecas, b.dataset.p));
   });
   if ($("fVideoModo")) $("fVideoModo").querySelectorAll("[data-m]").forEach((b) => {
     b.onclick = () => { editar(vAlvo.caminho, "videoAba", b.dataset.m === "aba"); salvar(); abrirPainel(caminho); desenhar(); };
@@ -3151,17 +3204,18 @@ const previaPlay = (e) => {
 function desenharCfgVideos() {
   const cfg = siteCfg || {};
   const ctrl = cfg.controlesPadrao;
+  const pecasCfg = pecasDe(ctrl || "minimos", cfg.pecasPadrao);
   const alt = (id, lista, atual) => '<div class="alternador" id="' + id + '" role="group">'
     + lista.map((o) => '<button class="' + (atual === o[0] ? "on" : "") + '" data-v="' + o[0] + '">' + o[1] + '</button>').join("")
     + '</div>';
   const temAlgo = Object.keys(cfg).length > 0;
   $("cfgVideosCorpo").innerHTML =
-    '<div class="cfg-linha"><span class="rotulo-campo">Controles</span>'
-    + alt("cfgCtrl", [["nenhum", "Nenhum"], ["minimos", "Mínimos"], ["favoritos", "Favoritos"], ["completos", "Originais"]], ctrl || "")
-    + '</div>'
+    htmlControles("cfgCtrl", "cfgPecas", PRESETS, ctrl === "personalizado" ? "" : (ctrl || ""),
+        pecasCfg, ctrl !== "completos")
     + '<p class="dica">' + (ctrl === "completos" ? "Originais: os menus do próprio YouTube/Vimeo (e do navegador, no vídeo subido)."
-        : ctrl ? "Os controles do site, por cima de qualquer vídeo. Cada vídeo pode ter o seu, na seção Vídeo."
-        : "Nada escolhido: vale o do painel do Figma (Mínimos).") + '</p>'
+        : ctrl === "personalizado" ? "Personalizado: as peças ligadas acima, em todos os vídeos. Cada vídeo pode ter o seu, na seção Vídeo."
+        : ctrl ? "Os controles do site, por cima de qualquer vídeo. Liga e desliga cada peça; cada vídeo pode ter o seu, na seção Vídeo."
+        : "Nada escolhido: vale o do painel do Figma (Mínimos). Ligue ou desligue uma peça para montar o seu.") + '</p>'
     + '<div class="cfg-linha"><span class="rotulo-campo">Estilo do play</span></div>'
     + '<div class="pv-grade" id="cfgEstilo">' + ESTILOS_PLAY.map((e) =>
         '<button type="button" class="pv-op' + (cfg.playEstilo === e[0] ? " on" : "") + '" data-v="' + e[0] + '" title="' + e[1] + '">'
@@ -3185,7 +3239,16 @@ function desenharCfgVideos() {
     salvar(); desenharCfgVideos();
     mostrarEstado("vídeos no site: falta Salvar", "aviso");
   };
-  $("cfgCtrl").querySelectorAll("[data-v]").forEach((b) => { b.onclick = () => muda("controlesPadrao", b.dataset.v === ctrl ? "" : b.dataset.v); });
+  $("cfgCtrl").querySelectorAll("[data-v]").forEach((b) => { b.onclick = () => {
+    if (siteCfg) delete siteCfg.pecasPadrao;
+    muda("controlesPadrao", b.dataset.v === ctrl ? "" : b.dataset.v);
+  }; });
+  if ($("cfgPecas")) $("cfgPecas").querySelectorAll("[data-p]").forEach((b) => { b.onclick = () => {
+    const obj = alternarPeca(pecasCfg, b.dataset.p);
+    if (siteCfg === null) siteCfg = {};
+    if (obj.pecas) siteCfg.pecasPadrao = obj.pecas; else delete siteCfg.pecasPadrao;
+    muda("controlesPadrao", obj.controles);
+  }; });
   $("cfgEstilo").querySelectorAll("[data-v]").forEach((b) => { b.onclick = () => { const v = Number(b.dataset.v); muda("playEstilo", cfg.playEstilo === v ? "" : v); }; });
   $("cfgPos").querySelectorAll("[data-v]").forEach((b) => { b.onclick = () => { const v = Number(b.dataset.v); muda("playPosicao", cfg.playPosicao === v ? "" : v); }; });
   $("cfgTam").onchange = () => { const v = $("cfgTam").value.trim(); muda("playTamanho", v === "" ? "" : Math.min(160, Math.max(24, Number(v)))); };
