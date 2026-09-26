@@ -3216,6 +3216,15 @@ function desenharCfgVideos() {
         : ctrl === "personalizado" ? "Personalizado: as peças ligadas acima, em todos os vídeos. Cada vídeo pode ter o seu, na seção Vídeo."
         : ctrl ? "Os controles do site, por cima de qualquer vídeo. Liga e desliga cada peça; cada vídeo pode ter o seu, na seção Vídeo."
         : "Nada escolhido: vale o do painel do Figma (Mínimos). Ligue ou desligue uma peça para montar o seu.") + '</p>'
+    /* 26/09, ela: "pode ser essa capa sempre, sem o fade, como padrao; caso
+       eu queira capa-fade-video, um toggle no organizador" */
+    + '<div class="cfg-linha"><span class="rotulo-campo">Capa do vídeo</span>'
+    + alt("cfgCapa", [["sempre", "Fica até o vídeo tocar"], ["fade", "Some com fade"]], cfg.videoCapa === "fade" ? "fade" : "sempre")
+    + '</div>'
+    + '<p class="dica">' + (cfg.videoCapa === "fade"
+        ? "Ao abrir, a capa se desfaz no quadro do vídeo assim que ele carrega."
+        : "Ao abrir, a sua capa fica na tela até o vídeo começar a tocar, e aí ele entra direto.")
+      + " Com os controles Originais o player aparece logo, para o play dele ficar à vista.</p>"
     + '<div class="cfg-linha"><span class="rotulo-campo">Estilo do play</span></div>'
     + '<div class="pv-grade" id="cfgEstilo">' + ESTILOS_PLAY.map((e) =>
         '<button type="button" class="pv-op' + (cfg.playEstilo === e[0] ? " on" : "") + '" data-v="' + e[0] + '" title="' + e[1] + '">'
@@ -3249,6 +3258,7 @@ function desenharCfgVideos() {
     if (obj.pecas) siteCfg.pecasPadrao = obj.pecas; else delete siteCfg.pecasPadrao;
     muda("controlesPadrao", obj.controles);
   }; });
+  $("cfgCapa").querySelectorAll("[data-v]").forEach((b) => { b.onclick = () => muda("videoCapa", b.dataset.v === "fade" ? "fade" : ""); });
   $("cfgEstilo").querySelectorAll("[data-v]").forEach((b) => { b.onclick = () => { const v = Number(b.dataset.v); muda("playEstilo", cfg.playEstilo === v ? "" : v); }; });
   $("cfgPos").querySelectorAll("[data-v]").forEach((b) => { b.onclick = () => { const v = Number(b.dataset.v); muda("playPosicao", cfg.playPosicao === v ? "" : v); }; });
   $("cfgTam").onchange = () => { const v = $("cfgTam").value.trim(); muda("playTamanho", v === "" ? "" : Math.min(160, Math.max(24, Number(v)))); };

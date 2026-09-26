@@ -612,6 +612,8 @@ const saida = { tags, tagsVisiveis: ferramenta.tagsVisiveis, collections: coleco
   const po = num(bruto.playPosicao, 1, 3); if (po !== undefined) site.playPosicao = Math.round(po);
   const t = num(bruto.playTamanho, 24, 160); if (t !== undefined) site.playTamanho = t;
   const a = num(bruto.videoEsconderApos, 0, 10); if (a !== undefined) site.videoEsconderApos = a;
+  /* capa do video: ausente = fica ate tocar; "fade" = se desfaz ao carregar */
+  if (bruto.videoCapa === "fade") site.videoCapa = "fade";
   if (["nenhum", "minimos", "favoritos", "completos", "personalizado"].includes(bruto.controlesPadrao)) site.controlesPadrao = bruto.controlesPadrao;
   if (site.controlesPadrao === "personalizado") {
     const pp = pecasValidas(bruto.pecasPadrao);
