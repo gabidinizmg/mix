@@ -2,8 +2,9 @@
   "tags": [
     "Design",
     "Motion",
-    "Draw",
+    "AI",
     "Photo",
+    "Draw",
     "3D"
   ],
   "tagsVisiveis": 2,
@@ -14,7 +15,8 @@
         "Photography"
       ],
       "tags": [
-        "Photo"
+        "Photo",
+        "AI"
       ]
     },
     "Imagens/2026-08/2026-08-29_18-28-23.jpg": {
@@ -35,9 +37,9 @@
         "Drawing"
       ],
       "tags": [
-        "Draw"
+        "Motion"
       ],
-      "tag": "Draw",
+      "tag": "Motion",
       "videoLink": "https://vimeo.com/265567437?fl=pl&fe=sh",
       "videoOpcoes": {
         "autoplay": false
