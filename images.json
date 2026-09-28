@@ -2,7 +2,7 @@
   "tags": [
     "Design",
     "Motion",
-    "Draw",
+    "AI",
     "Photo"
   ],
   "tagsVisiveis": 2,
@@ -170,7 +170,7 @@
       "collections": [
         "Drawing"
       ],
-      "tag": "Draw"
+      "tag": "Motion"
     },
     {
       "name": "TESTE",
@@ -189,7 +189,11 @@
       "collections": [
         "Photography"
       ],
-      "tag": "Photo"
+      "tag": "Photo",
+      "tags": [
+        "Photo",
+        "AI"
+      ]
     }
   ]
 }
