@@ -264,6 +264,14 @@ h1 { font: 600 22px/1.1 "Outfit",sans-serif; letter-spacing: -.02em; }
 .selo.sem { background: var(--amarelo); color: #17150b; }
 .selo.arq { background: rgba(179,38,30,.85); color: #fff; }
 .selo.nova { background: var(--verde); color: #08210f; }
+/* A SUBTAG DA COLECAO ABERTA, embaixo da foto (19/10/2026). Embaixo e nao
+   em cima: em cima ja moram o selo de sempre e a bolinha de marcar. */
+.selo-col { position: absolute; left: 8px; bottom: 8px; right: 8px; z-index: 4;
+  display: flex; flex-wrap: wrap; gap: 4px; pointer-events: none; }
+.selo-col span { font: 600 10.5px "Outfit",sans-serif; letter-spacing: .04em;
+  padding: 4px 8px; border-radius: 999px; background: var(--verde); color: #08210f; }
+.selo-col span.sem { background: rgba(18,17,22,.72); color: #EFEBF9; backdrop-filter: blur(8px);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--verde) 70%, transparent); }
 
 /* ---------- SUBIR FOTOS ---------- */
 .soltar-fotos {
@@ -490,6 +498,7 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
   border-left: 2px solid color-mix(in srgb, var(--verde) 45%, transparent); }
 .item.sub { padding-top: 6px; padding-bottom: 6px; font-size: 13px; }
 .item.sub.on { box-shadow: inset 2px 0 0 var(--verde); }
+.item.sub.sem-sub .rotulo { font-style: italic; color: var(--texto-3); }
 .novo-bt.sub { font-size: 12.5px; }
 .chip.verde.on { border-color: var(--verde); background: color-mix(in srgb, var(--verde) 16%, transparent); }
 .chave-linha { display: flex; align-items: center; gap: 10px; justify-content: flex-start; }
@@ -1884,6 +1893,46 @@ function apagarTagCol(nome, tag) {
   });
   gravarTagsDaColecao(nome, tagsDaColecao(nome).filter((t) => t !== tag));
 }
+/* EM LOTE (19/10/2026) - ela: "selecionar areas e mudar essas subtags".
+   Mesma regra do `aplicarTag` das tags de Cards: se TODAS ja tem, tira;
+   senao, poe em quem falta. `null` tira todas as subtags da colecao.
+   Foto que nao esta na colecao e ignorada - subtag fora da colecao nao
+   vale no site. */
+function aplicarTagCol(caminhos, col, t) {
+  const its = caminhos.map(acharItem).filter((x) => x && colecoesDe(x).includes(col));
+  const todas = !!t && its.length > 0 && its.every((x) => tagsColDe(x, col).includes(t));
+  its.forEach((x) => {
+    if (!t) definirTagsCol(x.caminho, col, []);
+    else if (todas) definirTagsCol(x.caminho, col, tagsColDe(x, col).filter((y) => y !== t));
+    else if (!tagsColDe(x, col).includes(t)) definirTagsCol(x.caminho, col, tagsColDe(x, col).concat([t]));
+  });
+  salvar();
+  return { n: its.length, tirou: todas };
+}
+const fotosTxt = (n) => n + (n === 1 ? " foto" : " fotos");
+/* as opcoes de subtag de um menu - o do botao direito e o do icone de tag */
+function opcoesSubtag(col, caminhos, depois) {
+  const its = caminhos.map(acharItem).filter((x) => x && colecoesDe(x).includes(col));
+  if (!its.length) return [];
+  const fim = (msg) => { if (depois) depois(); desenhar(); mostrarEstado(msg, "ok"); };
+  return tagsDaColecao(col).map((t) => {
+    const todas = its.every((x) => tagsColDe(x, col).includes(t));
+    return { id: "tc" + t, rotulo: (todas ? "✓ " : "") + col + " › " + t, faz: () => {
+      const r = aplicarTagCol(its.map((x) => x.caminho), col, t);
+      fim((r.tirou ? "“" + t + "” tirada de " : "“" + t + "” em ") + fotosTxt(r.n));
+    } };
+  }).concat([{ id: "tcnova", rotulo: "+ Nova subtag de " + col, faz: async () => {
+    const nome = await perguntar("Nova subtag de “" + col + "”",
+      "Ela já entra " + (its.length === 1 ? "nesta foto" : "nestas " + its.length + " fotos")
+      + ", e só aparece no site dentro desta coleção.", { dica: "Nome da subtag" });
+    if (!nome) return;
+    const t = criarTagCol(col, nome);
+    if (!t) return;
+    its.forEach((x) => { if (!tagsColDe(x, col).includes(t)) definirTagsCol(x.caminho, col, tagsColDe(x, col).concat([t])); });
+    salvar(); fim("“" + t + "” em " + fotosTxt(its.length));
+  } }]).concat(its.some((x) => tagsColDe(x, col).length) ? [{ id: "tctira", rotulo: "Tirar as subtags de " + col,
+    faz: () => { const r = aplicarTagCol(its.map((x) => x.caminho), col, null); fim("subtags tiradas de " + fotosTxt(r.n)); } }] : []);
+}
 function moverTagCol(nome, tag, passo) {
   const l = tagsDaColecao(nome);
   const i = l.indexOf(tag), j = i + passo;
@@ -2457,6 +2506,13 @@ function desenharLado() {
             + '<span class="qtd">' + contarTagCol(c.nome, t) + '</span>'
             + '<span class="engrenagem" data-menutagcol="' + esc(t) + '" role="button" tabindex="0"'
             + ' aria-label="Opções de ' + esc(t) + '">' + SVG_ENGRENAGEM + '</span></button>').join("")
+        + (() => {
+            /* "Sem subtag", para achar o que falta (19/10/2026) */
+            if (!tagsDaColecao(c.nome).length) return "";
+            const n = itens.filter((x) => ativa(x) && colecoesDe(x).includes(c.nome) && !tagsColDe(x, c.nome).length).length;
+            return '<button class="item sub sem-sub' + (tagColAtiva() === "__sem" ? " on" : "") + '" data-tagcol="__sem">'
+              + '<span class="rotulo">Sem subtag</span><span class="qtd">' + n + '</span></button>';
+          })()
         + '<button class="novo-bt sub" id="btNovaTagCol"><span class="mais" aria-hidden="true">+</span> Tag de '
         + esc(c.nome) + '</button></div>'
       : "")).join("");
@@ -2536,7 +2592,7 @@ function desenharLado() {
       filtroTagCol = tagColAtiva() === t ? null : { col: filtroCol, tag: t };
       mostrar = "fotos"; desenhar();
     };
-    b.oncontextmenu = (e) => { e.preventDefault(); menuDaTagCol(filtroCol, t, e); };
+    b.oncontextmenu = (e) => { e.preventDefault(); if (t !== "__sem") menuDaTagCol(filtroCol, t, e); };
   });
   document.querySelectorAll("[data-menutagcol]").forEach((g) => {
     g.onclick = (e) => { e.stopPropagation(); menuDaTagCol(filtroCol, g.dataset.menutagcol, g); };
@@ -2573,7 +2629,10 @@ function visiveis() {
   if (filtro === "__sem") l = l.filter((x) => !tagsDe(x).length);
   else if (filtro && filtro !== "__arq" && filtro !== "__lixo") l = l.filter((x) => tagsDe(x).includes(filtro));
   const tc = tagColAtiva();
-  if (tc) l = l.filter((x) => tagsColDe(x, filtroCol).includes(tc));
+  /* "__sem" = as fotos da colecao que ainda nao tem subtag (19/10/2026) -
+     ela: "uma separacao quando nao tiver tags, para eu descobrir qual mudar" */
+  if (tc === "__sem") l = l.filter((x) => !tagsColDe(x, filtroCol).length);
+  else if (tc) l = l.filter((x) => tagsColDe(x, filtroCol).includes(tc));
   const t = busca.trim().toLowerCase();
   if (t) {
     l = l.filter((x) => {
@@ -2632,6 +2691,12 @@ function desenharChips() {
       f.push('<button class="chip verde' + (tagColAtiva() === t ? " on" : "") + '" data-fc="' + esc(t) + '">'
         + esc(t) + ' <span class="n">' + n + '</span></button>');
     });
+    /* e as que ainda nao tem nenhuma - so quando a colecao ja tem subtags */
+    const nSemSub = base.filter((x) => !tagsColDe(x, filtroCol).length).length;
+    if (tagsDaColecao(filtroCol).length && nSemSub) {
+      f.push('<button class="chip verde' + (tagColAtiva() === "__sem" ? " on" : "") + '" data-fc="__sem">'
+        + 'Sem subtag <span class="n">' + nSemSub + '</span></button>');
+    }
   }
   $("chips").innerHTML = f.join("");
   $("chips").querySelectorAll("[data-f]").forEach((b) => {
@@ -2658,8 +2723,18 @@ function atualizarSel() {
   $("contaSel").textContent = selecao.size;
   $("acoesSel").hidden = selecao.size === 0;
 }
-function marcar(caminho) {
-  if (selecao.has(caminho)) selecao.delete(caminho); else selecao.add(caminho);
+/* SHIFT + CLIQUE marca o TRECHO entre a ultima foto marcada e esta, na
+   ordem da tela (19/10/2026) - ela: "selecionar areas". */
+let ultimaMarcada = "";
+function marcar(caminho, e) {
+  const tela = visiveis().map((x) => x.caminho);
+  const de = tela.indexOf(ultimaMarcada), ate = tela.indexOf(caminho);
+  if (e && e.shiftKey && de >= 0 && ate >= 0) {
+    const [a, b] = de < ate ? [de, ate] : [ate, de];
+    tela.slice(a, b + 1).forEach((c) => selecao.add(c));
+  } else if (selecao.has(caminho)) selecao.delete(caminho);
+  else selecao.add(caminho);
+  ultimaMarcada = caminho;
   desenhar();
 }
 async function criarColecaoDasMarcadas() {
@@ -2743,7 +2818,12 @@ function desenharGrade() {
 
   /* --- as fotos --- */
   const l = visiveis();
-  $("tituloVista").textContent = filtroCol ? filtroCol
+  const tcAtiva = tagColAtiva();
+  /* a colecao aberta TEM subtags? so entao o selo de baixo aparece - numa
+     colecao sem nenhuma, "sem subtag" em toda foto seria so ruido */
+  const comSubtags = !!filtroCol && filtro !== "__lixo" && tagsDaColecao(filtroCol).length > 0;
+  $("tituloVista").textContent = filtroCol
+      ? filtroCol + (tcAtiva === "__sem" ? " › sem subtag" : tcAtiva ? " › " + tcAtiva : "")
     : filtro === "__arq" ? "Arquivadas"
     : filtro === "__lixo" ? "Lixeira"
     : filtro === "__sem" ? "Sem tag"
@@ -2773,10 +2853,14 @@ function desenharGrade() {
         + '<div class="folha f3">' + midia(seq[0].url, "") + '</div>'
         + '<span class="entrar">abrir carrossel</span>'
       : midia(it.image || it.video, "");
+    const sub = comSubtags ? tagsColDe(it, filtroCol) : [];
+    const seloCol = !comSubtags ? ""
+      : '<div class="selo-col">' + (sub.length ? sub.map((s) => '<span>' + esc(s) + '</span>').join("")
+        : '<span class="sem">sem subtag</span>') + '</div>';
     return '<div class="cartao" data-foto="' + esc(it.caminho) + '">'
       + '<div class="moldura' + (ehGrupo ? " pilha" : "") + (selecao.has(it.caminho) ? " marcada" : "")
       + '" tabindex="0" role="button" draggable="true" aria-label="Abrir ' + esc(nome) + '">'
-      + marca + selo + corpo + '</div>'
+      + marca + selo + corpo + seloCol + '</div>'
       + '<div class="nome">' + esc(nome) + '</div>'
       + '<div class="meta"><span class="ponto"></span>' + esc(t || "sem tag")
       + (ano ? " · " + esc(ano) : "")
@@ -2788,10 +2872,15 @@ function desenharGrade() {
     const mold = c.querySelector(".moldura");
     const circ = c.querySelector("[data-marcar]");
     if (circ) {
-      circ.onclick = (e) => { e.stopPropagation(); marcar(caminho); };
+      circ.onclick = (e) => { e.stopPropagation(); marcar(caminho, e); };
       circ.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); marcar(caminho); } };
     }
-    mold.onclick = () => abrirPainel(caminho);
+    /* Shift ou Cmd no clique da FOTO tambem marca (19/10/2026) - para
+       marcar um trecho inteiro sem mirar na bolinha */
+    mold.onclick = (e) => {
+      if (e.shiftKey || e.metaKey || e.ctrlKey) { marcar(caminho, e); return; }
+      abrirPainel(caminho);
+    };
     mold.onkeydown = (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrirPainel(caminho); }
     };
@@ -2821,10 +2910,19 @@ function desenharGrade() {
         return;
       }
       const cols = colecoesDe(it);
-      abrirMenu(e, [
+      /* AS SUBTAGS DA COLECAO ABERTA NO TOPO (19/10/2026) - ela: "quando
+         voce clica do lado direito, poderia escolher qual tag colocar".
+         Clicou numa foto MARCADA: vale para todas as marcadas. */
+      const alvos = selecao.has(caminho) && selecao.size > 1 ? [...selecao] : [caminho];
+      const subtags = filtroCol && filtro !== "__arq" && cols.includes(filtroCol)
+        ? opcoesSubtag(filtroCol, alvos, alvos.length > 1 ? () => selecao.clear() : null) : [];
+      const nTela = visiveis().length;
+      abrirMenu(e, subtags.concat(subtags.length ? ["-"] : []).concat([
         { id: "abrir", rotulo: "Abrir", faz: () => abrirPainel(caminho) },
         { id: "marcar", rotulo: selecao.has(caminho) ? "Desmarcar" : "Marcar", faz: () => marcar(caminho) },
-      ].concat(cols.length ? [{ id: "col", rotulo: "Ver “" + cols[0] + "”",
+        { id: "marcartodas", rotulo: "Marcar todas desta tela (" + nTela + ")", faz: () => {
+            visiveis().forEach((x) => selecao.add(x.caminho)); desenhar(); } },
+      ]).concat(cols.length ? [{ id: "col", rotulo: "Ver “" + cols[0] + "”",
         faz: () => { filtroCol = cols[0]; filtro = ""; mostrar = "fotos"; desenhar(); } }] : [])
         .concat(paginas(it).length > 1 ? [{ id: "desagrupa", rotulo: "Desfazer o carrossel",
           faz: () => { selecao.clear(); selecao.add(caminho); desagrupar(); } }] : [])
@@ -3606,7 +3704,10 @@ $("btTagAcao").onclick = (e) => {
   e.stopPropagation();
   const n = selecao.size;
   const sel = [...selecao].map(acharItem).filter(Boolean);
-  abrirMenu(e, ordemTags.map((t) => {
+  /* com uma colecao aberta, as SUBTAGS dela vem primeiro (19/10/2026) */
+  const subtags = filtroCol && filtro !== "__arq" && filtro !== "__lixo"
+    ? opcoesSubtag(filtroCol, [...selecao], () => selecao.clear()) : [];
+  abrirMenu(e, subtags.concat(subtags.length ? ["-"] : []).concat(ordemTags.map((t) => {
     const todas = sel.length && sel.every((x) => tagsDe(x).includes(t));
     return { id: "t" + t, rotulo: (todas ? "✓ " : "") + t, faz: () => {
       aplicarTag(t);
@@ -3617,7 +3718,7 @@ $("btTagAcao").onclick = (e) => {
     .concat(["-", { id: "tirar", rotulo: "Tirar todas as tags", faz: () => {
       aplicarTag(null);
       mostrarEstado("tags tiradas de " + n + (n === 1 ? " foto" : " fotos"), "ok");
-    } }]));
+    } }])));
 };
 $("btColAcao").onclick = (e) => {
   e.stopPropagation();
