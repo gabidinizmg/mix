@@ -64,7 +64,15 @@
       "videoLink": "https://vimeo.com/265567437?fl=pl&fe=sh",
       "videoOpcoes": {
         "autoplay": false
-      }
+      },
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Posters",
+          "ordem": 2
+        }
+      ]
     },
     "Imagens/2026-08/2026-08-29_19-05-56-3.jpg": {
       "carrosselDe": "Imagens/2026-08/2026-08-29_19-05-56-4.jpg",
@@ -190,6 +198,14 @@
       },
       "carrossel": [
         "Imagens/2026-08/2026-08-29_19-05-56-8.jpg"
+      ],
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Posters",
+          "ordem": 1
+        }
       ]
     },
     "Uploads/Fotos/2026-09/FBE4FD9B-82BF-49D6-ABFA-367230DD9784.jpg": {
