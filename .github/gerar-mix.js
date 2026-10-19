@@ -220,6 +220,12 @@ const limparLugares = (bruto) => {
 };
 
 const itens = [];
+/* FOTOS SOLTAS DE DENTRO DE UM CARROSSEL, postas numa pagina do site
+   (19/10/2026). Ela: "tambem da para escolher uma foto solta de dentro do
+   carrossel". A seguidora nao vira item (na Mix ela e so uma pagina do
+   card), entao os lugares dela moram numa lista PROPRIA, que a Mix nao
+   le. Sai no images.json so quando existe. */
+const soltas = [];
 const colecoes = [];
 
 /* O VIDEO DE UMA FOTO OU DE UM ARQUIVO, num lugar so (23/09/2026).
@@ -304,7 +310,26 @@ const montar = (arquivos, nomeColecao, info) => {
        card. Sair aqui e o que faz N fotos virarem 1 item no JSON - sem
        isto o agrupamento nao tiraria nada da grade, so acrescentaria
        uma lista repetida. */
-    if (d.carrosselDe) continue;
+    if (d.carrosselDe) {
+      const lugS = limparLugares(d.lugares);
+      if (lugS.length && d.lixeira !== true) {
+        const so = {};
+        if (EXT_VID.test(a)) {
+          const mv = midiaDoVideo(a);
+          so.image = mv.image || "";
+          so.video = mv.video;
+        } else {
+          so.image = url(a);
+        }
+        const nomeS = d.name || d.nome;
+        const fraseS = d.phrase || d.frase || d.description;
+        if (nomeS) so.name = String(nomeS);
+        if (fraseS) so.phrase = String(fraseS);
+        so.lugares = lugS;
+        soltas.push(so);
+      }
+      continue;
+    }
     /* NA LIXEIRA DO ORGANIZADOR (23/09/2026): o arquivo ainda existe, mas
        ela excluiu - nao vai para o site. Restaurar tira a marca. */
     if (d.lixeira === true) continue;
@@ -699,7 +724,7 @@ const paginasSaida = [];
       }
     }
   }
-  for (const it of itens) {
+  for (const it of itens.concat(soltas)) {
     for (const l of (it.lugares || [])) {
       const pg = acharOuPor(paginasSaida, l.pagina, novaPagina);
       const car = acharOuPor(pg.carrosseis, l.carrossel, novoCarrossel);
@@ -711,6 +736,7 @@ const paginasSaida = [];
 const saida = { tags, tagsVisiveis: ferramenta.tagsVisiveis, collections: colecoes };
 if (paginasSaida.length) saida.paginas = paginasSaida;
 saida.items = itens;
+if (soltas.length) saida.soltasDasPaginas = soltas;
 /* AS CONFIGURACOES DE VIDEO DO ORGANIZADOR (23/09/2026): estilo, posicao e
    tamanho do play, tempo dos controles e os controles padrao. Vencem o
    painel do Figma. So sai quando ela mexeu. */
@@ -738,7 +764,7 @@ console.log("images.json: " + itens.length + " itens em " + colecoes.length + " 
 for (const p of paginasSaida) {
   for (const c of p.carrosseis) {
     for (const f of c.faixas) {
-      const n = itens.filter((i) => (i.lugares || []).some((l) => chaveNome(l.pagina) === chaveNome(p.name)
+      const n = itens.concat(soltas).filter((i) => (i.lugares || []).some((l) => chaveNome(l.pagina) === chaveNome(p.name)
         && chaveNome(l.carrossel) === chaveNome(c.name) && chaveNome(l.faixa) === chaveNome(f.name))).length;
       console.log("  pagina " + p.name + " > " + c.name + " > " + f.name + ": " + n);
     }

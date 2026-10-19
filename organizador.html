@@ -1428,6 +1428,12 @@ async function carregar() {
 
 /* ---------- HELPERS DA GRADE E DO CARROSSEL ---------- */
 function ativa(x) { return !ehArq(x) && !ehSeguidora(x) && !ehLixo(x); }
+/* FOTO SOLTA DE DENTRO DE UM CARROSSEL (19/10/2026). Ela: "carrossel
+   inteiro na faixa vira uma foto por card, e tambem da para escolher uma
+   foto solta de dentro do carrossel". Na Mix a seguidora continua sendo
+   so uma pagina do card; numa faixa do site ela vale sozinha. */
+const seguidoraViva = (x) => ehSeguidora(x) && !ehArq(x) && !ehLixo(x);
+const naFaixaVale = (x) => ativa(x) || seguidoraViva(x);
 function contarTag(t) { return itens.filter((x) => ativa(x) && tagsDe(x).includes(t)).length; }
 function semTag() { return itens.filter((x) => ativa(x) && !tagsDe(x).length).length; }
 function contarArq() { return itens.filter((x) => ehArq(x) && !ehLixo(x)).length + arquivadasOrfas().length; }
@@ -1449,6 +1455,9 @@ const ehSeguidora = (it) => !!val(it, "carrosselDe");
    virava capa direto - e ai nao havia como escrever o texto de uma
    pagina sem promove-la. */
 let paginaSel = null;
+/* no pop-up de um carrossel: as Paginas do site valem para o carrossel
+   inteiro ("grupo") ou so para a foto escolhida ("foto") */
+let lugarAlvo = "grupo";
 
 /* Quais secoes do painel estao abertas. O painel se reconstroi inteiro a
    cada clique numa foto do carrossel: sem guardar isto, tudo fecharia e
@@ -1568,7 +1577,27 @@ function acharItem(caminho) {
   return itens.find((x) => x.caminho === caminho)
     || arquivadasOrfas().find((x) => x.caminho === caminho)
     || lixeiraOrfas().find((x) => x.caminho === caminho)
+    || paginasDeCarrossel().find((x) => x.caminho === caminho)
     || null;
+}
+/* AS FOTOS DE DENTRO DE UM CARROSSEL que nao estao em `itens` (19/10/2026).
+   Quando o carrossel veio pronto do images.json, as paginas dele so
+   existem DENTRO do card - o robo nao publica seguidora como item. Sem
+   isto, "So a foto 2" nao achava a foto e gravava no carrossel inteiro,
+   em silencio (o kit pegou). Aqui elas viram itens leves, com o caminho
+   e a imagem, para os lugares delas poderem ser gravados. */
+function paginasDeCarrossel() {
+  const out = [];
+  itens.forEach((it) => {
+    if (!ativa(it)) return;
+    const seq = paginas(it);
+    if (seq.length < 2) return;
+    seq.slice(1).forEach((pg) => {
+      if (!pg.caminho || itens.some((x) => x.caminho === pg.caminho)) return;
+      out.push({ caminho: pg.caminho, image: pg.url, carrosselDe: it.caminho, daPagina: true });
+    });
+  });
+  return out;
 }
 
 /* ---------- VIDEO POR LINK (23/09/2026) ----------
@@ -2125,7 +2154,7 @@ function renomearNo(no, novo) {
   gravarArvore(a);
   const k = no.length - 1;
   const campo = ["pagina", "carrossel", "faixa"][k];
-  itens.forEach((it) => {
+  itens.concat(paginasDeCarrossel()).forEach((it) => {
     const ls = lugaresDe(it);
     if (!ls.some((l) => lugarEm(l, no))) return;
     definirLugares(it.caminho, ls.map((l) => lugarEm(l, no) ? Object.assign({}, l, { [campo]: novo }) : l));
@@ -2140,7 +2169,7 @@ function apagarNo(no) {
   const i = lista ? lista.findIndex((n) => mesmoNome(n.name, no[no.length - 1])) : -1;
   if (i >= 0) lista.splice(i, 1);
   gravarArvore(a);
-  itens.forEach((it) => {
+  itens.concat(paginasDeCarrossel()).forEach((it) => {
     const ls = lugaresDe(it);
     if (ls.some((l) => lugarEm(l, no))) definirLugares(it.caminho, ls.filter((l) => !lugarEm(l, no)));
   });
@@ -2158,7 +2187,7 @@ function moverNo(no, passo) {
 }
 /* as fotos que estão num nó (as vivas: arquivada e lixeira não contam) */
 function fotosNoNo(no) {
-  return itens.filter((x) => ativa(x) && lugaresDe(x).some((l) => lugarEm(l, no)));
+  return itens.concat(paginasDeCarrossel()).filter((x) => naFaixaVale(x) && lugaresDe(x).some((l) => lugarEm(l, no)));
 }
 
 /* A ORDEM DENTRO DA FAIXA: o número `ordem` do lugar. Sem número, depois
@@ -2991,7 +3020,7 @@ function baseDaVista() {
   const vivas = itens.filter((x) => !ehArq(x) && !ehSeguidora(x) && !ehLixo(x));
   if (filtroCol) return vivas.filter((x) => colecoesDe(x).includes(filtroCol));
   /* uma página, um carrossel ou uma faixa aberta no menu (19/10/2026) */
-  if (filtroLugar) return vivas.filter((x) => lugaresDe(x).some((l) => lugarEm(l, filtroLugar)));
+  if (filtroLugar) return itens.concat(paginasDeCarrossel()).filter((x) => naFaixaVale(x) && lugaresDe(x).some((l) => lugarEm(l, filtroLugar)));
   return vivas;
 }
 /* a faixa aberta (os três nomes), ou null */
@@ -3228,6 +3257,7 @@ function desenharGrade() {
     const marca = '<span class="marca-sel" data-marcar="' + esc(it.caminho) + '" role="button" tabindex="0"'
       + ' aria-label="Marcar">' + SVG_CHECK + '</span>';
     const selo = ehArq(it) ? '<span class="selo arq">arquivada</span>'
+      : ehSeguidora(it) ? '<span class="selo">foto de carrossel</span>'
       : ehGrupo ? '<span class="selo">' + seq.length + ' fotos</span>'
       : foraDoMix(it) ? '<span class="selo fora">fora do Mix</span>'
       : it.nova ? '<span class="selo nova">nova</span>'
@@ -3376,7 +3406,7 @@ async function pedirLugar() {
 function abrirPainel(caminho) {
   const it = acharItem(caminho);
   if (!it) return;
-  if (atual && atual.caminho !== caminho) paginaSel = null;
+  if (atual && atual.caminho !== caminho) { paginaSel = null; lugarAlvo = "grupo"; }
   atual = it;
   const seq = paginas(it);
   const ehGrupo = seq.length > 1;
@@ -3614,14 +3644,26 @@ function abrirPainel(caminho) {
         + "<strong>Toca no pop-up</strong> abre o player ali mesmo, com o botão de info; <strong>Abre em outra aba</strong> leva para a plataforma. O <strong>Link</strong> dos textos continua sendo o do botão de info — são dois lugares diferentes.");
   /* AS PÁGINAS DO SITE (19/10/2026): em que faixas a foto entra, a
      posição dela em cada uma, e o "Aparece no Mix" */
-  const meusLugares = lugaresDe(it);
+  /* num carrossel, "So a foto N": quem recebe os lugares e a foto
+     escolhida (uma seguidora). A capa (foto 1) e o carrossel inteiro. */
+  const alvoFoto = ehGrupo && lugarAlvo === "foto";
+  const itLug = alvoFoto && iSel > 0 ? (acharItem(paginaSel) || it) : it;
+  const semEdicao = alvoFoto && iSel === 0;
+  const meusLugares = lugaresDe(itLug);
   const fora = foraDoMix(it);
   const faixasTodas = todasFaixas();
-  const corpoLugares = chave("fNoMix", "Aparece no Mix", !fora)
+  const soltasDentro = ehGrupo ? seq.slice(1).filter((x) => { const y = acharItem(x.caminho); return y && lugaresDe(y).length; }).length : 0;
+  const corpoAlvo = !ehGrupo ? "" : '<div class="alternador" id="fLugAlvo" role="group" aria-label="O que entra na faixa">'
+    + '<button type="button" data-alvo="grupo" class="' + (alvoFoto ? "" : "on") + '">O carrossel inteiro</button>'
+    + '<button type="button" data-alvo="foto" class="' + (alvoFoto ? "on" : "") + '">Só a foto ' + (iSel + 1) + '</button></div>'
+    + '<p class="dica">' + (!alvoFoto ? "Na faixa, <strong>cada foto do carrossel vira um card</strong>, na ordem dele."
+      : semEdicao ? "A foto 1 é a capa: ela leva o carrossel inteiro. Escolha <strong>outra foto</strong> nas miniaturas para pôr só ela."
+      : "Só esta foto entra na faixa. Na Mix o carrossel continua igual.") + '</p>';
+  const corpoLugares = corpoAlvo + (semEdicao ? "" : (alvoFoto ? "" : chave("fNoMix", "Aparece no Mix", !fora))
     + (meusLugares.length ? '<div class="lugares">' + meusLugares.map((lg, i) => {
         const no = noDoLugar(lg);
         const seqFx = fotosDaFaixa(no).map((x) => x.caminho);
-        const pos = seqFx.indexOf(it.caminho);
+        const pos = seqFx.indexOf(itLug.caminho);
         return '<div class="lugar-linha" data-lug="' + i + '"><span class="txt">' + esc(textoNo(no)) + '</span>'
           + '<span class="pos">' + (pos >= 0 ? (pos + 1) + 'º de ' + seqFx.length : "") + '</span>'
           + '<button class="mini-bt" type="button" data-lugmove="-1" aria-label="Mais para a frente"'
@@ -3638,8 +3680,10 @@ function abrirPainel(caminho) {
         return '<button class="escolha pag' + (on ? " on" : "") + '" type="button" data-lf="' + i + '" aria-pressed="' + on + '">'
           + esc(textoNo(no)) + '</button>';
       }).join("")
-    + '<button class="escolha" type="button" id="btNovoLugar">+ novo lugar</button></div>';
-  const resumoLugares = (meusLugares.map((lg) => textoNo(noDoLugar(lg))).join(", ") || "em nenhuma")
+    + '<button class="escolha" type="button" id="btNovoLugar">+ novo lugar</button></div>');
+  const lugaresDoCard = lugaresDe(it);
+  const resumoLugares = (lugaresDoCard.map((lg) => textoNo(noDoLugar(lg))).join(", ") || (soltasDentro ? "" : "em nenhuma"))
+    + (soltasDentro ? (lugaresDoCard.length ? " · " : "") + soltasDentro + (soltasDentro === 1 ? " foto solta" : " fotos soltas") : "")
     + (fora ? " · fora do Mix" : "");
   const corpo = '<div class="linha-idioma"><div class="alternador" id="fIdiomas" role="group"'
     + ' aria-label="Idioma dos textos">' + IDIOMAS.map((lg) =>
@@ -3815,29 +3859,32 @@ function abrirPainel(caminho) {
     };
   });
   /* --- as páginas do site --- */
-  $("fNoMix").onclick = () => {
+  if ($("fLugAlvo")) $("fLugAlvo").querySelectorAll("[data-alvo]").forEach((b) => {
+    b.onclick = () => { lugarAlvo = b.dataset.alvo; abertas.add("lugares"); abrirPainel(caminho); };
+  });
+  if ($("fNoMix")) $("fNoMix").onclick = () => {
     definirForaDoMix(it.caminho, !foraDoMix(it));
     salvar(); abrirPainel(caminho); desenhar();
   };
-  $("fLugares").querySelectorAll("[data-lf]").forEach((b) => {
+  if ($("fLugares")) $("fLugares").querySelectorAll("[data-lf]").forEach((b) => {
     b.onclick = () => {
       const no = faixasTodas[+b.dataset.lf];
-      if (lugaresDe(it).some((lg) => lugarEm(lg, no))) tirarDaFaixa(it.caminho, no);
-      else porNaFaixa(it.caminho, no);
+      if (lugaresDe(itLug).some((lg) => lugarEm(lg, no))) tirarDaFaixa(itLug.caminho, no);
+      else porNaFaixa(itLug.caminho, no);
       salvar(); abrirPainel(caminho); desenhar();
     };
   });
   $("fCorpo").querySelectorAll("[data-lug]").forEach((row) => {
     const no = noDoLugar(meusLugares[+row.dataset.lug]);
     row.querySelectorAll("[data-lugmove]").forEach((b) => {
-      b.onclick = () => { moverNaFaixa(it.caminho, no, +b.dataset.lugmove); salvar(); abrirPainel(caminho); desenhar(); };
+      b.onclick = () => { moverNaFaixa(itLug.caminho, no, +b.dataset.lugmove); salvar(); abrirPainel(caminho); desenhar(); };
     });
-    row.querySelector("[data-lugtira]").onclick = () => { tirarDaFaixa(it.caminho, no); salvar(); abrirPainel(caminho); desenhar(); };
+    row.querySelector("[data-lugtira]").onclick = () => { tirarDaFaixa(itLug.caminho, no); salvar(); abrirPainel(caminho); desenhar(); };
   });
-  $("btNovoLugar").onclick = async () => {
+  if ($("btNovoLugar")) $("btNovoLugar").onclick = async () => {
     const no = await pedirLugar();
     if (!no) return;
-    porNaFaixa(it.caminho, no);
+    porNaFaixa(itLug.caminho, no);
     abertas.add("lugares");
     salvar(); abrirPainel(caminho); desenhar();
     mostrarEstado("em " + textoNo(no), "ok");
