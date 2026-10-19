@@ -70,7 +70,7 @@
           "pagina": "GrupoCurta",
           "carrossel": "Curta!",
           "faixa": "Posters",
-          "ordem": 2
+          "ordem": 1
         }
       ]
     },
@@ -204,7 +204,21 @@
           "pagina": "GrupoCurta",
           "carrossel": "Curta!",
           "faixa": "Posters",
-          "ordem": 1
+          "ordem": 2
+        }
+      ]
+    },
+    "Imagens/2026-10/2026-10-19_20-03-10.jpg": {
+      "tags": [
+        "Design"
+      ],
+      "tag": "Design",
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Cinelist",
+          "ordem": 4
         }
       ]
     },
