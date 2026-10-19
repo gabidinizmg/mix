@@ -29,7 +29,12 @@
       "tags": [
         "Photo"
       ],
-      "tag": "Photo"
+      "tag": "Photo",
+      "tagsCol": {
+        "Photography": [
+          "Teste 1"
+        ]
+      }
     },
     "Imagens/2026-08/2026-08-29_19-05-56-2.jpg": {
       "name": "sadsa",
@@ -181,7 +186,10 @@
       "order": 4
     },
     "Photography": {
-      "order": 6
+      "order": 6,
+      "tags": [
+        "Teste 1"
+      ]
     },
     "Social Media": {
       "order": 2
