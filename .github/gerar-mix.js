@@ -214,6 +214,10 @@ const limparLugares = (bruto) => {
     if (vistos.has(k)) continue;
     vistos.add(k);
     if (typeof l.ordem === "number" && isFinite(l.ordem)) lugar.ordem = l.ordem;
+    /* `foto: true` (19/10/2026): o lugar vale so para esta imagem, mesmo
+       sendo a capa de um carrossel. Sem a marca, na capa, e o carrossel
+       inteiro - o jeito antigo, que continua valendo. */
+    if (l.foto === true) lugar.foto = true;
     saida.push(lugar);
   }
   return saida;
@@ -226,6 +230,19 @@ const itens = [];
    card), entao os lugares dela moram numa lista PROPRIA, que a Mix nao
    le. Sai no images.json so quando existe. */
 const soltas = [];
+/* AS IMAGENS DAS PAGINAS DO SITE (19/10/2026, tarde). Ela: "separar Mix e
+   paginas de site... no modo pagina aparecem as imagens, e nao os
+   carrosseis". Uma lista so, uma entrada por imagem, independente de como
+   a Mix agrupa: o BigaFaixas le daqui e nada mais. */
+const fotosPag = [];
+const fotoDaPagina = (pg, l) => {
+  const f = { image: pg.src || "" };
+  if (pg.video) f.video = pg.video;
+  if (pg.name) f.name = pg.name;
+  if (pg.phrase) f.phrase = pg.phrase;
+  f.lugares = [l];
+  return f;
+};
 const colecoes = [];
 
 /* O VIDEO DE UMA FOTO OU DE UM ARQUIVO, num lugar so (23/09/2026).
@@ -327,6 +344,7 @@ const montar = (arquivos, nomeColecao, info) => {
         if (fraseS) so.phrase = String(fraseS);
         so.lugares = lugS;
         soltas.push(so);
+        fotosPag.push(so);
       }
       continue;
     }
@@ -337,6 +355,7 @@ const montar = (arquivos, nomeColecao, info) => {
        titulo, sem abrir arquivo nenhum. O `_info.json` so entra quando
        ela quiser um nome diferente do nome do arquivo. */
     const item = { name: String(d.name || d.nome || tituloPadrao(a)) };
+    let mixCarrossel = null;
     const frase = d.phrase || d.frase || d.description;
     if (frase) item.phrase = String(frase);
     /* ANO. Vai como TEXTO, nao como numero: "2024" e "2024-2025" tem
@@ -415,13 +434,18 @@ const montar = (arquivos, nomeColecao, info) => {
       };
       /* a capa entra SEMPRE, inclusive quando e video: antes o video da
          capa ficava de fora e o carrossel so tinha as fotos */
-      const paginas = [infoDe(d, url(a), a.split(path.sep).join("/"))]
-        .concat(d.carrossel.map((c) => {
-          const chave = String(c);
-          return infoDe(ferramenta.items[chave] || {}, url(chave), chave);
-        }))
-        .filter((x) => x.src);
-      if (paginas.length) item.images = paginas;
+      const chaves = [a.split(path.sep).join("/")].concat(d.carrossel.map((c) => String(c)));
+      const todas = chaves.map((chave, k) => {
+        const fonte = k === 0 ? d : (ferramenta.items[chave] || {});
+        return { pg: infoDe(fonte, url(k === 0 ? a : chave), chave), fora: fonte.foraDoMix === true };
+      }).filter((x) => x.pg.src);
+      const paginas = todas.map((x) => x.pg);
+      /* MIX FOTO POR FOTO (19/10/2026, tarde): a foto com "aparece no
+         carrossel da Mix" desligado sai do carrossel; nenhuma desligada,
+         tudo como antes */
+      const visiveis = todas.filter((x) => !x.fora).map((x) => x.pg);
+      if (paginas.length) item.images = visiveis.length ? visiveis : paginas;
+      mixCarrossel = { todas: paginas, visiveis, capaFora: !!(todas[0] && todas[0].fora) };
 
 
     }
@@ -545,7 +569,34 @@ const montar = (arquivos, nomeColecao, info) => {
        de quem nao usa continua identico. */
     const lug = limparLugares(d.lugares);
     if (lug.length) item.lugares = lug;
-    if (d.foraDoMix === true) item.foraDoMix = true;
+    if (mixCarrossel) {
+      /* carrossel: fora da Mix so quando TODAS as fotos estao fora; a capa
+         fora passa o lugar de capa para a primeira foto que ficou */
+      if (!mixCarrossel.visiveis.length) item.foraDoMix = true;
+      else if (mixCarrossel.capaFora) {
+        const c = mixCarrossel.visiveis[0];
+        item.image = c.src;
+        delete item.video; delete item.legenda; delete item.qualidades;
+        if (c.video) item.video = c.video;
+      }
+    } else if (d.foraDoMix === true) item.foraDoMix = true;
+    /* as imagens desta foto nas paginas do site */
+    if (lug.length) {
+      if (mixCarrossel && mixCarrossel.todas.length) {
+        lug.forEach((l) => {
+          if (l.foto) fotosPag.push(fotoDaPagina(mixCarrossel.todas[0], l));
+          else mixCarrossel.todas.forEach((pg, k) => fotosPag.push(fotoDaPagina(pg,
+            Object.assign({}, l, { ordem: (typeof l.ordem === "number" ? l.ordem : 1e5) + k / 1000 }))));
+        });
+      } else {
+        const f = { image: item.image || "" };
+        if (item.video) f.video = item.video;
+        if (item.name) f.name = item.name;
+        if (item.phrase) f.phrase = item.phrase;
+        f.lugares = lug;
+        fotosPag.push(f);
+      }
+    }
     itens.push(item);
   }
 };
@@ -737,6 +788,7 @@ const saida = { tags, tagsVisiveis: ferramenta.tagsVisiveis, collections: coleco
 if (paginasSaida.length) saida.paginas = paginasSaida;
 saida.items = itens;
 if (soltas.length) saida.soltasDasPaginas = soltas;
+if (fotosPag.length) saida.fotosDasPaginas = fotosPag;
 /* AS CONFIGURACOES DE VIDEO DO ORGANIZADOR (23/09/2026): estilo, posicao e
    tamanho do play, tempo dos controles e os controles padrao. Vencem o
    painel do Figma. So sai quando ela mexeu. */
@@ -764,7 +816,7 @@ console.log("images.json: " + itens.length + " itens em " + colecoes.length + " 
 for (const p of paginasSaida) {
   for (const c of p.carrosseis) {
     for (const f of c.faixas) {
-      const n = itens.concat(soltas).filter((i) => (i.lugares || []).some((l) => chaveNome(l.pagina) === chaveNome(p.name)
+      const n = fotosPag.filter((i) => (i.lugares || []).some((l) => chaveNome(l.pagina) === chaveNome(p.name)
         && chaveNome(l.carrossel) === chaveNome(c.name) && chaveNome(l.faixa) === chaveNome(f.name))).length;
       console.log("  pagina " + p.name + " > " + c.name + " > " + f.name + ": " + n);
     }
