@@ -74,7 +74,16 @@
   "items": [
     {
       "name": "",
-      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-10/2026-10-19_20-03-10.jpg"
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-10/2026-10-19_20-03-10.jpg",
+      "tag": "Design",
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Cinelist",
+          "ordem": 4
+        }
+      ]
     },
     {
       "name": "detalhes",
@@ -117,7 +126,7 @@
           "pagina": "GrupoCurta",
           "carrossel": "Curta!",
           "faixa": "Posters",
-          "ordem": 1
+          "ordem": 2
         }
       ]
     },
@@ -217,7 +226,7 @@
           "pagina": "GrupoCurta",
           "carrossel": "Curta!",
           "faixa": "Posters",
-          "ordem": 2
+          "ordem": 1
         }
       ]
     },
