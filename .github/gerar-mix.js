@@ -158,7 +158,7 @@ const acharInfo = (info, arquivo) => {
    briga toda vez que ela subisse uma foto.
    Chave aqui e o caminho INTEIRO ("Photography/foto.jpg"), porque a
    ferramenta conhece o caminho e nao precisa digitar nada. */
-let ferramenta = { tags: [], tagsVisiveis: 2, items: {}, collections: {} };
+let ferramenta = { tags: [], tagsVisiveis: 2, items: {}, collections: {}, paginas: [] };
 const caminhoFerr = path.join(RAIZ, "mix-info.json");
 if (fs.existsSync(caminhoFerr)) {
   try {
@@ -175,6 +175,9 @@ if (fs.existsSync(caminhoFerr)) {
            diz a que colecoes pertence (`collections` no item). */
         collections: (lido.collections && typeof lido.collections === "object"
           && !Array.isArray(lido.collections)) ? lido.collections : {},
+        /* AS PAGINAS DO SITE (19/10/2026): a arvore Pagina > Carrossel >
+           Faixa que ela monta no organizador, na ordem dela */
+        paginas: Array.isArray(lido.paginas) ? lido.paginas : [],
       };
     }
   } catch (e) {
@@ -191,6 +194,27 @@ const listar = (dir, base) => {
     const rel = base ? path.join(base, nome) : nome;
     if (fs.statSync(cheio).isDirectory()) saida.push(...listar(cheio, rel));
     else if (EXT_IMG.test(nome) || EXT_VID.test(nome)) saida.push(rel);
+  }
+  return saida;
+};
+
+/* um lugar so vale com os tres nomes; a ordem so quando e numero.
+   O mesmo lugar duas vezes (maiuscula diferente) fica uma vez so. */
+const nomeLimpo = (v) => String(v == null ? "" : v).trim().replace(/\s+/g, " ");
+const chaveNome = (v) => nomeLimpo(v).toLowerCase();
+const limparLugares = (bruto) => {
+  if (!Array.isArray(bruto)) return [];
+  const saida = [];
+  const vistos = new Set();
+  for (const l of bruto) {
+    if (!l || typeof l !== "object") continue;
+    const lugar = { pagina: nomeLimpo(l.pagina), carrossel: nomeLimpo(l.carrossel), faixa: nomeLimpo(l.faixa) };
+    if (!lugar.pagina || !lugar.carrossel || !lugar.faixa) continue;
+    const k = [lugar.pagina, lugar.carrossel, lugar.faixa].map(chaveNome).join("\u0000");
+    if (vistos.has(k)) continue;
+    vistos.add(k);
+    if (typeof l.ordem === "number" && isFinite(l.ordem)) lugar.ordem = l.ordem;
+    saida.push(lugar);
   }
   return saida;
 };
@@ -488,6 +512,15 @@ const montar = (arquivos, nomeColecao, info) => {
       }
       if (Object.keys(tc).length) item.tagsColecao = tc;
     }
+    /* AS PAGINAS DO SITE (19/10/2026). Ela: "Pagina Pro > carrossel" e um
+       botao para a foto aparecer ou nao no Mix. `lugares` diz em que
+       faixa de que carrossel de que pagina a foto entra (pode ser mais de
+       uma), com a ordem dentro da faixa. `foraDoMix` tira a foto da Mix
+       e deixa nas paginas. Os dois so saem quando existem - o images.json
+       de quem nao usa continua identico. */
+    const lug = limparLugares(d.lugares);
+    if (lug.length) item.lugares = lug;
+    if (d.foraDoMix === true) item.foraDoMix = true;
     itens.push(item);
   }
 };
@@ -604,7 +637,8 @@ const pertence = (it, nome) => (it.collections || (it.collection ? [it.collectio
   .indexOf(nome) >= 0;
 for (const c of colecoes) {
   if (!c.cover) {
-    const membro = itens.find((i) => i.image && !i.archived && pertence(i, c.name));
+    /* fora do Mix tambem nao serve: a capa seria de uma foto que nao aparece */
+    const membro = itens.find((i) => i.image && !i.archived && !i.foraDoMix && pertence(i, c.name));
     c.cover = membro ? membro.image : (c._pasta ? c._pasta.image : "");
   }
 }
@@ -616,7 +650,8 @@ for (const c of colecoes) { delete c._ordem; delete c._pasta; }
    no organizador (`tags` na colecao do mix-info.json); as que sobrarem
    entram no fim. Colecao sem nenhuma nao ganha o campo. */
 for (const c of colecoes) {
-  const usadasCol = [...new Set(itens.flatMap((i) => (i.tagsColecao && i.tagsColecao[c.name]) || []))];
+  const usadasCol = [...new Set(itens.filter((i) => !i.foraDoMix)
+    .flatMap((i) => (i.tagsColecao && i.tagsColecao[c.name]) || []))];
   if (!usadasCol.length) continue;
   const def = ferramenta.collections[c.name] || {};
   const declaradas = Array.isArray(def.tags) ? def.tags.map((t) => String(t || "").trim()) : [];
@@ -631,11 +666,51 @@ for (const c of colecoes) {
    aparecem - ou seja, mudaria sozinha ao subir uma foto nova.
    As tags que existem de verdade, na ordem que ela definiu; as que
    sobrarem entram no fim. */
-const usadas = [...new Set(itens.flatMap((i) => i.tags || (i.tag ? [i.tag] : [])))];
+/* foto fora do Mix nao conta: um filtro so dela abriria vazio na Mix */
+const usadas = [...new Set(itens.filter((i) => !i.foraDoMix).flatMap((i) => i.tags || (i.tag ? [i.tag] : [])))];
 const tags = ferramenta.tags.filter((t) => usadas.includes(t));
 for (const t of usadas) if (!tags.includes(t)) tags.push(t);
 
-const saida = { tags, tagsVisiveis: ferramenta.tagsVisiveis, collections: colecoes, items: itens };
+/* A ARVORE DAS PAGINAS (19/10/2026), na ordem que ela montou:
+     paginas: [{ name, carrosseis: [{ name, faixas: [{ name }] }] }]
+   Lugar que so existe numa foto (escrito a mao, ou de uma versao velha da
+   arvore) entra no fim - mesma regra das colecoes: a foto nunca aponta
+   para um lugar que nao existe. Sem pagina nenhuma, o campo nao sai. */
+const paginasSaida = [];
+{
+  const acharOuPor = (lista, nome, novo) => {
+    const k = chaveNome(nome);
+    let x = lista.find((n) => chaveNome(n.name) === k);
+    if (!x) { x = novo(nomeLimpo(nome)); lista.push(x); }
+    return x;
+  };
+  const novaPagina = (n) => ({ name: n, carrosseis: [] });
+  const novoCarrossel = (n) => ({ name: n, faixas: [] });
+  const novaFaixa = (n) => ({ name: n });
+  for (const p of ferramenta.paginas) {
+    if (!p || !nomeLimpo(p.name)) continue;
+    const pg = acharOuPor(paginasSaida, p.name, novaPagina);
+    for (const c of (Array.isArray(p.carrosseis) ? p.carrosseis : [])) {
+      if (!c || !nomeLimpo(c.name)) continue;
+      const car = acharOuPor(pg.carrosseis, c.name, novoCarrossel);
+      for (const f of (Array.isArray(c.faixas) ? c.faixas : [])) {
+        const nf = f && typeof f === "object" ? f.name : f;
+        if (nomeLimpo(nf)) acharOuPor(car.faixas, nf, novaFaixa);
+      }
+    }
+  }
+  for (const it of itens) {
+    for (const l of (it.lugares || [])) {
+      const pg = acharOuPor(paginasSaida, l.pagina, novaPagina);
+      const car = acharOuPor(pg.carrosseis, l.carrossel, novoCarrossel);
+      acharOuPor(car.faixas, l.faixa, novaFaixa);
+    }
+  }
+}
+
+const saida = { tags, tagsVisiveis: ferramenta.tagsVisiveis, collections: colecoes };
+if (paginasSaida.length) saida.paginas = paginasSaida;
+saida.items = itens;
 /* AS CONFIGURACOES DE VIDEO DO ORGANIZADOR (23/09/2026): estilo, posicao e
    tamanho do play, tempo dos controles e os controles padrao. Vencem o
    painel do Figma. So sai quando ela mexeu. */
@@ -660,6 +735,17 @@ const saida = { tags, tagsVisiveis: ferramenta.tagsVisiveis, collections: coleco
 fs.writeFileSync(path.join(RAIZ, "images.json"), JSON.stringify(saida, null, 2) + "\n");
 
 console.log("images.json: " + itens.length + " itens em " + colecoes.length + " colecoes");
+for (const p of paginasSaida) {
+  for (const c of p.carrosseis) {
+    for (const f of c.faixas) {
+      const n = itens.filter((i) => (i.lugares || []).some((l) => chaveNome(l.pagina) === chaveNome(p.name)
+        && chaveNome(l.carrossel) === chaveNome(c.name) && chaveNome(l.faixa) === chaveNome(f.name))).length;
+      console.log("  pagina " + p.name + " > " + c.name + " > " + f.name + ": " + n);
+    }
+  }
+}
+const nFora = itens.filter((i) => i.foraDoMix).length;
+if (nFora) console.log("  fora do Mix: " + nFora);
 console.log("  tags (" + tags.length + "): " + (tags.join(", ") || "nenhuma")
   + "   -> " + ferramenta.tagsVisiveis + " a vista");
 for (const c of colecoes) {

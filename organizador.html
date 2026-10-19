@@ -31,6 +31,10 @@
   --texto-3: rgba(239,235,249,.38);
   --roxo: #7C54FF;
   --verde: #24FB99;
+  /* as PÁGINAS DO SITE (19/10/2026): âmbar, para não confundir com as
+     tags (roxo) nem com as coleções da Mix (verde) */
+  --pag: #FFB547;
+  --pag-selo: #FFB547;   /* fundo dos selos: o mesmo nos dois temas, texto escuro */
   --amarelo: #FFF20B;
   --ok: #3BD98F;
   --erro: #FF9A8F;
@@ -48,6 +52,7 @@ html[data-tema="claro"] {
   --texto-2: rgba(53,34,112,.66);
   --texto-3: rgba(53,34,112,.45);
   --ok: #0B7A4B;
+  --pag: #A35400;
   --erro: #B3261E;
   --aviso: #8A6100;
   --sombra: rgba(53,34,112,.25);
@@ -498,6 +503,20 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
   border-left: 2px solid color-mix(in srgb, var(--verde) 45%, transparent); }
 .item.sub { padding-top: 6px; padding-bottom: 6px; font-size: 13px; }
 .item.sub.on { box-shadow: inset 2px 0 0 var(--verde); }
+.item.pag.on, .item.sub.pag.on { box-shadow: inset 2px 0 0 var(--pag); }
+.sub-pag { display: grid; gap: 2px; margin: 0 0 4px 22px; padding-left: 8px;
+  border-left: 2px solid color-mix(in srgb, var(--pag) 45%, transparent); }
+.escolha.pag.on { border-color: var(--pag); background: color-mix(in srgb, var(--pag) 18%, transparent); }
+.secao-bt.pag-titulo { margin-top: 10px; border-top: 1px solid var(--linha); padding-top: 18px; }
+/* uma linha por lugar da foto, no pop-up */
+.lugar-linha { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 10px; border-radius: 10px;
+  border-left: 2px solid var(--pag); background: color-mix(in srgb, var(--pag) 8%, transparent); }
+.lugar-linha .txt { flex: 1; min-width: 0; font-size: 12.5px; }
+.lugar-linha .pos { font-size: 11.5px; color: var(--texto-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lugar-linha .mini-bt[disabled] { opacity: .3; cursor: default; }
+.lugares { display: grid; gap: 6px; margin: 4px 0 8px; }
+.selo.fora { background: var(--pag-selo); color: #201300; }
+.selo-col span.pag { background: var(--pag-selo); color: #201300; }
 .item.sub.sem-sub .rotulo { font-style: italic; color: var(--texto-3); }
 .novo-bt.sub { font-size: 12.5px; }
 .chip.verde.on { border-color: var(--verde); background: color-mix(in srgb, var(--verde) 16%, transparent); }
@@ -668,6 +687,21 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
       <button class="novo-bt" id="btNovaTag"><span class="mais" aria-hidden="true">+</span> Nova tag</button>
       <div class="novo-campo" id="campoTag" hidden>
         <input id="novaTag" placeholder="Nome da tag" maxlength="30" autocomplete="off" aria-label="Nome da tag nova">
+        <div class="dica">Enter cria · Esc desiste</div>
+      </div>
+    </div>
+
+    <!-- AS PÁGINAS DO SITE (19/10/2026): separado das coleções da Mix -->
+    <button class="secao-bt pag-titulo" id="btDobraPag" aria-expanded="false" aria-controls="dobraPag">
+      <span class="seta" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+      <span class="rotulo">Páginas do site</span><span class="qtd" id="qtdPag"></span>
+    </button>
+    <div class="dobra" id="dobraPag" hidden>
+      <div id="listaPag"></div>
+      <button class="novo-bt" id="btNovaPag"><span class="mais" aria-hidden="true">+</span> Nova página</button>
+      <div class="novo-campo" id="campoPag" hidden>
+        <input id="novaPag" placeholder="Nome da página (ex.: Pro)" maxlength="60" autocomplete="off" aria-label="Nome da página nova">
         <div class="dica">Enter cria · Esc desiste</div>
       </div>
     </div>
@@ -915,6 +949,13 @@ let filtroCol = "";
    Guarda a colecao junto - trocou de colecao, ela simplesmente deixa de
    valer, sem precisar lembrar de limpar em cada lugar que muda filtroCol. */
 let filtroTagCol = null;
+/* AS PÁGINAS DO SITE (19/10/2026) - ver "AS PÁGINAS DO SITE" mais abaixo.
+   `paginasDef`: a árvore deste navegador (null = nunca teve).
+   `paginasPub`: a árvore como o robô publicou no images.json.
+   `filtroLugar`: o nó que a grade está mostrando, ou null. */
+let paginasDef = null;
+let paginasPub = [];
+let filtroLugar = null;
 const tagColAtiva = () => (filtroTagCol && filtroCol && filtroTagCol.col === filtroCol) ? filtroTagCol.tag : "";
 
 /* A chave vive numa gaveta propria: assim exportar, importar ou limpar
@@ -955,7 +996,7 @@ const salvar = () => {
   ultimaEdicao = Date.now();
   try {
     localStorage.setItem(CHAVE, JSON.stringify({
-      url: $("url").value, edicoes, ordemTags, tagsVisiveis, colecoesDef, siteCfg
+      url: $("url").value, edicoes, ordemTags, tagsVisiveis, colecoesDef, siteCfg, paginasDef
     }));
   } catch (e) {
     /* NAO PODE FALHAR CALADO.
@@ -1183,7 +1224,8 @@ const lerInfoTexto = (txt) => {
   const d = JSON.parse(txt || "{}");
   const obj = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
   return { items: obj(d.items), collections: obj(d.collections),
-           tags: Array.isArray(d.tags) ? d.tags.map(String) : [], site: obj(d.site) };
+           tags: Array.isArray(d.tags) ? d.tags.map(String) : [], site: obj(d.site),
+           paginas: Array.isArray(d.paginas) ? d.paginas : [] };
 };
 /* Com a chave: pela API (sempre o AGORA, e traz o `sha` para salvar).
    Sem a chave: pelo endereco publico do arquivo (pode atrasar uns minutos
@@ -1229,7 +1271,15 @@ function sincronizar(repo) {
     const c = juntar3(base ? { v: base.site } : null, { v: siteCfg }, { v: siteRepo });
     siteCfg = Object.assign({}, c.out.v || {});
   }
-  gravarBase({ items: repo.items, collections: repo.collections, site: siteRepo });
+  /* AS PÁGINAS: a árvore inteira é UM valor, a mesma regra do `site` */
+  const pagRepo = Array.isArray(repo.paginas) ? repo.paginas : [];
+  if (paginasDef === null || (!base && !paginasDef.length)) {
+    if (pagRepo.length) paginasDef = JSON.parse(JSON.stringify(pagRepo));
+  } else {
+    const c = juntar3(base ? { v: base.paginas || [] } : null, { v: paginasDef }, { v: pagRepo });
+    paginasDef = Array.isArray(c.out.v) ? c.out.v : [];
+  }
+  gravarBase({ items: repo.items, collections: repo.collections, site: siteRepo, paginas: pagRepo });
   return { trazidos: a.trazidos + b.trazidos, conflitos: a.conflitos + b.conflitos };
 }
 const resumoSync = (s) => (s.trazidos
@@ -1310,6 +1360,9 @@ async function carregar() {
         /* AS TAGS DE CADA COLECAO como o robo publicou (19/10/2026) */
         tagsColecao: (it.tagsColecao && typeof it.tagsColecao === "object" && !Array.isArray(it.tagsColecao))
           ? it.tagsColecao : {},
+        /* AS PÁGINAS DO SITE como o robô publicou (19/10/2026) */
+        lugares: Array.isArray(it.lugares) ? it.lugares.filter((l) => l && typeof l === "object") : [],
+        foraDoMix: it.foraDoMix === true,
       };
     });
     juntarSubidas();
@@ -1329,6 +1382,10 @@ async function carregar() {
       const lido = await lerInfoDoRepo(false);
       if (lido) { sync = sincronizar(lido.dados); tagsDoRepo = lido.dados.tags || []; }
     } catch (e) { /* sem rede ou sem permissao: segue com o daqui */ }
+    /* a árvore das páginas como o robô publicou: semeia SÓ um navegador que
+       nunca teve uma (e não conseguiu ler o mix-info.json) */
+    paginasPub = Array.isArray(d.paginas) ? d.paginas : [];
+    if (paginasDef === null && paginasPub.length) paginasDef = JSON.parse(JSON.stringify(paginasPub));
     if (colecoesDef === null) {
       colecoesDef = {};
       colecoesPub.forEach((c, i) => { if (c.criada) colecoesDef[c.name] = { order: 100 + i }; });
@@ -1942,7 +1999,220 @@ function moverTagCol(nome, tag, passo) {
 }
 
 const temTrabalho = () => Object.keys(edicoes).length > 0
-  || !!(colecoesDef && Object.keys(colecoesDef).length);
+  || !!(colecoesDef && Object.keys(colecoesDef).length)
+  || !!(paginasDef && paginasDef.length);
+
+/* ---------- AS PÁGINAS DO SITE ----------  (19/10/2026)
+   Ela: imagens do BigaFaixas (página /pro) vindas daqui, organizadas como
+   "Pagina Pro > carrossel", e um botão para a foto aparecer ou não no Mix.
+   "Organizar bonitinho para não ficar caótico": é uma seção PRÓPRIA no
+   menu lateral, separada das coleções da Mix.
+   Onde mora:
+     - a ÁRVORE, na ordem dela: `paginasDef`, mix-info.json `paginas`
+       [{ name, carrosseis: [{ name, faixas: [{ name }] }] }]
+     - em que faixa cada foto entra: `lugares` na edição,
+       [{ pagina, carrossel, faixa, ordem }] - pode ser mais de uma
+     - fora da Mix: `foraDoMix: true` (ligar de volta grava false, mesma
+       armadilha do arquivar)
+   Um "nó" é a lista de nomes até ele: ["Pro"], ["Pro","curta!"] ou
+   ["Pro","curta!","Revistas"]. */
+const nomePag = (v) => String(v == null ? "" : v).trim().replace(/\s+/g, " ");
+const mesmoNome = (a, b) => nomePag(a).toLowerCase() === nomePag(b).toLowerCase();
+const textoNo = (no) => no.join(" › ");
+/* "Pro › curta! › Revistas", "Pro > curta! > Revistas" ou "Pro / curta! / Revistas" */
+const separarNo = (t) => String(t || "").split(/\s*[›>\/]\s*/).map(nomePag).filter(Boolean);
+const lugarDoNo = (no) => ({ pagina: no[0], carrossel: no[1], faixa: no[2] });
+const noDoLugar = (l) => [l.pagina, l.carrossel, l.faixa];
+const lugarIgual = (a, b) => mesmoNome(a.pagina, b.pagina) && mesmoNome(a.carrossel, b.carrossel) && mesmoNome(a.faixa, b.faixa);
+/* o lugar está DENTRO do nó (a página, o carrossel ou a própria faixa) */
+const lugarEm = (l, no) => noDoLugar(l).slice(0, no.length).every((n, i) => mesmoNome(n, no[i]));
+
+function lugaresDe(it) {
+  const e = edicoes[it.caminho] || {};
+  const l = Array.isArray(e.lugares) ? e.lugares : (Array.isArray(it.lugares) ? it.lugares : []);
+  return l.filter((x) => x && x.pagina && x.carrossel && x.faixa).map((x) => Object.assign({}, x));
+}
+function definirLugares(caminho, lista) {
+  const it = acharItem(caminho);
+  const limpa = [];
+  (lista || []).forEach((x) => {
+    const l = { pagina: nomePag(x.pagina), carrossel: nomePag(x.carrossel), faixa: nomePag(x.faixa) };
+    if (!l.pagina || !l.carrossel || !l.faixa || limpa.some((y) => lugarIgual(y, l))) return;
+    if (typeof x.ordem === "number" && isFinite(x.ordem)) l.ordem = x.ordem;
+    limpa.push(l);
+  });
+  /* lista vazia fica gravada só quando o robô publicou alguma - senão os
+     lugares de lá voltariam sozinhos */
+  const pub = it && Array.isArray(it.lugares) && it.lugares.length;
+  editar(caminho, "lugares", limpa.length || pub ? limpa : "");
+}
+const foraDoMix = (it) => val(it, "foraDoMix") === true;
+function definirForaDoMix(caminho, fora) {
+  const it = acharItem(caminho);
+  editar(caminho, "foraDoMix", fora ? true : (it && it.foraDoMix ? false : ""));
+}
+
+/* A ÁRVORE COMO ELA VÊ: a dela, mais qualquer lugar que alguma foto tenha
+   e a árvore não (veio de outro navegador, ou escrito à mão) - no fim,
+   para dar para ver e tirar. Mesma regra do robô. */
+function arvoreVista() {
+  const a = JSON.parse(JSON.stringify(paginasDef || []));
+  const por = (lista, nome, novo) => {
+    let x = lista.find((n) => mesmoNome(n.name, nome));
+    if (!x) { x = novo(nomePag(nome)); lista.push(x); }
+    return x;
+  };
+  a.forEach((p) => {
+    p.carrosseis = Array.isArray(p.carrosseis) ? p.carrosseis : [];
+    p.carrosseis.forEach((c) => { c.faixas = Array.isArray(c.faixas) ? c.faixas : []; });
+  });
+  itens.forEach((x) => {
+    if (ehLixo(x)) return;
+    lugaresDe(x).forEach((l) => {
+      const p = por(a, l.pagina, (n) => ({ name: n, carrosseis: [] }));
+      const c = por(p.carrosseis, l.carrossel, (n) => ({ name: n, faixas: [] }));
+      por(c.faixas, l.faixa, (n) => ({ name: n }));
+    });
+  });
+  return a;
+}
+/* a lista dos filhos de um nó (a raiz é []) */
+function filhosDe(a, no) {
+  if (!no.length) return a;
+  const p = a.find((x) => mesmoNome(x.name, no[0]));
+  if (!p) return null;
+  if (no.length === 1) return p.carrosseis;
+  const c = p.carrosseis.find((x) => mesmoNome(x.name, no[1]));
+  return c && no.length === 2 ? c.faixas : null;
+}
+/* todas as faixas, em ordem: [["Pro","curta!","Revistas"], ...] */
+function todasFaixas() {
+  const out = [];
+  arvoreVista().forEach((p) => p.carrosseis.forEach((c) => c.faixas.forEach((f) => out.push([p.name, c.name, f.name]))));
+  return out;
+}
+const gravarArvore = (a) => { paginasDef = a; salvar(); };
+
+/* CRIAR: nome repetido (maiúscula diferente) devolve o que já existe */
+function criarNo(pai, nome) {
+  nome = nomePag(nome);
+  if (!nome || pai.length > 2) return null;
+  const a = arvoreVista();
+  const lista = filhosDe(a, pai);
+  if (!lista) return null;
+  const ja = lista.find((x) => mesmoNome(x.name, nome));
+  if (ja) return pai.concat([ja.name]);
+  lista.push(pai.length === 0 ? { name: nome, carrosseis: [] } : pai.length === 1 ? { name: nome, faixas: [] } : { name: nome });
+  gravarArvore(a);
+  return pai.concat([nome]);
+}
+/* "Pro › curta! › Revistas" de uma vez: cria o que faltar */
+function criarCaminho(no) {
+  let atual = [];
+  for (const n of no.slice(0, 3)) { atual = criarNo(atual, n); if (!atual) return null; }
+  return atual;
+}
+/* RENOMEAR: a árvore e as fotos que estão nele */
+function renomearNo(no, novo) {
+  novo = nomePag(novo);
+  if (!novo) return "vazio";
+  const a = arvoreVista();
+  const lista = filhosDe(a, no.slice(0, -1));
+  const x = lista && lista.find((n) => mesmoNome(n.name, no[no.length - 1]));
+  if (!x) return "sumiu";
+  if (lista.some((n) => n !== x && mesmoNome(n.name, novo))) return "repetido";
+  x.name = novo;
+  gravarArvore(a);
+  const k = no.length - 1;
+  const campo = ["pagina", "carrossel", "faixa"][k];
+  itens.forEach((it) => {
+    const ls = lugaresDe(it);
+    if (!ls.some((l) => lugarEm(l, no))) return;
+    definirLugares(it.caminho, ls.map((l) => lugarEm(l, no) ? Object.assign({}, l, { [campo]: novo }) : l));
+  });
+  return "";
+}
+/* EXCLUIR: sai da árvore e das fotos. Nenhuma foto é apagada, e na Mix
+   nada muda (o "Aparece no Mix" fica como estava). */
+function apagarNo(no) {
+  const a = arvoreVista();
+  const lista = filhosDe(a, no.slice(0, -1));
+  const i = lista ? lista.findIndex((n) => mesmoNome(n.name, no[no.length - 1])) : -1;
+  if (i >= 0) lista.splice(i, 1);
+  gravarArvore(a);
+  itens.forEach((it) => {
+    const ls = lugaresDe(it);
+    if (ls.some((l) => lugarEm(l, no))) definirLugares(it.caminho, ls.filter((l) => !lugarEm(l, no)));
+  });
+  if (filtroLugar && no.every((n, j) => mesmoNome(n, filtroLugar[j]))) filtroLugar = null;
+}
+/* SUBIR / DESCER entre os irmãos */
+function moverNo(no, passo) {
+  const a = arvoreVista();
+  const lista = filhosDe(a, no.slice(0, -1));
+  const i = lista ? lista.findIndex((n) => mesmoNome(n.name, no[no.length - 1])) : -1;
+  const j = i + passo;
+  if (i < 0 || j < 0 || j >= lista.length) return;
+  [lista[i], lista[j]] = [lista[j], lista[i]];
+  gravarArvore(a);
+}
+/* as fotos que estão num nó (as vivas: arquivada e lixeira não contam) */
+function fotosNoNo(no) {
+  return itens.filter((x) => ativa(x) && lugaresDe(x).some((l) => lugarEm(l, no)));
+}
+
+/* A ORDEM DENTRO DA FAIXA: o número `ordem` do lugar. Sem número, depois
+   das numeradas, na ordem da lista - a mesma conta do BigaFaixas. */
+const ordemNaFaixa = (it, no) => {
+  const l = lugaresDe(it).find((x) => lugarEm(x, no));
+  return l && typeof l.ordem === "number" ? l.ordem : 1e6 + itens.indexOf(it);
+};
+function fotosDaFaixa(no) {
+  return fotosNoNo(no).sort((a, b) => ordemNaFaixa(a, no) - ordemNaFaixa(b, no));
+}
+/* grava 1, 2, 3... na ordem da lista - as outras faixas da foto não mudam */
+function numerarFaixa(no, caminhos) {
+  caminhos.forEach((c, k) => {
+    const it = acharItem(c);
+    if (!it) return;
+    definirLugares(c, lugaresDe(it).map((l) => lugarEm(l, no) ? Object.assign({}, l, { ordem: k + 1 }) : l));
+  });
+}
+/* PÔR NA FAIXA: entra no FIM dela */
+function porNaFaixa(caminho, no) {
+  const it = acharItem(caminho);
+  if (!it || no.length !== 3) return;
+  const ls = lugaresDe(it);
+  if (ls.some((l) => lugarEm(l, no))) return;
+  const fim = fotosDaFaixa(no).reduce((m, x) => {
+    const o = ordemNaFaixa(x, no);
+    return o < 1e6 ? Math.max(m, o) : m + 1;
+  }, 0);
+  definirLugares(caminho, ls.concat([Object.assign(lugarDoNo(no), { ordem: fim + 1 })]));
+}
+function tirarDaFaixa(caminho, no) {
+  const it = acharItem(caminho);
+  if (!it) return;
+  definirLugares(caminho, lugaresDe(it).filter((l) => !lugarEm(l, no)));
+  numerarFaixa(no, fotosDaFaixa(no).map((x) => x.caminho));
+}
+/* uma casa para a frente (-1) ou para trás (+1), e numera a faixa toda */
+function moverNaFaixa(caminho, no, passo) {
+  const seq = fotosDaFaixa(no).map((x) => x.caminho);
+  const i = seq.indexOf(caminho), j = i + passo;
+  if (i < 0 || j < 0 || j >= seq.length) return;
+  [seq[i], seq[j]] = [seq[j], seq[i]];
+  numerarFaixa(no, seq);
+}
+/* em lote, como as tags: se TODAS já estão na faixa, tira; senão, põe */
+function aplicarFaixa(caminhos, no) {
+  const its = caminhos.map(acharItem).filter(Boolean);
+  const todas = its.length > 0 && its.every((x) => lugaresDe(x).some((l) => lugarEm(l, no)));
+  its.forEach((x) => { if (todas) tirarDaFaixa(x.caminho, no); else porNaFaixa(x.caminho, no); });
+  salvar();
+  return { n: its.length, tirou: todas };
+}
+
 
 /* ---------- ANOS DE UM CARROSSEL ----------  (17/09/2026)
    O site passou a mostrar o intervalo das fotos: "2022–2026". Aqui o
@@ -2282,6 +2552,9 @@ function textoDoArquivo() {
     saida.collections = {};
     Object.keys(colecoesDef).sort().forEach((c) => { saida.collections[c] = colecoesDef[c]; });
   }
+  /* a árvore das páginas, só quando existe (mix-info.json de quem não usa
+     continua idêntico) */
+  if (paginasDef && paginasDef.length) saida.paginas = paginasDef;
   Object.keys(edicoes).sort().forEach((c) => { saida.items[c] = edicoes[c]; });
   if (siteCfg && Object.keys(siteCfg).length) {
     saida.site = {};
@@ -2413,7 +2686,7 @@ function menuDaColecao(nome, alvo) {
     { id: "sobe", rotulo: "Subir", faz: () => { moverColecao(nome, -1); desenhar(); } },
     { id: "desce", rotulo: "Descer", faz: () => { moverColecao(nome, 1); desenhar(); } },
     "-",
-    { id: "ver", rotulo: "Ver as fotos", faz: () => { filtroCol = nome; filtro = ""; mostrar = "fotos"; desenhar(); } },
+    { id: "ver", rotulo: "Ver as fotos", faz: () => { filtroCol = nome; filtroLugar = null; filtro = ""; mostrar = "fotos"; desenhar(); } },
     { id: "exclui", rotulo: c.pasta ? "Excluir do site" : "Excluir a coleção", perigo: true, faz: async () => {
         const fotos = c.n ? (c.n === 1 ? "A foto continua" : "As " + c.n + " fotos continuam") : "";
         const ok = await perguntar(c.pasta ? "Excluir “" + nome + "” do site?" : "Excluir a coleção “" + nome + "”?",
@@ -2551,7 +2824,7 @@ function desenharLado() {
       };
     });
   };
-  ligarLista("[data-col]", (n) => { filtroCol = filtroCol === n ? "" : n; filtro = ""; mostrar = "fotos"; desenhar(); },
+  ligarLista("[data-col]", (n) => { filtroCol = filtroCol === n ? "" : n; filtroLugar = null; filtro = ""; mostrar = "fotos"; desenhar(); },
     menuDaColecao,
     (de, para) => {
       const ordem = todasColecoes().map((c) => c.nome);
@@ -2614,6 +2887,101 @@ function desenharLado() {
       desenhar();
     };
   });
+  desenharPaginas();
+}
+
+/* ---------- AS PÁGINAS DO SITE, no menu lateral ----------  (19/10/2026)
+   Abre por camadas, como a coleção abre as tags dela: a página aberta
+   mostra os carrosséis; o carrossel aberto mostra as faixas. Assim o
+   menu não vira uma árvore enorme. */
+const dentroDe = (no) => !!filtroLugar && no.every((n, i) => mesmoNome(n, filtroLugar[i]));
+const dadoNo = (no) => esc(JSON.stringify(no));
+function linhaNo(no, classe) {
+  const n = fotosNoNo(no).length;
+  const on = filtroLugar && filtroLugar.length === no.length && dentroDe(no);
+  return '<button class="item ' + classe + (on ? " on" : "") + '" data-no="' + dadoNo(no) + '">'
+    + '<span class="rotulo">' + esc(no[no.length - 1]) + '</span>'
+    + '<span class="qtd">' + n + '</span>'
+    + '<span class="engrenagem" data-menuno="' + dadoNo(no) + '" role="button" tabindex="0"'
+    + ' aria-label="Opções de ' + esc(textoNo(no)) + '">' + SVG_ENGRENAGEM + '</span></button>';
+}
+function desenharPaginas() {
+  const a = arvoreVista();
+  $("qtdPag").textContent = a.length || "";
+  $("listaPag").innerHTML = a.map((p) => {
+    const np = [p.name];
+    return linhaNo(np, "pag") + (!dentroDe(np) ? "" : '<div class="sub-pag" role="group" aria-label="Carrosséis de ' + esc(p.name) + '">'
+      + p.carrosseis.map((c) => {
+          const nc = [p.name, c.name];
+          return linhaNo(nc, "sub pag") + (!dentroDe(nc) ? "" : '<div class="sub-pag" role="group" aria-label="Faixas de ' + esc(c.name) + '">'
+            + c.faixas.map((f) => linhaNo([p.name, c.name, f.name], "sub pag")).join("")
+            + '<button class="novo-bt sub" data-novono="' + dadoNo(nc) + '"><span class="mais" aria-hidden="true">+</span> Faixa em '
+            + esc(c.name) + '</button></div>');
+        }).join("")
+      + '<button class="novo-bt sub" data-novono="' + dadoNo(np) + '"><span class="mais" aria-hidden="true">+</span> Carrossel em '
+      + esc(p.name) + '</button></div>');
+  }).join("");
+  const ler = (t) => { try { return JSON.parse(t); } catch (e) { return null; } };
+  $("listaPag").querySelectorAll("[data-no]").forEach((b) => {
+    const no = ler(b.dataset.no);
+    if (!no) return;
+    b.onclick = (e) => {
+      if (e.target.closest("[data-menuno]")) return;
+      const igual = filtroLugar && filtroLugar.length === no.length && dentroDe(no);
+      filtroLugar = igual ? (no.length > 1 ? no.slice(0, -1) : null) : no;
+      filtroCol = ""; filtroTagCol = null; filtro = ""; mostrar = "fotos";
+      desenhar();
+    };
+    b.oncontextmenu = (e) => { e.preventDefault(); menuDoNo(no, e); };
+  });
+  $("listaPag").querySelectorAll("[data-menuno]").forEach((g) => {
+    g.onclick = (e) => { e.stopPropagation(); const no = ler(g.dataset.menuno); if (no) menuDoNo(no, g); };
+  });
+  $("listaPag").querySelectorAll("[data-novono]").forEach((b) => {
+    b.onclick = async () => {
+      const pai = ler(b.dataset.novono);
+      if (!pai) return;
+      const nome = await perguntar(pai.length === 1 ? "Novo carrossel em “" + pai[0] + "”" : "Nova faixa em “" + textoNo(pai) + "”",
+        pai.length === 1 ? "Um carrossel é um bloco de faixas na página. Depois, crie as faixas dentro dele."
+          : "Cada faixa é uma tira com título e as fotos dela. Ponha as fotos pelo pop-up da foto ou pelo botão direito.",
+        { dica: pai.length === 1 ? "Nome do carrossel" : "Nome da faixa" });
+      if (!nome) return;
+      const no = criarNo(pai, nome);
+      if (!no) return;
+      filtroLugar = no; filtroCol = ""; filtro = ""; mostrar = "fotos";
+      mostrarEstado(textoNo(no) + " criada", "ok");
+      desenhar();
+    };
+  });
+}
+function menuDoNo(no, alvo) {
+  const nivel = ["a página", "o carrossel", "a faixa"][no.length - 1];
+  abrirMenu(alvo, [
+    { id: "sobe", rotulo: "Subir", faz: () => { moverNo(no, -1); desenhar(); } },
+    { id: "desce", rotulo: "Descer", faz: () => { moverNo(no, 1); desenhar(); } },
+    { id: "nome", rotulo: "Renomear", faz: async () => {
+        const novo = await perguntar("Renomear " + nivel + " “" + no[no.length - 1] + "”",
+          "As fotos que estão aqui vão junto.", { dica: no[no.length - 1] }, "Renomear");
+        if (!novo) return;
+        const erro = renomearNo(no, novo);
+        if (erro === "repetido") { mostrarEstado("já existe “" + nomePag(novo) + "” aqui", "erro"); return; }
+        if (erro) return;
+        if (filtroLugar && dentroDe(no)) filtroLugar[no.length - 1] = nomePag(novo);
+        desenhar();
+        mostrarEstado("agora é “" + nomePag(novo) + "”", "ok");
+      } },
+    "-",
+    { id: "ver", rotulo: "Ver as fotos", faz: () => { filtroLugar = no; filtroCol = ""; filtro = ""; mostrar = "fotos"; desenhar(); } },
+    { id: "exclui", rotulo: "Excluir " + nivel, perigo: true, faz: async () => {
+        const n = fotosNoNo(no).length;
+        const ok = await perguntar("Excluir " + nivel + " “" + textoNo(no) + "”?",
+          (n ? (n === 1 ? "A foto sai daqui" : "As " + n + " fotos saem daqui") + ", mas nenhuma é apagada. " : "")
+          + "Na Mix nada muda.");
+        if (!ok) return;
+        apagarNo(no); desenhar();
+        mostrarEstado("“" + textoNo(no) + "” excluída", "ok");
+      } },
+  ]);
 }
 
 /* ---------- BARRA DE CIMA ---------- */
@@ -2621,8 +2989,13 @@ function baseDaVista() {
   if (filtro === "__lixo") return naLixeira();
   if (filtro === "__arq") return itens.filter((x) => ehArq(x) && !ehLixo(x)).concat(arquivadasOrfas());
   const vivas = itens.filter((x) => !ehArq(x) && !ehSeguidora(x) && !ehLixo(x));
-  return filtroCol ? vivas.filter((x) => colecoesDe(x).includes(filtroCol)) : vivas;
+  if (filtroCol) return vivas.filter((x) => colecoesDe(x).includes(filtroCol));
+  /* uma página, um carrossel ou uma faixa aberta no menu (19/10/2026) */
+  if (filtroLugar) return vivas.filter((x) => lugaresDe(x).some((l) => lugarEm(l, filtroLugar)));
+  return vivas;
 }
+/* a faixa aberta (os três nomes), ou null */
+const faixaAberta = () => (!filtroCol && filtroLugar && filtroLugar.length === 3) ? filtroLugar : null;
 function visiveis() {
   let l = baseDaVista();
   if (mostrar === "carrosseis") l = l.filter((x) => paginas(x).length > 1);
@@ -2639,10 +3012,14 @@ function visiveis() {
       const txt = [val(x, "name"), val(x, "phrase"), valGrupo(x, "name"), valGrupo(x, "phrase"),
         tagsDe(x).join(" "), colecoesDe(x).join(" "),
         colecoesDe(x).map((c) => tagsColDe(x, c).join(" ")).join(" "),
+        lugaresDe(x).map((lg) => textoNo(noDoLugar(lg))).join(" "),
         x.caminho, faixaDeAnos(x), val(x, "year")].join(" ");
       return txt.toLowerCase().includes(t);
     });
   }
+  /* numa FAIXA, a ordem é a dela - a mesma que o site mostra */
+  const fx = faixaAberta();
+  if (fx) return l.slice().sort((a, b) => ordemNaFaixa(a, fx) - ordemNaFaixa(b, fx));
   return l.filter((x) => x.nova).concat(l.filter((x) => !x.nova));
 }
 function desenharAlternador() {
@@ -2651,9 +3028,9 @@ function desenharAlternador() {
   const nCol = todasColecoes().length;
   const op = [["fotos", "Fotos", base.length]];
   const especial = filtro === "__arq" || filtro === "__lixo";
-  if (!filtroCol && !especial) op.push(["colecoes", "Coleções", nCol]);
+  if (!filtroCol && !filtroLugar && !especial) op.push(["colecoes", "Coleções", nCol]);
   op.push(["carrosseis", "Carrosséis", nCar]);
-  if (mostrar === "colecoes" && (filtroCol || especial)) mostrar = "fotos";
+  if (mostrar === "colecoes" && (filtroCol || filtroLugar || especial)) mostrar = "fotos";
   $("alternador").innerHTML = op.map(([k, r, n]) =>
     '<button class="' + (mostrar === k ? "on" : "") + '" data-m="' + k + '" aria-pressed="' + (mostrar === k) + '">'
     + r + ' <span class="n">' + n + '</span></button>').join("");
@@ -2671,6 +3048,10 @@ function desenharChips() {
   if (filtroCol) {
     f.push('<button class="chip on" id="btSairCol" title="Ver todas as fotos">Coleção: '
       + esc(filtroCol) + ' <span class="n">×</span></button>');
+  }
+  if (filtroLugar && !filtroCol) {
+    f.push('<button class="chip on" id="btSairLugar" title="Ver todas as fotos">Página: '
+      + esc(textoNo(filtroLugar)) + ' <span class="n">×</span></button>');
   }
   f.push('<button class="chip' + (filtro === "" || filtro === "__arq" ? " on" : "") + '" data-f="">Todas'
     + ' <span class="n">' + base.length + '</span></button>');
@@ -2711,6 +3092,8 @@ function desenharChips() {
   });
   const sc = $("btSairCol");
   if (sc) sc.onclick = () => { filtroCol = ""; desenhar(); };
+  const sl = $("btSairLugar");
+  if (sl) sl.onclick = () => { filtroLugar = null; desenhar(); };
 }
 
 /* ---------- SELEÇÃO ---------- */
@@ -2799,14 +3182,14 @@ function desenharGrade() {
 
   /* --- as coleções, em mosaico --- */
   $("btLimparLixo").hidden = !(filtro === "__lixo" && naLixeira().length);
-  if (mostrar === "colecoes" && !filtroCol && filtro !== "__arq" && filtro !== "__lixo") {
+  if (mostrar === "colecoes" && !filtroCol && !filtroLugar && filtro !== "__arq" && filtro !== "__lixo") {
     const cs = todasColecoes();
     $("tituloVista").textContent = "Todas as coleções";
     $("conta").textContent = cs.length + (cs.length === 1 ? " coleção" : " coleções");
     $("grade").innerHTML = cs.length ? cs.map(cartaoDaColecao).join("")
       : '<div class="vazio">Nenhuma coleção ainda.</div>';
     $("grade").querySelectorAll("[data-abrircol]").forEach((b) => {
-      b.onclick = () => { filtroCol = b.dataset.abrircol; mostrar = "fotos"; filtro = ""; desenhar(); };
+      b.onclick = () => { filtroCol = b.dataset.abrircol; filtroLugar = null; mostrar = "fotos"; filtro = ""; desenhar(); };
       b.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); b.onclick(); } };
       b.oncontextmenu = (e) => { e.preventDefault(); menuDaColecao(b.dataset.abrircol, e); };
     });
@@ -2822,8 +3205,10 @@ function desenharGrade() {
   /* a colecao aberta TEM subtags? so entao o selo de baixo aparece - numa
      colecao sem nenhuma, "sem subtag" em toda foto seria so ruido */
   const comSubtags = !!filtroCol && filtro !== "__lixo" && tagsDaColecao(filtroCol).length > 0;
+  const fxAberta = faixaAberta();
   $("tituloVista").textContent = filtroCol
       ? filtroCol + (tcAtiva === "__sem" ? " › sem subtag" : tcAtiva ? " › " + tcAtiva : "")
+    : filtroLugar ? textoNo(filtroLugar)
     : filtro === "__arq" ? "Arquivadas"
     : filtro === "__lixo" ? "Lixeira"
     : filtro === "__sem" ? "Sem tag"
@@ -2844,6 +3229,7 @@ function desenharGrade() {
       + ' aria-label="Marcar">' + SVG_CHECK + '</span>';
     const selo = ehArq(it) ? '<span class="selo arq">arquivada</span>'
       : ehGrupo ? '<span class="selo">' + seq.length + ' fotos</span>'
+      : foraDoMix(it) ? '<span class="selo fora">fora do Mix</span>'
       : it.nova ? '<span class="selo nova">nova</span>'
       : temVideoLink(it) ? '<span class="selo">▶ vídeo</span>'
       : (!t ? '<span class="selo sem">sem tag</span>' : "");
@@ -2854,7 +3240,9 @@ function desenharGrade() {
         + '<span class="entrar">abrir carrossel</span>'
       : midia(it.image || it.video, "");
     const sub = comSubtags ? tagsColDe(it, filtroCol) : [];
-    const seloCol = !comSubtags ? ""
+    /* numa faixa, a posição da foto nela (19/10/2026) */
+    const seloCol = fxAberta ? '<div class="selo-col"><span class="pag">' + (l.indexOf(it) + 1) + 'º</span></div>'
+      : !comSubtags ? ""
       : '<div class="selo-col">' + (sub.length ? sub.map((s) => '<span>' + esc(s) + '</span>').join("")
         : '<span class="sem">sem subtag</span>') + '</div>';
     return '<div class="cartao" data-foto="' + esc(it.caminho) + '">'
@@ -2864,7 +3252,8 @@ function desenharGrade() {
       + '<div class="nome">' + esc(nome) + '</div>'
       + '<div class="meta"><span class="ponto"></span>' + esc(t || "sem tag")
       + (ano ? " · " + esc(ano) : "")
-      + (colecoesDe(it).length ? " · " + esc(colecoesDe(it).join(", ")) : "") + '</div></div>';
+      + (colecoesDe(it).length ? " · " + esc(colecoesDe(it).join(", ")) : "")
+      + (foraDoMix(it) ? " · fora do Mix" : "") + '</div></div>';
   }).join("") : '<div class="vazio">' + (filtro === "__lixo" ? "A lixeira está vazia." : "Nada aqui com esse filtro.") + '</div>';
 
   $("grade").querySelectorAll("[data-foto]").forEach((c) => {
@@ -2917,20 +3306,67 @@ function desenharGrade() {
       const subtags = filtroCol && filtro !== "__arq" && cols.includes(filtroCol)
         ? opcoesSubtag(filtroCol, alvos, alvos.length > 1 ? () => selecao.clear() : null) : [];
       const nTela = visiveis().length;
-      abrirMenu(e, subtags.concat(subtags.length ? ["-"] : []).concat([
+      /* AS PÁGINAS DO SITE (19/10/2026): numa faixa aberta, a ordem dela
+         no topo; e sempre "pôr numa página" e o "Aparece no Mix" */
+      const fx = faixaAberta();
+      const daFaixa = fx && lugaresDe(it).some((lg) => lugarEm(lg, fx)) ? [
+        { id: "fxant", rotulo: "Mais para a frente em " + fx[2], faz: () => { moverNaFaixa(caminho, fx, -1); salvar(); desenhar(); } },
+        { id: "fxdep", rotulo: "Mais para trás em " + fx[2], faz: () => { moverNaFaixa(caminho, fx, 1); salvar(); desenhar(); } },
+        { id: "fxtira", rotulo: "Tirar de " + fx[2], faz: () => { tirarDaFaixa(caminho, fx); salvar(); desenhar(); } },
+        "-"] : [];
+      const todasFora = alvos.every((c) => { const x = acharItem(c); return x && foraDoMix(x); });
+      const doSite = [
+        { id: "pagpor", rotulo: "Pôr numa página do site…", faz: () => menuDasFaixas(alvos, e) },
+        { id: "mixfora", rotulo: todasFora ? "Voltar a aparecer no Mix" : "Tirar do Mix (fica nas páginas)", faz: () => {
+            alvos.forEach((c) => definirForaDoMix(c, !todasFora));
+            if (alvos.length > 1) selecao.clear();
+            salvar(); desenhar();
+            mostrarEstado(fotosTxt(alvos.length) + (todasFora ? " de volta no Mix" : " fora do Mix"), "ok");
+          } },
+      ];
+      abrirMenu(e, daFaixa.concat(subtags).concat(subtags.length ? ["-"] : []).concat([
         { id: "abrir", rotulo: "Abrir", faz: () => abrirPainel(caminho) },
         { id: "marcar", rotulo: selecao.has(caminho) ? "Desmarcar" : "Marcar", faz: () => marcar(caminho) },
         { id: "marcartodas", rotulo: "Marcar todas desta tela (" + nTela + ")", faz: () => {
             visiveis().forEach((x) => selecao.add(x.caminho)); desenhar(); } },
       ]).concat(cols.length ? [{ id: "col", rotulo: "Ver “" + cols[0] + "”",
-        faz: () => { filtroCol = cols[0]; filtro = ""; mostrar = "fotos"; desenhar(); } }] : [])
+        faz: () => { filtroCol = cols[0]; filtroLugar = null; filtro = ""; mostrar = "fotos"; desenhar(); } }] : [])
         .concat(paginas(it).length > 1 ? [{ id: "desagrupa", rotulo: "Desfazer o carrossel",
           faz: () => { selecao.clear(); selecao.add(caminho); desagrupar(); } }] : [])
+        .concat(["-"]).concat(doSite)
         .concat(["-", { id: "arq", rotulo: ehArq(it) ? "Desarquivar" : "Arquivar", perigo: !ehArq(it),
           faz: () => { editar(caminho, "archived", ehArq(it) ? false : true); salvar(); desenhar(); } },
           { id: "lixo", rotulo: "Excluir", perigo: true, faz: () => moverParaLixeira([caminho]) }]));
     };
   });
+}
+
+/* "Pôr numa página do site…": as faixas, com ✓ quando TODAS já estão nela */
+function menuDasFaixas(caminhos, alvo) {
+  const its = caminhos.map(acharItem).filter(Boolean);
+  const fim = (msg) => { if (caminhos.length > 1) selecao.clear(); desenhar(); mostrarEstado(msg, "ok"); };
+  abrirMenu(alvo, todasFaixas().map((no, i) => {
+    const todas = its.length && its.every((x) => lugaresDe(x).some((lg) => lugarEm(lg, no)));
+    return { id: "fx" + i, rotulo: (todas ? "✓ " : "") + textoNo(no), faz: () => {
+      const r = aplicarFaixa(caminhos, no);
+      fim(fotosTxt(r.n) + (r.tirou ? " fora de " : " em ") + textoNo(no));
+    } };
+  }).concat([{ id: "fxnovo", rotulo: "+ Novo lugar…", faz: async () => {
+    const no = await pedirLugar();
+    if (!no) return;
+    caminhos.forEach((c) => porNaFaixa(c, no));
+    salvar(); fim(fotosTxt(its.length) + " em " + textoNo(no));
+  } }]));
+}
+/* pede "Página › Carrossel › Faixa" e cria o que faltar */
+async function pedirLugar() {
+  const t = await perguntar("Novo lugar",
+    "Escreva a página, o carrossel e a faixa, separados por ›, > ou /. Ex.: Pro › curta! › Revistas. O que ainda não existe é criado.",
+    { dica: "Pro › curta! › Revistas" }, "Pôr aqui");
+  if (!t) return null;
+  const no = separarNo(t);
+  if (no.length !== 3) { mostrarEstado("faltou um nome: são três, Página › Carrossel › Faixa", "erro"); return null; }
+  return criarCaminho(no);
 }
 
 /* ---------- O POP-UP DA FOTO ----------
@@ -3176,6 +3612,35 @@ function abrirPainel(caminho) {
         + (ehGrupo ? "esta foto vira o vídeo, e ele toca no lugar dela dentro do carrossel. Cada foto do carrossel tem o seu. "
                    : "esta foto vira a capa do card, com o play. ")
         + "<strong>Toca no pop-up</strong> abre o player ali mesmo, com o botão de info; <strong>Abre em outra aba</strong> leva para a plataforma. O <strong>Link</strong> dos textos continua sendo o do botão de info — são dois lugares diferentes.");
+  /* AS PÁGINAS DO SITE (19/10/2026): em que faixas a foto entra, a
+     posição dela em cada uma, e o "Aparece no Mix" */
+  const meusLugares = lugaresDe(it);
+  const fora = foraDoMix(it);
+  const faixasTodas = todasFaixas();
+  const corpoLugares = chave("fNoMix", "Aparece no Mix", !fora)
+    + (meusLugares.length ? '<div class="lugares">' + meusLugares.map((lg, i) => {
+        const no = noDoLugar(lg);
+        const seqFx = fotosDaFaixa(no).map((x) => x.caminho);
+        const pos = seqFx.indexOf(it.caminho);
+        return '<div class="lugar-linha" data-lug="' + i + '"><span class="txt">' + esc(textoNo(no)) + '</span>'
+          + '<span class="pos">' + (pos >= 0 ? (pos + 1) + 'º de ' + seqFx.length : "") + '</span>'
+          + '<button class="mini-bt" type="button" data-lugmove="-1" aria-label="Mais para a frente"'
+          + (pos <= 0 ? " disabled" : "") + '>‹</button>'
+          + '<button class="mini-bt" type="button" data-lugmove="1" aria-label="Mais para trás"'
+          + (pos < 0 || pos >= seqFx.length - 1 ? " disabled" : "") + '>›</button>'
+          + '<button class="mini-bt perigo" type="button" data-lugtira="1" aria-label="Tirar de '
+          + esc(textoNo(no)) + '">tirar</button></div>';
+      }).join("") + '</div>' : "")
+    + (faixasTodas.length ? "" : '<p class="dica">Ainda não há páginas. Crie em <strong>Páginas do site</strong>, no menu, ou escreva o lugar em “+ novo lugar”.</p>')
+    + '<div class="escolhas" id="fLugares" role="group" aria-label="Faixas do site">'
+    + faixasTodas.map((no, i) => {
+        const on = meusLugares.some((lg) => lugarEm(lg, no));
+        return '<button class="escolha pag' + (on ? " on" : "") + '" type="button" data-lf="' + i + '" aria-pressed="' + on + '">'
+          + esc(textoNo(no)) + '</button>';
+      }).join("")
+    + '<button class="escolha" type="button" id="btNovoLugar">+ novo lugar</button></div>';
+  const resumoLugares = (meusLugares.map((lg) => textoNo(noDoLugar(lg))).join(", ") || "em nenhuma")
+    + (fora ? " · fora do Mix" : "");
   const corpo = '<div class="linha-idioma"><div class="alternador" id="fIdiomas" role="group"'
     + ' aria-label="Idioma dos textos">' + IDIOMAS.map((lg) =>
       '<button class="' + (idioma === lg[0] ? "on" : "") + '" data-lg="' + lg[0] + '">'
@@ -3203,6 +3668,8 @@ function abrirPainel(caminho) {
           })(),
         corpoClasse, !tagsDe(it).length,
         "A fila de cima são as <strong>tags</strong>, os filtros da barra de Cards — a foto pode ter várias, e aparece em cada uma. A do meio são as <strong>coleções</strong>, que viram cards na página Mix; a mesma foto pode estar em várias, e em nenhuma ela aparece só no All. Embaixo, uma linha para cada coleção da foto: as <strong>tags da coleção</strong>, que só aparecem quando alguém abre aquela coleção no site.")
+    + secao("lugares", "Páginas do site", resumoLugares, corpoLugares, false,
+        "Onde a foto aparece nas <strong>outras páginas do site</strong>, como a Pro: <strong>Página › Carrossel › Faixa</strong>. Pode estar em várias. As setas mudam a posição dentro da faixa. <strong>Aparece no Mix</strong> desligado tira a foto da página Mix (Cards e Coleções) e deixa nas outras páginas.")
     + (!ehGrupo ? secaoVideo : "")
     + (ehGrupo ? secao("pagina", "Foto " + (iSel + 1) + " de " + seq.length + (iSel === 0 ? " · capa" : ""),
         resumoPagina, corpoPagina, false,
@@ -3347,6 +3814,34 @@ function abrirPainel(caminho) {
       salvar(); abrirPainel(caminho); desenhar();
     };
   });
+  /* --- as páginas do site --- */
+  $("fNoMix").onclick = () => {
+    definirForaDoMix(it.caminho, !foraDoMix(it));
+    salvar(); abrirPainel(caminho); desenhar();
+  };
+  $("fLugares").querySelectorAll("[data-lf]").forEach((b) => {
+    b.onclick = () => {
+      const no = faixasTodas[+b.dataset.lf];
+      if (lugaresDe(it).some((lg) => lugarEm(lg, no))) tirarDaFaixa(it.caminho, no);
+      else porNaFaixa(it.caminho, no);
+      salvar(); abrirPainel(caminho); desenhar();
+    };
+  });
+  $("fCorpo").querySelectorAll("[data-lug]").forEach((row) => {
+    const no = noDoLugar(meusLugares[+row.dataset.lug]);
+    row.querySelectorAll("[data-lugmove]").forEach((b) => {
+      b.onclick = () => { moverNaFaixa(it.caminho, no, +b.dataset.lugmove); salvar(); abrirPainel(caminho); desenhar(); };
+    });
+    row.querySelector("[data-lugtira]").onclick = () => { tirarDaFaixa(it.caminho, no); salvar(); abrirPainel(caminho); desenhar(); };
+  });
+  $("btNovoLugar").onclick = async () => {
+    const no = await pedirLugar();
+    if (!no) return;
+    porNaFaixa(it.caminho, no);
+    abertas.add("lugares");
+    salvar(); abrirPainel(caminho); desenhar();
+    mostrarEstado("em " + textoNo(no), "ok");
+  };
   $("btNovaColPainel").onclick = async () => {
     const nome = await perguntar("Nova coleção", "Ela já entra nesta foto.", { dica: "Nome da coleção" });
     if (!nome) return;
@@ -3633,7 +4128,7 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (ev) => {
 
 document.querySelectorAll("[data-vista]").forEach((b) => {
   b.onclick = () => {
-    filtroCol = "";
+    filtroCol = ""; filtroLugar = null;
     const v = b.dataset.vista;
     filtro = v === "todas" ? "" : v === "semtag" ? "__sem" : v === "lixeira" ? "__lixo" : "__arq";
     if (filtro === "__arq" || filtro === "__lixo") mostrar = "fotos";
@@ -3653,6 +4148,7 @@ const ligarDobra = (bt, dobra) => {
 };
 ligarDobra("btDobraCol", "dobraCol");
 ligarDobra("btDobraTag", "dobraTag");
+ligarDobra("btDobraPag", "dobraPag");
 
 const ligarCriar = (bt, campo, input, criar) => {
   const sair = () => { $(campo).hidden = true; $(bt).hidden = false; $(input).value = ""; };
@@ -3669,6 +4165,13 @@ const ligarCriar = (bt, campo, input, criar) => {
 ligarCriar("btNovaCol", "campoCol", "novaCol", (n) => {
   const nome = criarColecao(n);
   if (nome) mostrarEstado("“" + nome + "” criada — entra no site quando ganhar a primeira foto", "ok");
+});
+ligarCriar("btNovaPag", "campoPag", "novaPag", (n) => {
+  const no = criarNo([], n);
+  if (!no) return;
+  /* já abre a página nova: o "+ Carrossel" dela aparece embaixo */
+  filtroLugar = no; filtroCol = ""; filtro = ""; mostrar = "fotos";
+  mostrarEstado("página “" + no[0] + "” criada — agora um carrossel dentro dela", "ok");
 });
 ligarCriar("btNovaTag", "campoTag", "novaTag", (n) => {
   if (!ordemTags.includes(n)) ordemTags.push(n);
@@ -4242,6 +4745,7 @@ window.addEventListener("drop", (e) => {
   tagsVisiveis = g.tagsVisiveis === undefined ? 2 : g.tagsVisiveis;
   colecoesDef = g.colecoesDef && typeof g.colecoesDef === "object" ? g.colecoesDef : null;
   siteCfg = g.siteCfg && typeof g.siteCfg === "object" ? g.siteCfg : null;
+  paginasDef = Array.isArray(g.paginasDef) ? g.paginasDef : null;
   desenhar();
   carregar();
 })();
