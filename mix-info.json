@@ -17,6 +17,14 @@
       "tags": [
         "Photo",
         "AI"
+      ],
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Cinelist",
+          "ordem": 3
+        }
       ]
     },
     "Imagens/2026-08/2026-08-29_18-28-23.jpg": {
@@ -34,7 +42,15 @@
         "Photography": [
           "Teste 1"
         ]
-      }
+      },
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Cinelist",
+          "ordem": 2
+        }
+      ]
     },
     "Imagens/2026-08/2026-08-29_19-05-56-2.jpg": {
       "name": "sadsa",
@@ -89,6 +105,14 @@
       ],
       "tags": [
         "Motion"
+      ],
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Cinelist",
+          "ordem": 1
+        }
       ]
     },
     "Imagens/2026-08/2026-08-29_19-05-56-5.jpg": {
@@ -197,5 +221,23 @@
     "UI": {
       "order": 1
     }
-  }
+  },
+  "paginas": [
+    {
+      "name": "GrupoCurta",
+      "carrosseis": [
+        {
+          "name": "Curta!",
+          "faixas": [
+            {
+              "name": "Cinelist"
+            },
+            {
+              "name": "Posters"
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
