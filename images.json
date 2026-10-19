@@ -107,7 +107,15 @@
       "collections": [
         "3D"
       ],
-      "tag": "Photo"
+      "tag": "Photo",
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Posters",
+          "ordem": 1
+        }
+      ]
     },
     {
       "name": "teste 4",
@@ -199,7 +207,15 @@
       "collections": [
         "Drawing"
       ],
-      "tag": "Motion"
+      "tag": "Motion",
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Posters",
+          "ordem": 2
+        }
+      ]
     },
     {
       "name": "TESTE",
