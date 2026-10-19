@@ -274,5 +274,118 @@
         }
       ]
     }
+  ],
+  "fotosDasPaginas": [
+    {
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-10/2026-10-19_20-03-10.jpg",
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Cinelist",
+          "ordem": 4
+        }
+      ]
+    },
+    {
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56.jpg",
+      "name": "detalhes",
+      "phrase": "Teste",
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Posters",
+          "ordem": 2
+        }
+      ]
+    },
+    {
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-8.jpg",
+      "phrase": "Arte conceitual",
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Posters",
+          "ordem": 2.001
+        }
+      ]
+    },
+    {
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-4.jpg",
+      "name": "Nome cara adesivo",
+      "phrase": "Legal",
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Cinelist",
+          "ordem": 1
+        }
+      ]
+    },
+    {
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-3.jpg",
+      "name": "Teste texto",
+      "phrase": "Imagem 2",
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Cinelist",
+          "ordem": 1.001
+        }
+      ]
+    },
+    {
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-5.jpg",
+      "name": "Teste texto",
+      "phrase": "teste 3",
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Cinelist",
+          "ordem": 1.002
+        }
+      ]
+    },
+    {
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-2.jpg",
+      "name": "sadsa",
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Posters",
+          "ordem": 1
+        }
+      ]
+    },
+    {
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_18-28-23.jpg",
+      "name": "TESTE",
+      "phrase": "ETETETETE",
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Cinelist",
+          "ordem": 2
+        }
+      ]
+    },
+    {
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_18-28-23-2.jpg",
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Cinelist",
+          "ordem": 3
+        }
+      ]
+    }
   ]
 }
