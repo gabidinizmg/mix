@@ -471,6 +471,23 @@ const montar = (arquivos, nomeColecao, info) => {
     tags = [...new Set(tags.map((x) => String(x || "").trim()).filter(Boolean))];
     if (tags.length) item.tag = tags[0];
     if (tags.length > 1) item.tags = tags;
+    /* AS TAGS DE CADA COLECAO (19/10/2026). Ela: "Fotografia (colecao) >
+       posso criar 4 tags especificas de fotografia sem sujar os cards".
+       Uma terceira lista, separada das tags de Cards: `tagsCol` no
+       organizador, { "Fotografia": ["Editorial"] }. So vale para colecao
+       a que a foto PERTENCE (tirou a foto da colecao, a tag dela some
+       junto). Sai como `tagsColecao`, e so quando existe - o images.json
+       de quem nao usa continua identico. */
+    if (d.tagsCol && typeof d.tagsCol === "object" && !Array.isArray(d.tagsCol)) {
+      const tc = {};
+      for (const n of membros) {
+        const l = d.tagsCol[n];
+        if (!Array.isArray(l)) continue;
+        const limpa = [...new Set(l.map((x) => String(x || "").trim()).filter(Boolean))];
+        if (limpa.length) tc[n] = limpa;
+      }
+      if (Object.keys(tc).length) item.tagsColecao = tc;
+    }
     itens.push(item);
   }
 };
@@ -561,6 +578,11 @@ const ocultas = new Set(Object.keys(ferramenta.collections)
   .map((n) => String(n).trim()));
 if (ocultas.size) {
   for (const it of itens) {
+    /* as tags da colecao escondida saem junto com ela */
+    if (it.tagsColecao) {
+      for (const n of Object.keys(it.tagsColecao)) if (ocultas.has(n)) delete it.tagsColecao[n];
+      if (!Object.keys(it.tagsColecao).length) delete it.tagsColecao;
+    }
     if (Array.isArray(it.collections)) {
       if (!it.collections.some((n) => ocultas.has(n))) continue;
       it.collections = it.collections.filter((n) => !ocultas.has(n));
@@ -588,6 +610,20 @@ for (const c of colecoes) {
 }
 colecoes.sort((a, b) => (a._ordem - b._ordem) || a.name.localeCompare(b.name));
 for (const c of colecoes) { delete c._ordem; delete c._pasta; }
+
+/* A ORDEM DAS TAGS DE CADA COLECAO (19/10/2026) - a mesma regra das tags
+   de Cards, logo abaixo: as que alguma foto usa, na ordem que ela definiu
+   no organizador (`tags` na colecao do mix-info.json); as que sobrarem
+   entram no fim. Colecao sem nenhuma nao ganha o campo. */
+for (const c of colecoes) {
+  const usadasCol = [...new Set(itens.flatMap((i) => (i.tagsColecao && i.tagsColecao[c.name]) || []))];
+  if (!usadasCol.length) continue;
+  const def = ferramenta.collections[c.name] || {};
+  const declaradas = Array.isArray(def.tags) ? def.tags.map((t) => String(t || "").trim()) : [];
+  const lista = declaradas.filter((t) => usadasCol.includes(t));
+  for (const t of usadasCol) if (!lista.includes(t)) lista.push(t);
+  c.tags = lista;
+}
 
 /* ORDEM DAS TAGS.
    O componente mostra as primeiras na barra e esconde o resto atras do

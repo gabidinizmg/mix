@@ -483,6 +483,15 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
 .escolha:hover { color: var(--texto); border-color: color-mix(in srgb, var(--texto-3) 60%, transparent); }
 .escolha.on { border-color: var(--roxo); background: rgba(124,84,255,.18); color: var(--texto); }
 .escolha.verde.on { border-color: var(--verde); background: color-mix(in srgb, var(--verde) 18%, transparent); }
+/* a terceira fila: as tags de cada colecao da foto (19/10/2026) */
+.escolhas.tags-col { align-items: center; padding-left: 10px; border-left: 2px solid color-mix(in srgb, var(--verde) 45%, transparent); }
+.tags-col-nome { font-size: 11.5px; color: var(--texto-3); margin-right: 2px; }
+.sub-tags { display: grid; gap: 2px; margin: 0 0 4px 22px; padding-left: 8px;
+  border-left: 2px solid color-mix(in srgb, var(--verde) 45%, transparent); }
+.item.sub { padding-top: 6px; padding-bottom: 6px; font-size: 13px; }
+.item.sub.on { box-shadow: inset 2px 0 0 var(--verde); }
+.novo-bt.sub { font-size: 12.5px; }
+.chip.verde.on { border-color: var(--verde); background: color-mix(in srgb, var(--verde) 16%, transparent); }
 .chave-linha { display: flex; align-items: center; gap: 10px; justify-content: flex-start; }
 .cfg-linha { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
 .campo input.cfg-num { width: 84px; flex: 0 0 84px; }
@@ -893,6 +902,11 @@ let colecoesDef = null;
 let siteCfg = null;
 let colecoesPub = [];
 let filtroCol = "";
+/* a tag DA COLECAO que a grade esta filtrando (19/10/2026): { col, tag }.
+   Guarda a colecao junto - trocou de colecao, ela simplesmente deixa de
+   valer, sem precisar lembrar de limpar em cada lugar que muda filtroCol. */
+let filtroTagCol = null;
+const tagColAtiva = () => (filtroTagCol && filtroCol && filtroTagCol.col === filtroCol) ? filtroTagCol.tag : "";
 
 /* A chave vive numa gaveta propria: assim exportar, importar ou limpar
    as edicoes nunca arrasta o token junto por descuido. */
@@ -1284,6 +1298,9 @@ async function carregar() {
         collection: it.collection || it.colecao || "",
         /* a LISTA, quando o robo a escreveu (so sai quando ela mexeu) */
         collections: Array.isArray(it.collections) ? it.collections.map(String) : null,
+        /* AS TAGS DE CADA COLECAO como o robo publicou (19/10/2026) */
+        tagsColecao: (it.tagsColecao && typeof it.tagsColecao === "object" && !Array.isArray(it.tagsColecao))
+          ? it.tagsColecao : {},
       };
     });
     juntarSubidas();
@@ -1292,7 +1309,8 @@ async function carregar() {
        acabou de apagar voltaria sozinha ate o robo rodar. */
     colecoesPub = (Array.isArray(d.collections) ? d.collections : [])
       .map((c) => ({ name: String((c && (c.name || c.nome)) || "").trim(),
-                     cover: (c && c.cover) || "", criada: !!(c && c.criada) }))
+                     cover: (c && c.cover) || "", criada: !!(c && c.criada),
+                     tags: (c && Array.isArray(c.tags)) ? c.tags.map(String) : [] }))
       .filter((c) => c.name);
     /* PRIMEIRO o mix-info.json do GitHub (ver "JUNTAR, NUNCA ATROPELAR").
        So se ele nao puder ser lido e que as colecoes criadas sao
@@ -1798,6 +1816,82 @@ function moverColecao(nome, passo) {
   });
   salvar();
 }
+/* ---------- AS TAGS DE CADA COLECAO ----------  (19/10/2026)
+   Ela: "Seria 3 tags - Tags cards, Coleções, 3 terceira tag de cada
+   coleção". Exemplo dela: Fotografia > Editorial, Case study - "sem sujar
+   os cards". No site, a barra de Cards continua com as tags de sempre; ao
+   abrir a colecao, a barra mostra so as tags DELA.
+   Onde mora:
+     - a LISTA (e a ordem) de cada colecao: `tags` em `colecoesDef[nome]`
+       - mix-info.json `collections`, o mesmo lugar da `order`
+     - o que cada foto tem: `tagsCol` na edicao, { "Fotografia": ["Editorial"] }
+       - o MAPA INTEIRO, entao a primeira mudanca copia o que o robo ja
+       tinha publicado para as outras colecoes da foto. */
+function tagsColDe(it, nome) {
+  const e = edicoes[it.caminho] || {};
+  if (e.tagsCol && typeof e.tagsCol === "object") {
+    return Array.isArray(e.tagsCol[nome]) ? e.tagsCol[nome].slice() : [];
+  }
+  const p = it.tagsColecao && it.tagsColecao[nome];
+  return Array.isArray(p) ? p.slice() : [];
+}
+function definirTagsCol(caminho, nome, lista) {
+  const it = acharItem(caminho);
+  if (!it) return;
+  const mapa = {};
+  colecoesDe(it).forEach((c) => { const l = tagsColDe(it, c); if (l.length) mapa[c] = l; });
+  const limpa = [...new Set((lista || []).map((t) => String(t || "").trim()).filter(Boolean))];
+  if (limpa.length) mapa[nome] = limpa; else delete mapa[nome];
+  editar(caminho, "tagsCol", mapa);
+}
+/* A lista da colecao: a que ela escreveu aqui manda. Sem ela, vale a que
+   o robo publicou. Tag que alguma foto usa e nao esta na lista entra no
+   fim - senao ela existiria no site e nao daria para tirar daqui. */
+function tagsDaColecao(nome) {
+  const def = (colecoesDef || {})[nome] || {};
+  const pub = colecoesPub.find((c) => c.name === nome);
+  const l = Array.isArray(def.tags) ? def.tags.slice() : ((pub && pub.tags) || []).slice();
+  itens.forEach((x) => {
+    if (!ativa(x) || !colecoesDe(x).includes(nome)) return;
+    tagsColDe(x, nome).forEach((t) => { if (!l.includes(t)) l.push(t); });
+  });
+  return l;
+}
+function gravarTagsDaColecao(nome, lista) {
+  if (!colecoesDef) colecoesDef = {};
+  colecoesDef[nome] = Object.assign({}, colecoesDef[nome] || {}, { tags: lista });
+  salvar();
+}
+function contarTagCol(nome, tag) {
+  return itens.filter((x) => ativa(x) && colecoesDe(x).includes(nome) && tagsColDe(x, nome).includes(tag)).length;
+}
+function criarTagCol(nome, tag) {
+  tag = String(tag || "").trim().replace(/\s+/g, " ");
+  if (!tag) return "";
+  const l = tagsDaColecao(nome);
+  /* "editorial" e "Editorial" seriam duas no site e uma na cabeca dela */
+  const ja = l.find((t) => t.toLowerCase() === tag.toLowerCase());
+  if (ja) return ja;
+  gravarTagsDaColecao(nome, l.concat([tag]));
+  return tag;
+}
+/* EXCLUIR a tag da colecao: sai da lista e das fotos. Nenhuma foto sai
+   da colecao, e as tags de Cards nao sao tocadas. */
+function apagarTagCol(nome, tag) {
+  itens.forEach((x) => {
+    const l = tagsColDe(x, nome);
+    if (l.includes(tag)) definirTagsCol(x.caminho, nome, l.filter((t) => t !== tag));
+  });
+  gravarTagsDaColecao(nome, tagsDaColecao(nome).filter((t) => t !== tag));
+}
+function moverTagCol(nome, tag, passo) {
+  const l = tagsDaColecao(nome);
+  const i = l.indexOf(tag), j = i + passo;
+  if (i < 0 || j < 0 || j >= l.length) return;
+  [l[i], l[j]] = [l[j], l[i]];
+  gravarTagsDaColecao(nome, l);
+}
+
 const temTrabalho = () => Object.keys(edicoes).length > 0
   || !!(colecoesDef && Object.keys(colecoesDef).length);
 
@@ -2309,6 +2403,26 @@ function menuDaTag(nome, alvo) {
   ]);
 }
 
+function menuDaTagCol(col, nome, alvo) {
+  abrirMenu(alvo, [
+    { id: "sobe", rotulo: "Subir", faz: () => { moverTagCol(col, nome, -1); desenhar(); } },
+    { id: "desce", rotulo: "Descer", faz: () => { moverTagCol(col, nome, 1); desenhar(); } },
+    "-",
+    { id: "ver", rotulo: "Ver as fotos", faz: () => { filtroTagCol = { col, tag: nome }; mostrar = "fotos"; desenhar(); } },
+    { id: "exclui", rotulo: "Excluir a tag", perigo: true, faz: async () => {
+        const n = contarTagCol(col, nome);
+        const ok = await perguntar("Excluir a tag “" + nome + "” de " + col + "?",
+          n ? (n === 1 ? "A foto continua" : "As " + n + " fotos continuam") + " na coleção, só sem esta tag. As tags de Cards não mudam."
+            : "Nenhuma foto usa esta tag.");
+        if (!ok) return;
+        apagarTagCol(col, nome);
+        if (tagColAtiva() === nome) filtroTagCol = null;
+        desenhar();
+        mostrarEstado("tag “" + nome + "” excluída de " + col, "ok");
+      } },
+  ]);
+}
+
 /* ---------- MENU LATERAL ---------- */
 const dobraAberta = (id) => { try { return localStorage.getItem("mix-dobra-" + id) === "1"; } catch (e) { return false; } };
 const gravarDobra = (id, v) => { try { localStorage.setItem("mix-dobra-" + id, v ? "1" : "0"); } catch (e) {} };
@@ -2333,7 +2447,19 @@ function desenharLado() {
     + '<span class="rotulo">' + esc(c.nome) + '</span>'
     + '<span class="qtd">' + c.n + '</span>'
     + '<span class="engrenagem" data-menucol="' + esc(c.nome) + '" role="button" tabindex="0"'
-    + ' aria-label="Opções de ' + esc(c.nome) + '">' + SVG_ENGRENAGEM + '</span></button>').join("");
+    + ' aria-label="Opções de ' + esc(c.nome) + '">' + SVG_ENGRENAGEM + '</span></button>'
+    /* A COLECAO ABERTA mostra as tags DELA logo embaixo (19/10/2026) -
+       a terceira lista mora dentro da colecao, entao aparece dentro dela */
+    + (filtroCol === c.nome ? '<div class="sub-tags" role="group" aria-label="Tags de ' + esc(c.nome) + '">'
+        + tagsDaColecao(c.nome).map((t) =>
+            '<button class="item sub' + (tagColAtiva() === t ? " on" : "") + '" data-tagcol="' + esc(t) + '">'
+            + '<span class="rotulo">' + esc(t) + '</span>'
+            + '<span class="qtd">' + contarTagCol(c.nome, t) + '</span>'
+            + '<span class="engrenagem" data-menutagcol="' + esc(t) + '" role="button" tabindex="0"'
+            + ' aria-label="Opções de ' + esc(t) + '">' + SVG_ENGRENAGEM + '</span></button>').join("")
+        + '<button class="novo-bt sub" id="btNovaTagCol"><span class="mais" aria-hidden="true">+</span> Tag de '
+        + esc(c.nome) + '</button></div>'
+      : "")).join("");
 
   const fora = colecoesOcultas();
   $("excluidas").innerHTML = fora.length
@@ -2401,6 +2527,30 @@ function desenharLado() {
   document.querySelectorAll("[data-menutag]").forEach((g) => {
     g.onclick = (e) => { e.stopPropagation(); menuDaTag(g.dataset.menutag, g); };
   });
+  /* as tags da colecao aberta: clique filtra a grade, engrenagem e botao
+     direito abrem o menu (subir, descer, excluir) */
+  document.querySelectorAll("[data-tagcol]").forEach((b) => {
+    const t = b.dataset.tagcol;
+    b.onclick = (e) => {
+      if (e.target.closest("[data-menutagcol]")) return;
+      filtroTagCol = tagColAtiva() === t ? null : { col: filtroCol, tag: t };
+      mostrar = "fotos"; desenhar();
+    };
+    b.oncontextmenu = (e) => { e.preventDefault(); menuDaTagCol(filtroCol, t, e); };
+  });
+  document.querySelectorAll("[data-menutagcol]").forEach((g) => {
+    g.onclick = (e) => { e.stopPropagation(); menuDaTagCol(filtroCol, g.dataset.menutagcol, g); };
+  });
+  const novaTc = $("btNovaTagCol");
+  if (novaTc) novaTc.onclick = async () => {
+    const col = filtroCol;
+    const nome = await perguntar("Nova tag de “" + col + "”",
+      "Só aparece no site dentro desta coleção. Marque as fotos no painel de cada uma.", { dica: "Nome da tag" });
+    if (!nome) return;
+    const t = criarTagCol(col, nome);
+    if (t) mostrarEstado("tag “" + t + "” criada em " + col, "ok");
+    desenhar();
+  };
   document.querySelectorAll("[data-restaurar]").forEach((b) => {
     b.onclick = () => {
       restaurarColecao(b.dataset.restaurar);
@@ -2422,11 +2572,15 @@ function visiveis() {
   if (mostrar === "carrosseis") l = l.filter((x) => paginas(x).length > 1);
   if (filtro === "__sem") l = l.filter((x) => !tagsDe(x).length);
   else if (filtro && filtro !== "__arq" && filtro !== "__lixo") l = l.filter((x) => tagsDe(x).includes(filtro));
+  const tc = tagColAtiva();
+  if (tc) l = l.filter((x) => tagsColDe(x, filtroCol).includes(tc));
   const t = busca.trim().toLowerCase();
   if (t) {
     l = l.filter((x) => {
       const txt = [val(x, "name"), val(x, "phrase"), valGrupo(x, "name"), valGrupo(x, "phrase"),
-        tagsDe(x).join(" "), colecoesDe(x).join(" "), x.caminho, faixaDeAnos(x), val(x, "year")].join(" ");
+        tagsDe(x).join(" "), colecoesDe(x).join(" "),
+        colecoesDe(x).map((c) => tagsColDe(x, c).join(" ")).join(" "),
+        x.caminho, faixaDeAnos(x), val(x, "year")].join(" ");
       return txt.toLowerCase().includes(t);
     });
   }
@@ -2470,9 +2624,25 @@ function desenharChips() {
     f.push('<button class="chip' + (filtro === t ? " on" : "") + '" data-f="' + esc(t) + '">'
       + esc(t) + ' <span class="n">' + conta(t) + '</span></button>');
   });
+  /* com uma colecao aberta, as tags DELA vem depois, em verde */
+  if (filtroCol && filtro !== "__arq") {
+    tagsDaColecao(filtroCol).forEach((t) => {
+      const n = base.filter((x) => tagsColDe(x, filtroCol).includes(t)).length;
+      if (!n) return;
+      f.push('<button class="chip verde' + (tagColAtiva() === t ? " on" : "") + '" data-fc="' + esc(t) + '">'
+        + esc(t) + ' <span class="n">' + n + '</span></button>');
+    });
+  }
   $("chips").innerHTML = f.join("");
   $("chips").querySelectorAll("[data-f]").forEach((b) => {
     b.onclick = () => { filtro = b.dataset.f; desenhar(); };
+  });
+  $("chips").querySelectorAll("[data-fc]").forEach((b) => {
+    b.onclick = () => {
+      const t = b.dataset.fc;
+      filtroTagCol = tagColAtiva() === t ? null : { col: filtroCol, tag: t };
+      desenhar();
+    };
   });
   const sc = $("btSairCol");
   if (sc) sc.onclick = () => { filtroCol = ""; desenhar(); };
@@ -2784,7 +2954,21 @@ function abrirPainel(caminho) {
     + cols.map((c) => '<button class="escolha verde' + (minhas.includes(c) ? " on" : "")
         + '" type="button" data-c="' + esc(c) + '" aria-pressed="' + minhas.includes(c) + '">'
         + esc(c) + '</button>').join("")
-    + '<button class="escolha" type="button" id="btNovaColPainel">+ nova</button></div>';
+    + '<button class="escolha" type="button" id="btNovaColPainel">+ nova</button></div>'
+    /* A TERCEIRA FILA (19/10/2026): uma linha por colecao em que a foto
+       esta, com as tags DAQUELA colecao. Verde como a colecao, porque e
+       um pedaco dela; o nome na frente diz de qual. */
+    + minhas.map((c) => {
+        const daFoto = tagsColDe(it, c);
+        return '<div class="escolhas tags-col" data-colrow="' + esc(c) + '" role="group"'
+          + ' aria-label="Tags de ' + esc(c) + '">'
+          + '<span class="tags-col-nome">' + esc(c) + ' ›</span>'
+          + tagsDaColecao(c).map((t) => '<button class="escolha verde' + (daFoto.includes(t) ? " on" : "")
+              + '" type="button" data-tc="' + esc(t) + '" aria-pressed="' + daFoto.includes(t) + '">'
+              + esc(t) + '</button>').join("")
+          + '<button class="escolha" type="button" data-novatc="1"'
+          + ' aria-label="Nova tag de ' + esc(c) + '">+ tag</button></div>';
+      }).join("");
 
   const corpoPagina = !ehGrupo ? "" :
     campoTexto("fPagFrase",
@@ -2913,9 +3097,14 @@ function abrirPainel(caminho) {
             ? "No site o card mostra <strong>" + esc(faixaDeAnos(it)) + "</strong>, da foto mais antiga à mais nova. " : "")
         + "O botão de info liga e desliga esse cantinho.")
     + secao("classe", "Tag e coleções",
-        (tagsDe(it).join(", ") || "sem tag") + (minhas.length ? " · " + minhas.join(", ") : ""),
+        (tagsDe(it).join(", ") || "sem tag") + (minhas.length ? " · " + minhas.join(", ") : "")
+          + (() => {
+            const tc = [];
+            minhas.forEach((c) => tagsColDe(it, c).forEach((t) => tc.push(t)));
+            return tc.length ? " · " + tc.join(", ") : "";
+          })(),
         corpoClasse, !tagsDe(it).length,
-        "A fila de cima são as <strong>tags</strong>, os filtros da barra do site — a foto pode ter várias, e aparece em cada uma. A de baixo são as <strong>coleções</strong>, que viram cards na página Mix; a mesma foto pode estar em várias, e em nenhuma ela aparece só no All.")
+        "A fila de cima são as <strong>tags</strong>, os filtros da barra de Cards — a foto pode ter várias, e aparece em cada uma. A do meio são as <strong>coleções</strong>, que viram cards na página Mix; a mesma foto pode estar em várias, e em nenhuma ela aparece só no All. Embaixo, uma linha para cada coleção da foto: as <strong>tags da coleção</strong>, que só aparecem quando alguém abre aquela coleção no site.")
     + (!ehGrupo ? secaoVideo : "")
     + (ehGrupo ? secao("pagina", "Foto " + (iSel + 1) + " de " + seq.length + (iSel === 0 ? " · capa" : ""),
         resumoPagina, corpoPagina, false,
@@ -3037,6 +3226,26 @@ function abrirPainel(caminho) {
       const c = b.dataset.c;
       const agora = colecoesDe(it);
       definirColecoes(it.caminho, agora.includes(c) ? agora.filter((x) => x !== c) : agora.concat([c]));
+      salvar(); abrirPainel(caminho); desenhar();
+    };
+  });
+  document.querySelectorAll("[data-colrow]").forEach((row) => {
+    const c = row.dataset.colrow;
+    row.querySelectorAll("[data-tc]").forEach((b) => {
+      b.onclick = () => {
+        const t = b.dataset.tc, agora = tagsColDe(it, c);
+        definirTagsCol(it.caminho, c, agora.includes(t) ? agora.filter((y) => y !== t) : agora.concat([t]));
+        salvar(); abrirPainel(caminho); desenhar();
+      };
+    });
+    row.querySelector("[data-novatc]").onclick = async () => {
+      const nome = await perguntar("Nova tag de “" + c + "”",
+        "Ela já entra nesta foto, e só aparece no site dentro desta coleção.", { dica: "Nome da tag" });
+      if (!nome) return;
+      const limpo = criarTagCol(c, nome);
+      if (!limpo) return;
+      const agora = tagsColDe(it, c);
+      if (!agora.includes(limpo)) definirTagsCol(it.caminho, c, agora.concat([limpo]));
       salvar(); abrirPainel(caminho); desenhar();
     };
   });
