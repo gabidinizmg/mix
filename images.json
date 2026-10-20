@@ -289,6 +289,11 @@
     },
     {
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56.jpg",
+      "videoLink": "https://vimeo.com/265567437?fl=pl&fe=sh",
+      "videoOpcoes": {
+        "autoplay": false,
+        "controles": "minimos"
+      },
       "name": "detalhes",
       "phrase": "Teste",
       "lugares": [
@@ -353,6 +358,10 @@
     },
     {
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-2.jpg",
+      "videoLink": "https://vimeo.com/265567437?fl=pl&fe=sh",
+      "videoOpcoes": {
+        "autoplay": false
+      },
       "name": "sadsa",
       "lugares": [
         {
