@@ -235,9 +235,18 @@ const soltas = [];
    carrosseis". Uma lista so, uma entrada por imagem, independente de como
    a Mix agrupa: o BigaFaixas le daqui e nada mais. */
 const fotosPag = [];
+/* O VIDEO DAS PAGINAS DO SITE = o MESMO da Mix (20/10/2026). Ela: "faz o
+   mesmo esquema para pagina do site; se mudarmos algo sobre video no mix
+   tem que mudar sincronizado". Os campos sao exatamente os que a Mix le
+   num card ou numa pagina de carrossel - mudou aqui, mudou nos dois. */
+const CAMPOS_DE_VIDEO = ["video", "videoLink", "videoAba", "videoOpcoes", "legenda", "qualidades"];
+const copiarVideo = (de, para) => {
+  for (const k of CAMPOS_DE_VIDEO) if (de[k] !== undefined && de[k] !== "" && de[k] !== false) para[k] = de[k];
+  return para;
+};
 const fotoDaPagina = (pg, l) => {
   const f = { image: pg.src || "" };
-  if (pg.video) f.video = pg.video;
+  copiarVideo(pg, f);
   if (pg.name) f.name = pg.name;
   if (pg.phrase) f.phrase = pg.phrase;
   f.lugares = [l];
@@ -334,9 +343,14 @@ const montar = (arquivos, nomeColecao, info) => {
         if (EXT_VID.test(a)) {
           const mv = midiaDoVideo(a);
           so.image = mv.image || "";
-          so.video = mv.video;
+          copiarVideo(mv, so);
         } else {
           so.image = url(a);
+          copiarVideo(linkDoVideo(d), so);
+        }
+        if (so.video || so.videoLink) {
+          const opS = opcoesDoVideo(d);
+          if (opS) so.videoOpcoes = opS;
         }
         const nomeS = d.name || d.nome;
         const fraseS = d.phrase || d.frase || d.description;
@@ -590,7 +604,7 @@ const montar = (arquivos, nomeColecao, info) => {
         });
       } else {
         const f = { image: item.image || "" };
-        if (item.video) f.video = item.video;
+        copiarVideo(item, f);
         if (item.name) f.name = item.name;
         if (item.phrase) f.phrase = item.phrase;
         f.lugares = lug;
