@@ -2393,18 +2393,29 @@ function agruparCarrossel() {
 }
 
 /* Solta o caminho de qualquer grupo, seja ele lider ou seguidora. */
+/* A PAGINA DE UM CARROSSEL TAMBEM (22/10/2026). Ela: "nao to conseguindo
+   criar carrossel no organizador, igual faco no mix". No modo Paginas ela
+   soltou uma foto em cima de "Teste texto", que e a pagina 2 do Detalhe 2.
+   A pagina nao esta em `itens` (o robo nao publica seguidora como item),
+   entao isto saia sem fazer nada: ela virava capa do carrossel novo E
+   continuava pagina do antigo. O robo pula quem tem `carrosselDe` - o
+   carrossel novo sumia, e a foto arrastada sumia da Mix junto. */
 function soltarGrupo(caminho) {
-  const it = itens.find((x) => x.caminho === caminho);
+  const it = itens.find((x) => x.caminho === caminho) || acharItem(caminho);
   if (!it) return;
   grupo(it).forEach((c) => editar(c, "carrosselDe", ""));
   editar(caminho, "carrossel", "");
   const dono = val(it, "carrosselDe");
   if (dono) {
     const pai = itens.find((x) => x.caminho === dono);
-    if (pai) editar(dono, "carrossel", grupo(pai).filter((c) => c !== caminho));
+    /* a lista do pai: a editada aqui ou, sem ela, a que o robo publicou.
+       Gravar [] numa lista que so existe publicada nao tirava nada - o
+       pai voltava a ler a publicada, com a pagina dentro (o kit pegou) */
+    if (pai) editar(dono, "carrossel", seguidorasDe(pai).filter((c) => c !== caminho));
     editar(caminho, "carrosselDe", "");
   }
 }
+const seguidorasDe = (it) => (grupo(it).length ? grupo(it) : paginas(it).slice(1).map((pg) => pg.caminho));
 
 function desagrupar() {
   const sel = selecionadasEmOrdem();
@@ -4230,8 +4241,42 @@ function reordenarPaginas(ordem) {
   else fecharPainel();
 }
 
+/* CONSERTO DO QUE O BUG DEIXOU (22/10/2026): uma foto com carrossel
+   PROPRIO e ainda marcada como pagina de outro so nasce do `soltarGrupo`
+   que nao achava a pagina (ver la). Ela pediu um carrossel novo com essa
+   capa, entao vale o novo: a foto sai do carrossel antigo. */
+function consertarCapaPresa() {
+  let mexeu = false;
+  Object.keys(edicoes).forEach((c) => {
+    const e = edicoes[c] || {};
+    if (!Array.isArray(e.carrossel) || !e.carrossel.length || !e.carrosselDe) return;
+    const dono = e.carrosselDe;
+    const pai = itens.find((x) => x.caminho === dono);
+    if (pai) editar(dono, "carrossel", seguidorasDe(pai).filter((x) => x !== c));
+    editar(c, "carrosselDe", "");
+    mexeu = true;
+  });
+  if (mexeu) salvar();
+}
+/* A CAPA NOVA QUE ERA PAGINA (22/10/2026). Uma pagina de carrossel nao e
+   item no images.json; quando ela vira capa de um carrossel novo, ate o
+   robo rodar ela nao existia em lugar nenhum da grade - o carrossel que
+   ela acabou de criar sumia da tela. Entra como card, igual a uma foto
+   recem-subida, e sai daqui sozinha quando o robo publicar. */
+function trazerCapasNovas() {
+  const ref = (itens.find((x) => x.image) || {}).image || "";
+  Object.keys(edicoes).forEach((c) => {
+    const e = edicoes[c] || {};
+    if (!Array.isArray(e.carrossel) || !e.carrossel.length || e.carrosselDe) return;
+    if (e.lixeira === true || itens.some((x) => x.caminho === c)) return;
+    itens.push(Object.assign(itemDaSubida({ caminho: c }), { image: urlDe(c, ref) || itemDaSubida({ caminho: c }).image, nova: false }));
+  });
+}
+
 /* ---------- DESENHAR TUDO ---------- */
 function desenhar() {
+  consertarCapaPresa();
+  trazerCapasNovas();
   migrarLugaresDeCarrossel();
   desenharLado();
   desenharAlternador();
