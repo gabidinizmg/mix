@@ -278,6 +278,31 @@ h1 { font: 600 22px/1.1 "Outfit",sans-serif; letter-spacing: -.02em; }
 .selo-col span.sem { background: rgba(18,17,22,.72); color: #EFEBF9; backdrop-filter: blur(8px);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--verde) 70%, transparent); }
 
+/* O QUADRO DE FAIXAS (22/10/2026). Ela: "clico em Curta! e do lado
+   direito aparece Cinelist / imagens, Posters / imagens, botao de mais
+   para criar mais secoes. quero conseguir arrastar uma imagem para onde eu
+   quero ou a pilha". Uma linha por faixa, na ordem do site; embaixo, a
+   bandeja com o que ainda nao esta em nenhuma. Ambar = paginas do site. */
+.quadro { grid-column: 1 / -1; display: grid; gap: 14px; }
+.qfaixa { border: 1px solid var(--linha); border-radius: 16px; background: var(--painel); padding: 12px 14px 8px; min-width: 0; }
+.qfaixa.bandeja { border-style: dashed; background: transparent; }
+.qcabeca { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.qcabeca .qnome { font-weight: 600; font-size: 15px; color: var(--pag); }
+.qfaixa.bandeja .qnome { color: var(--texto-2); }
+.qcabeca .qn { font-size: 12px; color: var(--texto-3); }
+.qcabeca .qdica { margin-left: auto; font-size: 12px; color: var(--texto-3); }
+.qcabeca .engrenagem { margin-left: auto; }
+.qlinha { display: flex; gap: 16px; overflow-x: auto; min-height: 140px; padding: 8px 6px 10px;
+  border-radius: 12px; align-items: flex-start; outline: 2px dashed transparent; outline-offset: -2px; }
+.qlinha.sobre { background: color-mix(in srgb, var(--pag) 9%, transparent); outline-color: var(--pag); }
+.qlinha .cartao { flex: 0 0 auto; }
+.qlinha .vazia { align-self: center; color: var(--texto-3); font-size: 13px; padding: 0 8px; }
+.qlinha .cartao.qantes::before { content: ""; position: absolute; left: -10px; top: 0; bottom: 30px; width: 3px;
+  border-radius: 3px; background: var(--pag); }
+.qlinha .cartao.qfim::after { content: ""; position: absolute; right: -10px; top: 0; bottom: 30px; width: 3px;
+  border-radius: 3px; background: var(--pag); }
+.quadro .novo-bt { justify-self: start; }
+
 /* ---------- SUBIR FOTOS ---------- */
 .soltar-fotos {
   position: fixed; inset: 12px 12px 12px 264px; z-index: 60; pointer-events: none;
@@ -3390,6 +3415,143 @@ function cartaoDaColecao(c) {
     + esc(c.nome) + '">' + SVG_ENGRENAGEM + '</button></div></div>';
 }
 
+/* ---------- O QUADRO DE FAIXAS (22/10/2026) ----------
+   Clicou num CARROSSEL do site (Pagina › Carrossel): uma linha por faixa,
+   na ordem do site, e a bandeja embaixo. Arrastar:
+     dentro da linha  -> muda a ordem
+     para outra faixa -> MOVE (com Option/Alt: COPIA, fica nas duas)
+     para a bandeja   -> tira da faixa
+   A pilha vai INTEIRA (um card no site); a foto sozinha de dentro de um
+   carrossel vai sozinha. Decidido com ela: "arrastar move, Option copia,
+   bandeja embaixo". */
+let arrastoQ = null;   // { c, de (indice da faixa, -1 = bandeja), foto }
+const faixasDoQuadro = () => (filhosDe(arvoreVista(), filtroLugar) || []).map((f) => filtroLugar.concat([f.name]));
+function cartaoQuadro(it, no, de) {
+  const lg = no ? lugaresDe(it).find((l) => lugarEm(l, no)) : null;
+  const seq = paginas(it);
+  const ehCapa = seq.length > 1 && itens.some((x) => x.caminho === it.caminho);
+  const pilha = ehCapa && (!lg || !lg.foto);
+  const orig = pilha ? null : origemCarrossel(it);
+  const nome = (pilha ? valGrupo(it, "name") : "") || val(it, "name") || it.caminho.split("/").pop();
+  const u = it.image || it.video || "";
+  const midia = (url) => (it.video && !it.image && url === u)
+    ? '<video src="' + esc(url) + '" preload="metadata" muted></video>'
+    : '<img src="' + esc(url) + '" alt="" loading="lazy" draggable="false">';
+  const selo = pilha ? '<span class="selo">' + seq.length + ' fotos</span>'
+    : orig ? '<span class="selo">carrossel · ' + (orig.k + 1) + '/' + orig.n + '</span>' : "";
+  const corpo = pilha
+    ? '<div class="folha f1">' + midia(seq[1].url) + '</div><div class="folha f2">' + midia((seq[2] || seq[0]).url) + '</div>'
+      + '<div class="folha f3">' + midia(seq[0].url) + '</div>'
+    : midia(u);
+  const w = Math.round(ZOOMS[zoom] * 0.8);
+  return '<div class="cartao" data-qc="' + esc(it.caminho) + '" data-qde="' + de + '" data-qfoto="' + (pilha ? "0" : "1") + '" style="width:' + w + 'px">'
+    + '<div class="moldura' + (pilha ? " pilha" : "") + '" draggable="true" tabindex="0" role="button" aria-label="Abrir ' + esc(nome) + '">'
+    + selo + corpo + '</div><div class="nome">' + esc(nome) + '</div></div>';
+}
+function desenharQuadro() {
+  const nos = faixasDoQuadro();
+  const daBandeja = cardsDoSite().filter((it) => {
+    const multi = paginas(it).length > 1;
+    return !lugaresDe(it).some((l) => lugarEm(l, filtroLugar) && (!multi || !l.foto));
+  });
+  $("tituloVista").textContent = textoNo(filtroLugar);
+  $("conta").textContent = nos.length + (nos.length === 1 ? " faixa" : " faixas");
+  $("grade").style.gridTemplateColumns = "minmax(0, 1fr)";
+  $("grade").innerHTML = '<div class="quadro">'
+    + nos.map((no, i) => {
+      const fs = fotosDaFaixa(no);
+      return '<section class="qfaixa"><div class="qcabeca"><span class="qnome">' + esc(no[2]) + '</span>'
+        + '<span class="qn">' + fs.length + '</span>'
+        + '<button class="engrenagem" data-qmenu="' + i + '" aria-label="Opções de ' + esc(no[2]) + '">' + SVG_ENGRENAGEM + '</button></div>'
+        + '<div class="qlinha" data-qfx="' + i + '" aria-label="Faixa ' + esc(no[2]) + '">'
+        + (fs.length ? fs.map((it) => cartaoQuadro(it, no, i)).join("") : '<span class="vazia">Arraste imagens para cá</span>')
+        + '</div></section>';
+    }).join("")
+    + '<button class="novo-bt" id="btQNova"><span class="mais" aria-hidden="true">+</span> Nova faixa em ' + esc(filtroLugar[1]) + '</button>'
+    + '<section class="qfaixa bandeja"><div class="qcabeca"><span class="qnome">Fora das faixas de ' + esc(filtroLugar[1]) + '</span>'
+    + '<span class="qn">' + daBandeja.length + '</span><span class="qdica">arraste para uma faixa · Option copia</span></div>'
+    + '<div class="qlinha" data-qfx="-1" aria-label="Fora das faixas">'
+    + (daBandeja.length ? daBandeja.map((it) => cartaoQuadro(it, null, -1)).join("") : '<span class="vazia">Tudo já está numa faixa</span>')
+    + '</div></section></div>';
+
+  const limparMarcas = () => $("grade").querySelectorAll(".sobre, .qantes, .qfim").forEach((x) => x.classList.remove("sobre", "qantes", "qfim"));
+  $("grade").querySelectorAll("[data-qc]").forEach((c) => {
+    const mold = c.querySelector(".moldura");
+    mold.onclick = () => abrirPainel(c.dataset.qc);
+    mold.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrirPainel(c.dataset.qc); } };
+    mold.ondragstart = (e) => {
+      arrastoQ = { c: c.dataset.qc, de: +c.dataset.qde, foto: c.dataset.qfoto === "1" };
+      e.dataTransfer.setData("text/plain", "qfoto:" + c.dataset.qc);
+      e.dataTransfer.effectAllowed = "copyMove";
+    };
+    mold.ondragend = () => { arrastoQ = null; limparMarcas(); };
+  });
+  /* onde entra: antes do primeiro card cujo meio esta a direita do mouse */
+  const posicao = (linha, x) => {
+    const cs = [...linha.querySelectorAll("[data-qc]")].filter((k) => !arrastoQ || k.dataset.qc !== arrastoQ.c);
+    const k = cs.findIndex((k) => { const r = k.getBoundingClientRect(); return x < r.left + r.width / 2; });
+    return { cs, k: k < 0 ? cs.length : k };
+  };
+  $("grade").querySelectorAll("[data-qfx]").forEach((linha) => {
+    const dest = +linha.dataset.qfx;
+    linha.ondragover = (e) => {
+      if (!arrastoQ) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = e.altKey && dest >= 0 ? "copy" : "move";
+      limparMarcas();
+      linha.classList.add("sobre");
+      if (dest < 0) return;
+      const p = posicao(linha, e.clientX);
+      if (p.cs[p.k]) p.cs[p.k].classList.add("qantes");
+      else if (p.cs.length) p.cs[p.cs.length - 1].classList.add("qfim");
+    };
+    linha.ondragleave = (e) => { if (!linha.contains(e.relatedTarget)) linha.classList.remove("sobre"); };
+    linha.ondrop = (e) => {
+      if (!arrastoQ) return;
+      e.preventDefault();
+      const d = arrastoQ;
+      arrastoQ = null;
+      limparMarcas();
+      soltarNoQuadro(d, dest, dest >= 0 ? posicao(linha, e.clientX).k : 0, e.altKey);
+    };
+  });
+  $("grade").querySelectorAll("[data-qmenu]").forEach((g) => {
+    g.onclick = (e) => { e.stopPropagation(); const no = nos[+g.dataset.qmenu]; if (no) menuDoNo(no, g); };
+  });
+  $("btQNova").onclick = async () => {
+    const nome = await perguntar("Nova faixa em “" + textoNo(filtroLugar) + "”",
+      "Ela entra no fim, embaixo das outras. Depois é só arrastar as imagens para ela.", { dica: "Nome da faixa" });
+    if (!nome) return;
+    const no = criarNo(filtroLugar, nome);
+    if (!no) return;
+    mostrarEstado(textoNo(no) + " criada", "ok");
+    desenhar();
+  };
+}
+/* soltar: `dest` -1 = bandeja; `pos` = posicao na faixa de destino */
+function soltarNoQuadro(d, dest, pos, copia) {
+  const nos = faixasDoQuadro();
+  const de = d.de >= 0 ? nos[d.de] : null;
+  const itD = acharItem(d.c);
+  const nomeDe = (itD && ((!d.foto && valGrupo(itD, "name")) || val(itD, "name"))) || d.c.split("/").pop();
+  if (dest < 0) {
+    if (de) { tirarDaFaixa(d.c, de); salvar(); desenhar(); mostrarEstado("“" + nomeDe + "” fora de " + de[2], "ok"); }
+    return;
+  }
+  const para = nos[dest];
+  if (!para) return;
+  const mesma = !!de && de.join("|") === para.join("|");
+  if (!mesma) {
+    if (de && !copia) tirarDaFaixa(d.c, de);
+    porNaFaixa(d.c, para, d.foto);
+  }
+  const seq = fotosDaFaixa(para).map((x) => x.caminho).filter((c) => c !== d.c);
+  seq.splice(Math.min(pos, seq.length), 0, d.c);
+  numerarFaixa(para, seq);
+  salvar(); desenhar();
+  mostrarEstado("“" + nomeDe + "” " + (mesma ? "mudou de lugar em " : copia && de ? "copiada para " : "em ") + para[2], "ok");
+}
+
 function desenharGrade() {
   $("grade").style.gridTemplateColumns = "repeat(auto-fill, minmax(" + ZOOMS[zoom] + "px, 1fr))";
   $("btMenos").disabled = zoom === 0;
@@ -3413,6 +3575,9 @@ function desenharGrade() {
     });
     return;
   }
+
+  /* --- um CARROSSEL do site aberto: o quadro de faixas --- */
+  if (modo === "paginas" && filtroLugar && filtroLugar.length === 2 && !busca.trim()) { desenharQuadro(); return; }
 
   /* --- as fotos --- */
   const l = visiveis();
