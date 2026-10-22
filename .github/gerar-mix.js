@@ -244,11 +244,22 @@ const copiarVideo = (de, para) => {
   for (const k of CAMPOS_DE_VIDEO) if (de[k] !== undefined && de[k] !== "" && de[k] !== false) para[k] = de[k];
   return para;
 };
+/* A INFO DA MIX NAS PAGINAS DO SITE (22/10/2026). O BigaFaixas ganhou o
+   cantinho de info da Mix (ela: "o cantinho abre igual o mix"), e o
+   cantinho mostra tambem o ano, o elo do link e respeita o interruptor
+   ("sem info"). Os nomes sao os mesmos das paginas da Mix. */
+const copiarInfo = (de, para) => {
+  if (de.year) para.year = String(de.year);
+  if (de.link) para.link = String(de.link);
+  if (de.noInfo === true) para.noInfo = true;
+  return para;
+};
 const fotoDaPagina = (pg, l) => {
   const f = { image: pg.src || "" };
   copiarVideo(pg, f);
   if (pg.name) f.name = pg.name;
   if (pg.phrase) f.phrase = pg.phrase;
+  copiarInfo(pg, f);
   f.lugares = [l];
   return f;
 };
@@ -358,7 +369,13 @@ const montar = (arquivos, nomeColecao, info) => {
         if (fraseS) so.phrase = String(fraseS);
         so.lugares = lugS;
         soltas.push(so);
-        fotosPag.push(so);
+        /* a lista das paginas leva tambem a info; a `soltasDasPaginas`
+           (do BigaFaixas antigo) fica como era */
+        const anoS = d.year !== undefined ? d.year : d.ano;
+        fotosPag.push(copiarInfo({
+          year: anoS !== undefined && anoS !== null ? String(anoS).trim() : "",
+          link: d.link, noInfo: semInfo(d),
+        }, Object.assign({}, so)));
       }
       continue;
     }
@@ -597,16 +614,33 @@ const montar = (arquivos, nomeColecao, info) => {
     /* as imagens desta foto nas paginas do site */
     if (lug.length) {
       if (mixCarrossel && mixCarrossel.todas.length) {
+        /* CARROSSEL INTEIRO = UM CARD (22/10/2026). Ela: "igual o
+           carrossel mix, mas agora em BigaFaixas". As fotos continuam uma
+           por entrada (quem le foto por foto nao muda), mas levam a MESMA
+           marca `doCarrossel` - o BigaFaixas junta pela marca num card so,
+           a capa, que folheia no pop-up. A 1a leva em `cartao` o texto do
+           CARD (o do grupo, que vence o da capa - como na grade da Mix). */
+        const idCarrossel = mixCarrossel.todas[0].src;
+        const cartao = {};
+        if (item.name) cartao.name = item.name;
+        if (item.phrase) cartao.phrase = item.phrase;
+        copiarInfo(item, cartao);
         lug.forEach((l) => {
           if (l.foto) fotosPag.push(fotoDaPagina(mixCarrossel.todas[0], l));
-          else mixCarrossel.todas.forEach((pg, k) => fotosPag.push(fotoDaPagina(pg,
-            Object.assign({}, l, { ordem: (typeof l.ordem === "number" ? l.ordem : 1e5) + k / 1000 }))));
+          else mixCarrossel.todas.forEach((pg, k) => {
+            const f = fotoDaPagina(pg,
+              Object.assign({}, l, { ordem: (typeof l.ordem === "number" ? l.ordem : 1e5) + k / 1000 }));
+            f.doCarrossel = idCarrossel;
+            if (k === 0 && Object.keys(cartao).length) f.cartao = cartao;
+            fotosPag.push(f);
+          });
         });
       } else {
         const f = { image: item.image || "" };
         copiarVideo(item, f);
         if (item.name) f.name = item.name;
         if (item.phrase) f.phrase = item.phrase;
+        copiarInfo(item, f);
         f.lugares = lug;
         fotosPag.push(f);
       }
