@@ -235,6 +235,31 @@ const soltas = [];
    carrosseis". Uma lista so, uma entrada por imagem, independente de como
    a Mix agrupa: o BigaFaixas le daqui e nada mais. */
 const fotosPag = [];
+/* O CARROSSEL DO SITE (22/10/2026), separado do da Mix. Ela: "caso eu
+   queira criar carrossel em paginas do site e diferente do mix"; vale em
+   qualquer faixa, e os carrosseis da Mix que ja estavam nas faixas viram
+   carrosseis do site. No mix-info.json: a capa guarda `carrosselSite`
+   (as outras, em ordem) e cada outra `carrosselSiteDe`. Quem tem a chave
+   (mesmo vazia) segue o carrossel do SITE; quem nao tem, o jeito antigo
+   (o carrossel da Mix inteiro) - o images.json nao muda sozinho.
+   `baseDe`: cada arquivo como foto das paginas (sem os lugares), para
+   montar o carrossel do site depois que todos passaram. */
+const baseDe = new Map();
+/* o texto do CARD de uma capa que tem grupo na Mix (nome, frase, ano do
+   grupo): o carrossel do site com essa capa mostra o mesmo - converter nao
+   muda o que aparece no site */
+const cartaoDe = new Map();
+const pendentesSite = [];
+const semLugares = (f) => { const g = Object.assign({}, f); delete g.lugares; return g; };
+/* os lugares de uma foto que segue o carrossel do SITE: inteiro = fica
+   para o fim (precisa das outras fotos); o resto, ela sozinha */
+const lugaresDoSite = (chave, d, base, lug) => {
+  const site = (Array.isArray(d.carrosselSite) ? d.carrosselSite : []).map(String).filter((c) => c && c !== chave);
+  lug.forEach((l) => {
+    if (!l.foto && site.length) pendentesSite.push({ chave, l, site });
+    else fotosPag.push(Object.assign({}, base, { lugares: [l] }));
+  });
+};
 /* O VIDEO DAS PAGINAS DO SITE = o MESMO da Mix (20/10/2026). Ela: "faz o
    mesmo esquema para pagina do site; se mudarmos algo sobre video no mix
    tem que mudar sincronizado". Os campos sao exatamente os que a Mix le
@@ -349,7 +374,7 @@ const montar = (arquivos, nomeColecao, info) => {
        uma lista repetida. */
     if (d.carrosselDe) {
       const lugS = limparLugares(d.lugares);
-      if (lugS.length && d.lixeira !== true) {
+      if (d.lixeira !== true) {
         const so = {};
         if (EXT_VID.test(a)) {
           const mv = midiaDoVideo(a);
@@ -367,15 +392,20 @@ const montar = (arquivos, nomeColecao, info) => {
         const fraseS = d.phrase || d.frase || d.description;
         if (nomeS) so.name = String(nomeS);
         if (fraseS) so.phrase = String(fraseS);
-        so.lugares = lugS;
-        soltas.push(so);
-        /* a lista das paginas leva tambem a info; a `soltasDasPaginas`
-           (do BigaFaixas antigo) fica como era */
         const anoS = d.year !== undefined ? d.year : d.ano;
-        fotosPag.push(copiarInfo({
+        const baseS = copiarInfo({
           year: anoS !== undefined && anoS !== null ? String(anoS).trim() : "",
           link: d.link, noInfo: semInfo(d),
-        }, Object.assign({}, so)));
+        }, Object.assign({}, so));
+        baseDe.set(a.split(path.sep).join("/"), baseS);
+        if (lugS.length) {
+          so.lugares = lugS;
+          soltas.push(so);
+          /* a lista das paginas leva tambem a info; a `soltasDasPaginas`
+             (do BigaFaixas antigo) fica como era */
+          if (Array.isArray(d.carrosselSite)) lugaresDoSite(a.split(path.sep).join("/"), d, baseS, lugS);
+          else fotosPag.push(Object.assign({}, baseS, { lugares: lugS }));
+        }
       }
       continue;
     }
@@ -612,7 +642,31 @@ const montar = (arquivos, nomeColecao, info) => {
       }
     } else if (d.foraDoMix === true) item.foraDoMix = true;
     /* as imagens desta foto nas paginas do site */
-    if (lug.length) {
+    const chaveIt = a.split(path.sep).join("/");
+    if (mixCarrossel && mixCarrossel.todas.length) {
+      baseDe.set(chaveIt, semLugares(fotoDaPagina(mixCarrossel.todas[0], null)));
+      if (d.grupo && typeof d.grupo === "object" && Object.keys(d.grupo).length) {
+        const cg = {};
+        if (item.name) cg.name = item.name;
+        if (item.phrase) cg.phrase = item.phrase;
+        copiarInfo(item, cg);
+        cartaoDe.set(chaveIt, cg);
+      }
+      (d.carrossel || []).forEach((c, k) => {
+        const pg = mixCarrossel.todas[k + 1];
+        if (pg && !baseDe.has(String(c))) baseDe.set(String(c), semLugares(fotoDaPagina(pg, null)));
+      });
+    } else {
+      const fb = { image: item.image || "" };
+      copiarVideo(item, fb);
+      if (item.name) fb.name = item.name;
+      if (item.phrase) fb.phrase = item.phrase;
+      copiarInfo(item, fb);
+      baseDe.set(chaveIt, fb);
+    }
+    if (lug.length && Array.isArray(d.carrosselSite)) {
+      lugaresDoSite(chaveIt, d, baseDe.get(chaveIt), lug);
+    } else if (lug.length) {
       if (mixCarrossel && mixCarrossel.todas.length) {
         /* CARROSSEL INTEIRO = UM CARD (22/10/2026). Ela: "igual o
            carrossel mix, mas agora em BigaFaixas". As fotos continuam uma
@@ -695,6 +749,33 @@ const soltos = fs.readdirSync(RAIZ)
     && (EXT_IMG.test(n) || EXT_VID.test(n)))
   .sort();
 if (soltos.length) montar(soltos, "", lerInfo(RAIZ));
+
+/* OS CARROSSEIS DO SITE, agora que toda foto tem a base: a capa e as
+   outras, na ordem dela, com a mesma marca `doCarrossel` (o BigaFaixas
+   junta num card so) e, na 1a, o `cartao` com o texto da capa. Foto na
+   lixeira ou que nao existe mais fica de fora. */
+for (const p of pendentesSite) {
+  const membros = [p.chave].concat(p.site)
+    .filter((c, i, l) => l.indexOf(c) === i && baseDe.has(c) && !((ferramenta.items[c] || {}).lixeira === true));
+  if (!membros.length) continue;
+  const capa = baseDe.get(membros[0]);
+  let cartao = cartaoDe.get(membros[0]);
+  if (!cartao) {
+    cartao = {};
+    if (capa.name) cartao.name = capa.name;
+    if (capa.phrase) cartao.phrase = capa.phrase;
+    copiarInfo(capa, cartao);
+  }
+  const base = typeof p.l.ordem === "number" ? p.l.ordem : 1e5;
+  membros.forEach((c, k) => {
+    const f = Object.assign({}, baseDe.get(c), { lugares: [Object.assign({}, p.l, { ordem: base + k / 1000 })] });
+    if (membros.length > 1) {
+      f.doCarrossel = capa.image || membros[0];
+      if (k === 0 && Object.keys(cartao).length) f.cartao = cartao;
+    }
+    fotosPag.push(f);
+  });
+}
 
 /* AS COLECOES DA FERRAMENTA entram na mesma lista. As que tem nome de
    pasta so emprestam a ORDEM (se ela escreveu uma); as outras nascem
