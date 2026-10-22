@@ -296,6 +296,8 @@
       },
       "name": "detalhes",
       "phrase": "Teste",
+      "year": "2024",
+      "link": "https://motionographer.com/",
       "lugares": [
         {
           "pagina": "GrupoCurta",
@@ -303,11 +305,20 @@
           "faixa": "Posters",
           "ordem": 2
         }
-      ]
+      ],
+      "doCarrossel": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56.jpg",
+      "cartao": {
+        "name": "detalhes",
+        "phrase": "Teste",
+        "year": "2024",
+        "link": "https://motionographer.com/"
+      }
     },
     {
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-8.jpg",
       "phrase": "Arte conceitual",
+      "year": "2025",
+      "noInfo": true,
       "lugares": [
         {
           "pagina": "GrupoCurta",
@@ -315,7 +326,8 @@
           "faixa": "Posters",
           "ordem": 2.001
         }
-      ]
+      ],
+      "doCarrossel": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56.jpg"
     },
     {
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-4.jpg",
@@ -328,12 +340,19 @@
           "faixa": "Cinelist",
           "ordem": 1
         }
-      ]
+      ],
+      "doCarrossel": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-4.jpg",
+      "cartao": {
+        "name": "Detalhe 2",
+        "phrase": "CArrossel",
+        "year": "2023"
+      }
     },
     {
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-3.jpg",
       "name": "Teste texto",
       "phrase": "Imagem 2",
+      "link": "https://bigadiniz.com/info",
       "lugares": [
         {
           "pagina": "GrupoCurta",
@@ -341,12 +360,14 @@
           "faixa": "Cinelist",
           "ordem": 1.001
         }
-      ]
+      ],
+      "doCarrossel": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-4.jpg"
     },
     {
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-5.jpg",
       "name": "Teste texto",
       "phrase": "teste 3",
+      "noInfo": true,
       "lugares": [
         {
           "pagina": "GrupoCurta",
@@ -354,7 +375,8 @@
           "faixa": "Cinelist",
           "ordem": 1.002
         }
-      ]
+      ],
+      "doCarrossel": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-4.jpg"
     },
     {
       "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_19-05-56-2.jpg",
