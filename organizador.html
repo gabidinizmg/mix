@@ -668,7 +668,7 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
       <button type="button" role="tab" data-modo="paginas">Páginas do site</button>
     </div>
     <p class="dica-modo so-mix">Os cards, carrosséis, coleções e tags da página Mix.</p>
-    <p class="dica-modo so-pag">Cada imagem sozinha — inclusive as de dentro dos carrosséis — e em que faixa ela entra.</p>
+    <p class="dica-modo so-pag">Em que faixa cada imagem entra. Carrossel em pilha, como na Mix: abra para pôr uma foto dele sozinha.</p>
     <button class="item so-pag" data-pagtodas="1">
       <span class="rotulo">Todas as imagens</span><span class="qtd" id="qtdImagens">0</span>
     </button>
@@ -1623,6 +1623,26 @@ function imagensDoSite() {
   const vivas = itens.filter((x) => !ehArq(x) && !ehLixo(x));
   return vivas.concat(paginasDeCarrossel());
 }
+/* A GRADE DO MODO PAGINAS (22/10/2026). Ela: "quero a pilha no modo
+   Paginas do site, igual a Mix, e abrindo o carrossel da para escolher
+   foto por foto". Os cards da Mix: foto unica e carrossel em PILHA - as
+   fotos de dentro moram dentro dele. */
+function cardsDoSite() {
+  return itens.filter((x) => !ehArq(x) && !ehSeguidora(x) && !ehLixo(x));
+}
+/* embaixo da pilha: onde o carrossel inteiro entra, e quantas fotos dele
+   estao sozinhas em alguma faixa */
+function metaDaPilha(it, seq) {
+  const inteiro = lugaresDe(it).filter((l) => !l.foto).map((l) => textoNo(noDoLugar(l)));
+  const soltas = seq.filter((pg) => lugaresDe(acharItem(pg.caminho) || { caminho: pg.caminho }).some((l) => l.foto)).length;
+  return (inteiro.join(", ") || "em nenhuma faixa")
+    + (soltas ? " · " + soltas + (soltas === 1 ? " foto sozinha" : " fotos sozinhas") + " em faixa" : "");
+}
+/* o lugar do carrossel INTEIRO e o que mora na capa sem `foto` - no site
+   ele vira UM card que folheia no pop-up (BigaFaixas, doCarrossel) */
+const ehCarrosselInteiroEm = (it, no) => paginas(it).length > 1
+  && itens.some((x) => x.caminho === it.caminho)
+  && lugaresDe(it).some((l) => lugarEm(l, no) && !l.foto);
 /* de que carrossel a imagem e, e em que posicao: { lider, k, n } ou null */
 function origemCarrossel(it) {
   if (!it) return null;
@@ -1654,34 +1674,41 @@ function definirForaDoMixCard(caminho, fora) {
   if (seq.length < 2) { definirForaDoMix(caminho, fora); return; }
   seq.forEach((pg) => definirForaDoMix(pg.caminho, fora));
 }
-/* MIGRACAO: um carrossel posto numa faixa do jeito antigo (o lugar so na
-   capa, valendo para o carrossel inteiro) vira imagens soltas: cada foto
-   dele ganha o proprio lugar, na ordem do carrossel. `foto: true` marca o
-   lugar novo, que vale so para aquela imagem. */
-function migrarLugaresDeCarrossel() {
-  let mexeu = false;
+/* DESFAZ A MIGRACAO DE 19/10 (22/10/2026). Ate hoje, ao abrir, o lugar do
+   carrossel INTEIRO numa faixa (na capa, sem `foto`) era espalhado em um
+   lugar por foto - era o modo Paginas sem pilha. Agora o modo Paginas tem
+   pilha e o site mostra o carrossel inteiro como UM card; espalhado, ele
+   voltaria a ser um card por foto no proximo Salvar.
+   Volta ao inteiro so onde o images.json AINDA tem o carrossel inteiro na
+   capa e a edicao DESTE navegador o espalhou (capa com `foto`). Roda UMA
+   vez por navegador: depois disso, "so a capa" e escolha dela. */
+const CHAVE_DESMIGRADO = "mix-desmigrado-1";
+function desfazerMigracaoDeLugares() {
+  try { if (localStorage.getItem(CHAVE_DESMIGRADO)) return; } catch (e) { return; }
+  if (!itens.length) return;
   const faixasMexidas = [];
   itens.forEach((it) => {
-    if (!ativa(it)) return;
     const seq = paginas(it);
     if (seq.length < 2) return;
-    const antigos = lugaresDe(it).filter((l) => !l.foto);
-    if (!antigos.length) return;
-    antigos.forEach((l) => {
+    const pub = Array.isArray(it.lugares) ? it.lugares : [];
+    const local = (edicoes[it.caminho] || {}).lugares;
+    if (!Array.isArray(local)) return;
+    pub.filter((l) => l && !l.foto).forEach((l) => {
       const no = noDoLugar(l);
-      seq.forEach((pg, k) => {
-        const alvo = acharItem(pg.caminho) || { caminho: pg.caminho };
-        const ls = lugaresDe(alvo).filter((x) => !lugarIgual(x, l));
-        ls.push(Object.assign({}, l, { foto: true, ordem: (typeof l.ordem === "number" ? l.ordem : 1e5) + k / 1000 }));
-        definirLugares(pg.caminho, ls);
+      const daCapa = local.find((x) => x && x.foto && lugarEm(x, no));
+      if (!daCapa) return;
+      definirLugares(it.caminho, lugaresDe(it).map((x) => (lugarEm(x, no) ? Object.assign({}, x, { foto: false }) : x)));
+      seq.slice(1).forEach((pg) => {
+        const p = acharItem(pg.caminho) || { caminho: pg.caminho };
+        const ls = lugaresDe(p);
+        if (ls.some((x) => x.foto && lugarEm(x, no))) definirLugares(pg.caminho, ls.filter((x) => !lugarEm(x, no)));
       });
       if (!faixasMexidas.some((f) => f.join("|") === no.join("|"))) faixasMexidas.push(no);
     });
-    mexeu = true;
   });
   faixasMexidas.forEach((no) => numerarFaixa(no, fotosDaFaixa(no).map((x) => x.caminho)));
-  if (mexeu) salvar();
-  return mexeu;
+  if (faixasMexidas.length) salvar();
+  try { localStorage.setItem(CHAVE_DESMIGRADO, "1"); } catch (e) {}
 }
 /* AS FOTOS DE DENTRO DE UM CARROSSEL que nao estao em `itens` (19/10/2026).
    Quando o carrossel veio pronto do images.json, as paginas dele so
@@ -2311,17 +2338,24 @@ function numerarFaixa(no, caminhos) {
     definirLugares(c, lugaresDe(it).map((l) => lugarEm(l, no) ? Object.assign({}, l, { ordem: k + 1 }) : l));
   });
 }
-/* PÔR NA FAIXA: entra no FIM dela */
-function porNaFaixa(caminho, no) {
+/* PÔR NA FAIXA: entra no FIM dela.
+   A PILHA entra INTEIRA (22/10/2026): um carrossel posto numa faixa vira
+   UM card no site. `soFoto` = a foto escolhida de dentro dele, sozinha.
+   A capa so tem um lugar por faixa: escolher um jeito troca o outro. */
+function porNaFaixa(caminho, no, soFoto) {
   const it = acharItem(caminho);
   if (!it || no.length !== 3) return;
+  const inteiro = !soFoto && paginas(it).length > 1 && itens.some((x) => x.caminho === caminho);
   const ls = lugaresDe(it);
-  if (ls.some((l) => lugarEm(l, no))) return;
+  const ja = ls.find((l) => lugarEm(l, no));
+  if (ja && !!ja.foto === !inteiro) return;
   const fim = fotosDaFaixa(no).reduce((m, x) => {
     const o = ordemNaFaixa(x, no);
     return o < 1e6 ? Math.max(m, o) : m + 1;
   }, 0);
-  definirLugares(caminho, ls.concat([Object.assign(lugarDoNo(no), { ordem: fim + 1, foto: true })]));
+  const novo = Object.assign(lugarDoNo(no), { ordem: ja && typeof ja.ordem === "number" ? ja.ordem : fim + 1 });
+  if (!inteiro) novo.foto = true;
+  definirLugares(caminho, ls.filter((l) => !lugarEm(l, no)).concat([novo]));
 }
 function tirarDaFaixa(caminho, no) {
   const it = acharItem(caminho);
@@ -2913,7 +2947,7 @@ function desenharLado() {
     b.setAttribute("aria-selected", String(on));
     b.onclick = () => { if (b.dataset.modo !== modo) trocarModo(b.dataset.modo); };
   });
-  $("qtdImagens").textContent = imagensDoSite().length;
+  $("qtdImagens").textContent = cardsDoSite().length;
   const btImg = document.querySelector("[data-pagtodas]");
   btImg.classList.toggle("on", modo === "paginas" && !filtroLugar);
   btImg.onclick = () => { filtroLugar = null; desenhar(); };
@@ -3155,8 +3189,11 @@ function menuDoNo(no, alvo) {
 /* ---------- BARRA DE CIMA ---------- */
 function baseDaVista() {
   if (modo === "paginas") {
-    const todas = imagensDoSite();
-    return filtroLugar ? todas.filter((x) => lugaresDe(x).some((l) => lugarEm(l, filtroLugar))) : todas;
+    /* numa pagina/faixa: o que esta nela - pilha (carrossel inteiro) e
+       fotos soltas de dentro de um carrossel. Em "Todas": os cards, como
+       na Mix (22/10/2026) */
+    return filtroLugar ? imagensDoSite().filter((x) => lugaresDe(x).some((l) => lugarEm(l, filtroLugar)))
+      : cardsDoSite();
   }
   if (filtro === "__lixo") return naLixeira();
   if (filtro === "__arq") return itens.filter((x) => ehArq(x) && !ehLixo(x)).concat(arquivadasOrfas());
@@ -3398,9 +3435,12 @@ function desenharGrade() {
   const noModoPag = modo === "paginas";
   $("grade").innerHTML = l.length ? l.map((it) => {
     const seq = paginas(it);
-    /* no modo Paginas o carrossel nao e pilha: cada imagem e uma imagem */
-    const ehGrupo = !noModoPag && seq.length > 1;
-    const orig = noModoPag ? origemCarrossel(it) : null;
+    /* no modo Paginas o carrossel e PILHA como na Mix (22/10/2026); numa
+       faixa, so quando entrou INTEIRO - a foto solta e uma imagem so */
+    const pilhaPag = noModoPag && seq.length > 1 && itens.some((x) => x.caminho === it.caminho)
+      && (!filtroLugar || ehCarrosselInteiroEm(it, filtroLugar));
+    const ehGrupo = noModoPag ? pilhaPag : seq.length > 1;
+    const orig = noModoPag && !pilhaPag ? origemCarrossel(it) : null;
     const t = tagsDe(it).join(", ");
     const nome = valGrupo(it, "name") || val(it, "name") || it.caminho.split("/").pop();
     const ano = ehGrupo ? (faixaDeAnos(it) || valGrupo(it, "year") || val(it, "year")) : val(it, "year");
@@ -3411,6 +3451,7 @@ function desenharGrade() {
       + ' aria-label="Marcar">' + SVG_CHECK + '</span>';
     const selo = ehArq(it) ? '<span class="selo arq">arquivada</span>'
       : orig ? '<span class="selo">carrossel · ' + (orig.k + 1) + '/' + orig.n + '</span>'
+      : pilhaPag ? '<span class="selo">' + seq.length + ' fotos</span>'
       : noModoPag ? ""
       : ehGrupo ? (foraDoMixCard(it) ? '<span class="selo fora">fora do Mix</span>' : '<span class="selo">' + seq.length + ' fotos</span>')
       : foraDoMix(it) ? '<span class="selo fora">fora do Mix</span>'
@@ -3435,7 +3476,7 @@ function desenharGrade() {
       + marca + selo + corpo + seloCol + '</div>'
       + '<div class="nome">' + esc(nome) + '</div>'
       + '<div class="meta"><span class="ponto"></span>' + (noModoPag
-        ? esc(lugaresDe(it).map((lg) => textoNo(noDoLugar(lg))).join(", ") || "em nenhuma faixa")
+        ? esc(pilhaPag ? metaDaPilha(it, seq) : (lugaresDe(it).map((lg) => textoNo(noDoLugar(lg))).join(", ") || "em nenhuma faixa"))
         : esc(t || "sem tag")
           + (ano ? " · " + esc(ano) : "")
           + (colecoesDe(it).length ? " · " + esc(colecoesDe(it).join(", ")) : "")
@@ -4153,23 +4194,50 @@ function abrirPainel(caminho) {
 /* O POP-UP DO MODO PAGINAS (19/10/2026): uma imagem e as faixas dela.
    Nada de Mix aqui (tags, colecoes, carrossel, aparece no Mix): ela pediu
    os dois modos separados. */
+/* no pop-up de uma PILHA (modo Paginas): null = o carrossel inteiro; um
+   caminho = aquela foto, sozinha (22/10/2026) */
+let fotoDaPilha = null;
+let pilhaAberta = "";
 function abrirPainelPagina(caminho) {
   const it = acharItem(caminho);
   if (!it) return;
   atual = it;
-  const orig = origemCarrossel(it);
-  const u = it.image || it.video || "";
-  $("fPalco").innerHTML = it.image ? '<img src="' + esc(it.image) + '" alt="">'
+  const seq = paginas(it);
+  const ehPilha = seq.length > 1 && itens.some((x) => x.caminho === it.caminho);
+  if (pilhaAberta !== it.caminho) { fotoDaPilha = null; pilhaAberta = it.caminho; }
+  if (fotoDaPilha && !seq.some((pg) => pg.caminho === fotoDaPilha)) fotoDaPilha = null;
+  /* ALVO: quem ganha (ou perde) o lugar. Na pilha, o carrossel inteiro
+     mora na capa sem `foto`; a foto escolhida, nela mesma, com `foto` */
+  const alvo = ehPilha && fotoDaPilha ? (acharItem(fotoDaPilha) || { caminho: fotoDaPilha }) : it;
+  const soFoto = ehPilha && !!fotoDaPilha;
+  const doAlvo = (l) => !ehPilha || (soFoto ? !!l.foto || alvo.caminho !== it.caminho : !l.foto);
+  const pgSel = ehPilha && fotoDaPilha ? seq.find((pg) => pg.caminho === fotoDaPilha) : null;
+  const u = pgSel ? pgSel.url : (it.image || it.video || "");
+  $("fPalco").innerHTML = (pgSel || it.image) ? '<img src="' + esc(u) + '" alt="">'
     : '<video src="' + esc(it.video || "") + '" controls preload="metadata"></video>';
-  $("fCaminho").textContent = it.caminho;
-  $("fTitulo").textContent = val(it, "name") || it.caminho.split("/").pop();
-  $("fTiras").innerHTML = "";
-  const meus = lugaresDe(it);
+  $("fCaminho").textContent = alvo.caminho;
+  /* o inteiro tem o nome do CARD (o do grupo, como na grade); a foto, o dela */
+  $("fTitulo").textContent = (ehPilha && !soFoto ? valGrupo(it, "name") : "")
+    || val(alvo, "name") || (pgSel && pgSel.name) || alvo.caminho.split("/").pop();
+  /* A TIRA: o carrossel inteiro e cada foto dele - escolher e clicar */
+  $("fTiras").innerHTML = ehPilha
+    ? '<button type="button" class="tira tira-todas' + (fotoDaPilha ? "" : " on") + '" data-pp="" title="O carrossel inteiro"'
+      + ' style="display:grid;place-items:center;font:600 10px Outfit,sans-serif;color:var(--texto);background:var(--painel-2);cursor:pointer">'
+      + 'inteiro<br>' + seq.length + ' fotos</button>'
+      + seq.map((pg, k) => '<button type="button" class="tira' + (pg.caminho === fotoDaPilha ? " on" : "") + '" data-pp="' + esc(pg.caminho) + '"'
+        + ' title="Só a foto ' + (k + 1) + '" style="padding:0;cursor:pointer">'
+        + '<img src="' + esc(pg.url) + '" alt="Foto ' + (k + 1) + '">'
+        + (k === 0 ? '<span class="capa-marca">capa</span>' : "") + '</button>').join("")
+    : "";
+  $("fTiras").querySelectorAll("[data-pp]").forEach((b) => {
+    b.onclick = () => { fotoDaPilha = b.dataset.pp || null; abrirPainelPagina(caminho); };
+  });
+  const meus = lugaresDe(alvo).filter(doAlvo);
   const faixasTodas = todasFaixas();
   const linhas = meus.map((lg, i) => {
     const no = noDoLugar(lg);
     const seqFx = fotosDaFaixa(no).map((x) => x.caminho);
-    const pos = seqFx.indexOf(it.caminho);
+    const pos = seqFx.indexOf(alvo.caminho);
     return '<div class="lugar-linha" data-lug="' + i + '"><span class="txt">' + esc(textoNo(no)) + '</span>'
       + '<span class="pos">' + (pos >= 0 ? (pos + 1) + 'º de ' + seqFx.length : "") + '</span>'
       + '<button class="mini-bt" type="button" data-lugmove="-1" aria-label="Mais para a frente"' + (pos <= 0 ? " disabled" : "") + '>‹</button>'
@@ -4182,9 +4250,17 @@ function abrirPainelPagina(caminho) {
         return '<button class="escolha pag' + (on ? " on" : "") + '" type="button" data-lf="' + i + '" aria-pressed="' + on + '">' + esc(textoNo(no)) + '</button>';
       }).join("")
     + '<button class="escolha" type="button" id="btNovoLugar">+ novo lugar</button></div>';
-  $("fCorpo").innerHTML = (orig
+  const orig = ehPilha ? null : origemCarrossel(it);
+  const kSel = pgSel ? seq.indexOf(pgSel) : -1;
+  const dica = ehPilha
+    ? (soFoto
+      ? '<p class="dica">Foto ' + (kSel + 1) + ' de ' + seq.length + ', <strong>sozinha</strong>: no site ela é um card próprio, fora do carrossel.</p>'
+      : '<p class="dica">O <strong>carrossel inteiro</strong>: no site ele é um card só, a capa, que folheia as ' + seq.length
+        + ' fotos no pop-up. Para pôr uma foto sozinha, escolha ela na tira.</p>')
+    : orig
       ? '<p class="dica">Imagem ' + (orig.k + 1) + ' de ' + orig.n + ' do carrossel “' + esc(val(orig.lider, "name") || orig.lider.caminho.split("/").pop())
-        + '” na Mix. Aqui ela vale <strong>sozinha</strong>: entra só esta imagem.</p>' : "")
+        + '” na Mix. Aqui ela vale <strong>sozinha</strong>: entra só esta imagem.</p>' : "";
+  $("fCorpo").innerHTML = dica
     + '<div class="secao-pag"><div class="nome-s" style="margin:4px 0 10px">Páginas do site</div>'
     + (linhas ? '<div class="lugares">' + linhas + '</div>' : '<p class="dica">Em nenhuma faixa ainda. Escolha abaixo.</p>')
     + (faixasTodas.length ? "" : '<p class="dica">Ainda não há páginas. Crie em <strong>Páginas do site</strong>, no menu, ou em “+ novo lugar”.</p>')
@@ -4193,19 +4269,19 @@ function abrirPainelPagina(caminho) {
   $("fLugares").querySelectorAll("[data-lf]").forEach((b) => {
     b.onclick = () => {
       const no = faixasTodas[+b.dataset.lf];
-      if (lugaresDe(it).some((lg) => lugarEm(lg, no))) tirarDaFaixa(it.caminho, no); else porNaFaixa(it.caminho, no);
+      if (meus.some((lg) => lugarEm(lg, no))) tirarDaFaixa(alvo.caminho, no); else porNaFaixa(alvo.caminho, no, soFoto);
       redesenhar();
     };
   });
   $("fCorpo").querySelectorAll("[data-lug]").forEach((row) => {
     const no = noDoLugar(meus[+row.dataset.lug]);
-    row.querySelectorAll("[data-lugmove]").forEach((b) => { b.onclick = () => { moverNaFaixa(it.caminho, no, +b.dataset.lugmove); redesenhar(); }; });
-    row.querySelector("[data-lugtira]").onclick = () => { tirarDaFaixa(it.caminho, no); redesenhar(); };
+    row.querySelectorAll("[data-lugmove]").forEach((b) => { b.onclick = () => { moverNaFaixa(alvo.caminho, no, +b.dataset.lugmove); redesenhar(); }; });
+    row.querySelector("[data-lugtira]").onclick = () => { tirarDaFaixa(alvo.caminho, no); redesenhar(); };
   });
   $("btNovoLugar").onclick = async () => {
     const no = await pedirLugar();
     if (!no) return;
-    porNaFaixa(it.caminho, no);
+    porNaFaixa(alvo.caminho, no, soFoto);
     redesenhar();
     mostrarEstado("em " + textoNo(no), "ok");
   };
@@ -4277,7 +4353,7 @@ function trazerCapasNovas() {
 function desenhar() {
   consertarCapaPresa();
   trazerCapasNovas();
-  migrarLugaresDeCarrossel();
+  desfazerMigracaoDeLugares();
   desenharLado();
   desenharAlternador();
   desenharChips();
