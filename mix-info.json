@@ -18,14 +18,7 @@
         "Photo",
         "AI"
       ],
-      "lugares": [
-        {
-          "pagina": "GrupoCurta",
-          "carrossel": "Curta!",
-          "faixa": "Cinelist",
-          "ordem": 3
-        }
-      ]
+      "lugares": []
     },
     "Imagens/2026-08/2026-08-29_18-28-23.jpg": {
       "name": "TESTE",
@@ -43,14 +36,10 @@
           "Teste 1"
         ]
       },
-      "lugares": [
-        {
-          "pagina": "GrupoCurta",
-          "carrossel": "Curta!",
-          "faixa": "Cinelist",
-          "ordem": 2
-        }
-      ]
+      "lugares": [],
+      "carrosselDe": "Imagens/2026-08/2026-08-29_19-05-56-5.jpg",
+      "carrosselSite": [],
+      "carrosselSiteDe": "Imagens/2026-10/2026-10-19_20-03-10.jpg"
     },
     "Imagens/2026-08/2026-08-29_19-05-56-2.jpg": {
       "name": "sadsa",
@@ -70,12 +59,11 @@
           "pagina": "GrupoCurta",
           "carrossel": "Curta!",
           "faixa": "Posters",
-          "ordem": 1
+          "ordem": 3
         }
       ]
     },
     "Imagens/2026-08/2026-08-29_19-05-56-3.jpg": {
-      "carrosselDe": "Imagens/2026-08/2026-08-29_19-05-56-4.jpg",
       "phrase": "Imagem 2",
       "name": "Teste texto",
       "link": "https://bigadiniz.com/info",
@@ -85,7 +73,19 @@
       "tags": [
         "Motion"
       ],
-      "tag": "Motion"
+      "tag": "Motion",
+      "carrossel": [
+        "Imagens/2026-08/2026-08-29_19-05-56-5.jpg"
+      ],
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Posters",
+          "ordem": 4,
+          "foto": true
+        }
+      ]
     },
     "Imagens/2026-08/2026-08-29_19-05-56-4.jpg": {
       "carrossel": [
@@ -119,12 +119,12 @@
           "pagina": "GrupoCurta",
           "carrossel": "Curta!",
           "faixa": "Cinelist",
-          "ordem": 1
+          "ordem": 3,
+          "foto": true
         }
       ]
     },
     "Imagens/2026-08/2026-08-29_19-05-56-5.jpg": {
-      "carrosselDe": "Imagens/2026-08/2026-08-29_19-05-56-4.jpg",
       "phrase": "teste 3",
       "name": "Teste texto",
       "noInfo": true,
@@ -134,7 +134,12 @@
       "tags": [
         "Motion"
       ],
-      "tag": "Motion"
+      "tag": "Motion",
+      "carrossel": [
+        "Imagens/2026-08/2026-08-29_18-28-23.jpg"
+      ],
+      "carrosselSite": [],
+      "carrosselSiteDe": "Imagens/2026-10/2026-10-19_20-03-10.jpg"
     },
     "Imagens/2026-08/2026-08-29_19-05-56-6.jpg": {
       "carrosselDe": "Imagens/2026-08/2026-08-29_19-05-56-7.jpg",
@@ -163,7 +168,16 @@
       "tags": [
         "Design"
       ],
-      "tag": "Design"
+      "tag": "Design",
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Cinelist",
+          "ordem": 2,
+          "foto": true
+        }
+      ]
     },
     "Imagens/2026-08/2026-08-29_19-05-56-8.jpg": {
       "noInfo": true,
@@ -175,6 +189,15 @@
       ],
       "tags": [
         "Design"
+      ],
+      "lugares": [
+        {
+          "pagina": "GrupoCurta",
+          "carrossel": "Curta!",
+          "faixa": "Posters",
+          "ordem": 2,
+          "foto": true
+        }
       ],
       "carrosselDe": "Imagens/2026-08/2026-08-29_19-05-56.jpg"
     },
@@ -196,16 +219,17 @@
         "autoplay": false,
         "controles": "minimos"
       },
-      "carrossel": [
-        "Imagens/2026-08/2026-08-29_19-05-56-8.jpg"
-      ],
       "lugares": [
         {
           "pagina": "GrupoCurta",
           "carrossel": "Curta!",
           "faixa": "Posters",
-          "ordem": 2
+          "ordem": 1,
+          "foto": true
         }
+      ],
+      "carrossel": [
+        "Imagens/2026-08/2026-08-29_19-05-56-8.jpg"
       ]
     },
     "Imagens/2026-10/2026-10-19_20-03-10.jpg": {
@@ -216,10 +240,21 @@
       "lugares": [
         {
           "pagina": "GrupoCurta",
+          "carrossel": "Materia Bruta",
+          "faixa": "Todos",
+          "ordem": 1,
+          "foto": true
+        },
+        {
+          "pagina": "GrupoCurta",
           "carrossel": "Curta!",
           "faixa": "Cinelist",
-          "ordem": 4
+          "ordem": 1
         }
+      ],
+      "carrosselSite": [
+        "Imagens/2026-08/2026-08-29_19-05-56-5.jpg",
+        "Imagens/2026-08/2026-08-29_18-28-23.jpg"
       ]
     },
     "Uploads/Fotos/2026-09/FBE4FD9B-82BF-49D6-ABFA-367230DD9784.jpg": {
@@ -264,6 +299,14 @@
             },
             {
               "name": "Posters"
+            }
+          ]
+        },
+        {
+          "name": "Materia Bruta",
+          "faixas": [
+            {
+              "name": "Todos"
             }
           ]
         }
