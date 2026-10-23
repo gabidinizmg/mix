@@ -41,7 +41,10 @@
       "name": "Photography",
       "cover": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_18-28-23-2.jpg",
       "link": "",
-      "criada": true
+      "criada": true,
+      "tags": [
+        "Teste 1"
+      ]
     },
     {
       "name": "Drawing",
@@ -335,6 +338,11 @@
         "Photo",
         "AI"
       ],
+      "tagsColecao": {
+        "Photography": [
+          "Teste 1"
+        ]
+      },
       "lugares": [
         {
           "pagina": "festival",
