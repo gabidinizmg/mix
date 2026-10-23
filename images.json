@@ -80,7 +80,11 @@
       "carrosseis": [
         {
           "name": "Festival 1",
-          "faixas": []
+          "faixas": [
+            {
+              "name": "Teste"
+            }
+          ]
         }
       ]
     }
@@ -330,6 +334,15 @@
       "tags": [
         "Photo",
         "AI"
+      ],
+      "lugares": [
+        {
+          "pagina": "festival",
+          "carrossel": "Festival 1",
+          "faixa": "Teste",
+          "ordem": 1,
+          "foto": true
+        }
       ]
     }
   ],
@@ -453,6 +466,18 @@
           "carrossel": "Curta!",
           "faixa": "Posters",
           "ordem": 3
+        }
+      ]
+    },
+    {
+      "image": "https://cdn.jsdelivr.net/gh/gabidinizmg/mix@main/Imagens/2026-08/2026-08-29_18-28-23-2.jpg",
+      "lugares": [
+        {
+          "pagina": "festival",
+          "carrossel": "Festival 1",
+          "faixa": "Teste",
+          "ordem": 1,
+          "foto": true
         }
       ]
     },
