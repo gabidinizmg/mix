@@ -26,7 +26,12 @@
           "ordem": 1,
           "foto": true
         }
-      ]
+      ],
+      "tagsCol": {
+        "Photography": [
+          "Teste 1"
+        ]
+      }
     },
     "Imagens/2026-08/2026-08-29_18-28-23.jpg": {
       "name": "TESTE",
