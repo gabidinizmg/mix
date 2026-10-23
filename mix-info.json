@@ -18,7 +18,15 @@
         "Photo",
         "AI"
       ],
-      "lugares": []
+      "lugares": [
+        {
+          "pagina": "festival",
+          "carrossel": "Festival 1",
+          "faixa": "Teste",
+          "ordem": 1,
+          "foto": true
+        }
+      ]
     },
     "Imagens/2026-08/2026-08-29_18-28-23.jpg": {
       "name": "TESTE",
@@ -317,7 +325,11 @@
       "carrosseis": [
         {
           "name": "Festival 1",
-          "faixas": []
+          "faixas": [
+            {
+              "name": "Teste"
+            }
+          ]
         }
       ]
     }
