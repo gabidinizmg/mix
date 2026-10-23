@@ -2490,11 +2490,19 @@ function numerarFaixa(no, caminhos) {
    A PILHA entra INTEIRA (22/10/2026): um carrossel posto numa faixa vira
    UM card no site. `soFoto` = a foto escolhida de dentro dele, sozinha.
    A capa so tem um lugar por faixa: escolher um jeito troca o outro. */
-function porNaFaixa(caminho, no, soFoto) {
+/* UMA FAIXA SO, POR PADRAO (23/10/2026). Ela: "geralmente nao vou repetir
+   imagem, ou seja se encaixei numa faixa ela pode sair". Por numa faixa
+   MOVE: sai das outras (do mesmo jeito - a capa pode estar inteira numa e
+   sozinha noutra). `manter` = copiar (o Option do quadro). */
+function porNaFaixa(caminho, no, soFoto, manter) {
   const it = acharItem(caminho);
   if (!it || no.length !== 3) return;
   const inteiro = !soFoto && ehCapaSite(it);
-  const ls = lugaresDe(it);
+  if (!manter) {
+    lugaresDe(it).filter((l) => !lugarEm(l, no) && (!ehCapaSite(it) || !l.foto === inteiro))
+      .forEach((l) => tirarDaFaixa(caminho, noDoLugar(l)));
+  }
+  const ls = lugaresDe(acharItem(caminho) || it);
   const ja = ls.find((l) => lugarEm(l, no));
   if (ja && !!ja.foto === !inteiro) return;
   const fim = fotosDaFaixa(no).reduce((m, x) => {
@@ -3575,8 +3583,9 @@ function cartaoQuadro(it, no, de) {
 function desenharQuadro() {
   const nos = faixasDoQuadro();
   const daBandeja = cardsDoSite().filter((it) => {
+    /* 23/10: uma faixa so - a bandeja e o que ainda nao esta em NENHUMA */
     const multi = ehCapaSite(it);
-    return !lugaresDe(it).some((l) => lugarEm(l, filtroLugar) && (!multi || !l.foto));
+    return !lugaresDe(it).some((l) => !multi || !l.foto);
   });
   $("tituloVista").textContent = textoNo(filtroLugar);
   $("conta").textContent = nos.length + (nos.length === 1 ? " faixa" : " faixas");
@@ -3592,8 +3601,8 @@ function desenharQuadro() {
         + '</div></section>';
     }).join("")
     + '<button class="novo-bt" id="btQNova"><span class="mais" aria-hidden="true">+</span> Nova faixa em ' + esc(filtroLugar[1]) + '</button>'
-    + '<section class="qfaixa bandeja"><div class="qcabeca"><span class="qnome">Fora das faixas de ' + esc(filtroLugar[1]) + '</span>'
-    + '<span class="qn">' + daBandeja.length + '</span><span class="qdica">arraste para uma faixa · Option copia</span></div>'
+    + '<section class="qfaixa bandeja"><div class="qcabeca"><span class="qnome">Fora das faixas</span>'
+    + '<span class="qn">' + daBandeja.length + '</span><span class="qdica">em nenhuma faixa ainda · arraste para uma</span></div>'
     + '<div class="qlinha" data-qfx="-1" aria-label="Fora das faixas">'
     + (daBandeja.length ? daBandeja.map((it) => cartaoQuadro(it, null, -1)).join("") : '<span class="vazia">Tudo já está numa faixa</span>')
     + '</div></section></div>';
@@ -3690,7 +3699,7 @@ function soltarNoQuadro(d, dest, pos, copia) {
   const mesma = !!de && de.join("|") === para.join("|");
   if (!mesma) {
     if (de && !copia) tirarDaFaixa(d.c, de);
-    porNaFaixa(d.c, para, d.foto);
+    porNaFaixa(d.c, para, d.foto, copia && !!de);
   }
   const seq = fotosDaFaixa(para).map((x) => x.caminho).filter((c) => c !== d.c);
   seq.splice(Math.min(pos, seq.length), 0, d.c);
@@ -4189,14 +4198,9 @@ function abrirPainel(caminho) {
   const faixasTodas = todasFaixas();
   const blocoSite = !origS
     ? '<p class="dica">Para fazer um <strong>carrossel do site</strong>, arraste outra imagem para cima desta, no quadro da faixa ou na grade.</p>'
-    : '<div class="site-car"><div class="nome-s" style="margin:2px 0 8px">Carrossel do site · ' + seqS.length + ' fotos</div>'
-      + '<div class="site-tira">' + seqS.map((pg, k) => '<button type="button" class="tira' + (pg.caminho === it.caminho ? " on" : "")
-        + '" data-sitepg="' + esc(pg.caminho) + '" title="Abrir a foto ' + (k + 1) + '"><img src="' + esc(pg.url) + '" alt="Foto ' + (k + 1) + '">'
-        + (k === 0 ? '<span class="capa-marca">capa</span>' : "") + '</button>').join("") + '</div>'
+    : '<div class="site-car"><div class="nome-s" style="margin:2px 0 8px">Carrossel do site · foto ' + (origS.k + 1) + ' de ' + seqS.length + '</div>'
+      + '<p class="dica">As fotos estão embaixo da imagem: arraste para mudar a ordem; a primeira é a capa.</p>'
       + '<div class="site-acoes">'
-      + (origS.k > 1 ? '<button type="button" class="mini-bt" data-sitemove="-1" aria-label="Mais para a frente">‹</button>' : "")
-      + (origS.k > 0 && origS.k < seqS.length - 1 ? '<button type="button" class="mini-bt" data-sitemove="1" aria-label="Mais para trás">›</button>' : "")
-      + (origS.k > 0 ? '<button type="button" class="mini-bt" data-sitecapa="1">virar capa</button>' : "")
       + '<button type="button" class="mini-bt perigo" data-sitetira="1">' + (capaS ? "desfazer o carrossel" : "tirar do carrossel") + '</button>'
       + '</div></div>';
   const corpoAlvo = capaS
@@ -4217,7 +4221,7 @@ function abrirPainel(caminho) {
   const livres = faixasTodas.map((no, i) => ({ no, i })).filter((x) => !meusLugares.some((lg) => lugarEm(lg, x.no)));
   const corpoLugares = corpoAlvo
     + (tagsLugar ? '<div class="tags-lugar">' + tagsLugar + '</div>' : '<p class="dica">Em nenhuma faixa ainda.</p>')
-    + '<select class="sel-lugar" id="fPorFaixa" aria-label="Pôr numa faixa"><option value="">+ Pôr numa faixa…</option>'
+    + '<select class="sel-lugar" id="fPorFaixa" aria-label="Pôr numa faixa"><option value="">' + (tagsLugar ? "Mover para outra faixa…" : "+ Pôr numa faixa…") + '</option>'
     + livres.map((x) => '<option value="' + x.i + '">' + esc(textoNo(x.no)) + '</option>').join("")
     + '<option value="novo">+ Novo lugar…</option></select>';
   const blocoLugares = modo !== "paginas" ? ""
@@ -4429,26 +4433,40 @@ function abrirPainel(caminho) {
     tag.querySelector("[data-lugtira]").onclick = () => { tirarDaFaixa(itLug.caminho, no); salvar(); abrirPainel(caminho); desenhar(); };
   });
   /* o carrossel do site: abrir outra foto, ordem, capa, tirar */
-  $("fCorpo").querySelectorAll("[data-sitepg]").forEach((b) => {
-    b.onclick = () => { if (b.dataset.sitepg !== it.caminho) { abertas.clear(); abrirPainel(b.dataset.sitepg); } };
-  });
-  if (origS) {
+  /* A TIRA DO CARROSSEL DO SITE embaixo da foto, igual a da Mix (23/10).
+     Ela: "gosto desse tipo de organizacao de carrossel, de arrastar".
+     Clique abre a foto; arrastar muda a ordem; a primeira vira a capa. */
+  if (modo === "paginas" && origS) {
     const ordem = seqS.map((x) => x.caminho);
-    const k = origS.k;
-    $("fCorpo").querySelectorAll("[data-sitemove]").forEach((b) => {
-      b.onclick = () => {
-        const j = k + +b.dataset.sitemove;
-        if (j < 1 || j >= ordem.length) return;
-        [ordem[k], ordem[j]] = [ordem[j], ordem[k]];
-        reordenarSite(ordem); salvar(); abrirPainel(caminho); desenhar();
+    $("fTiras").innerHTML = seqS.map((pg, k) =>
+      '<div class="tira' + (pg.caminho === it.caminho ? " on" : "") + '" data-sp="' + esc(pg.caminho) + '"'
+      + ' data-k="' + k + '" draggable="true" role="button" tabindex="0" title="Arraste para mudar a ordem">'
+      + '<img src="' + esc(pg.url) + '" alt="">'
+      + (k === 0 ? '<span class="capa-marca">capa</span>' : "") + '</div>').join("");
+    $("fTiras").querySelectorAll("[data-sp]").forEach((t) => {
+      t.onclick = () => { if (t.dataset.sp !== it.caminho) { abertas.clear(); abrirPainel(t.dataset.sp); } };
+      t.ondragstart = (e) => { e.dataTransfer.setData("text/plain", "sp:" + t.dataset.k); t.classList.add("arrastando"); };
+      t.ondragend = () => t.classList.remove("arrastando");
+      t.ondragover = (e) => { e.preventDefault(); t.classList.add("alvo"); };
+      t.ondragleave = () => t.classList.remove("alvo");
+      t.ondrop = (e) => {
+        e.preventDefault(); t.classList.remove("alvo");
+        const d = String(e.dataTransfer.getData("text/plain") || "");
+        if (d.indexOf("sp:") !== 0) return;
+        const de = +d.slice(3), para = +t.dataset.k;
+        if (de === para) return;
+        const nova = ordem.slice();
+        const [x] = nova.splice(de, 1);
+        nova.splice(para, 0, x);
+        reordenarSite(nova);
+        if (para === 0 || de === 0) lugarAlvo = "grupo";
+        salvar(); abrirPainel(caminho); desenhar();
+        mostrarEstado(para === 0 || de === 0 ? "nova capa do carrossel do site" : "nova ordem do carrossel do site", "ok");
       };
     });
-    const bc = $("fCorpo").querySelector("[data-sitecapa]");
-    if (bc) bc.onclick = () => {
-      reordenarSite([it.caminho].concat(ordem.filter((c) => c !== it.caminho)));
-      lugarAlvo = "grupo"; salvar(); abrirPainel(caminho); desenhar();
-      mostrarEstado("nova capa do carrossel do site", "ok");
-    };
+  }
+  if (origS) {
+    const ordem = seqS.map((x) => x.caminho);
     const bt = $("fCorpo").querySelector("[data-sitetira]");
     if (bt) bt.onclick = async () => {
       if (capaS && !(await perguntar("Desfazer o carrossel do site?", "As " + ordem.length + " fotos voltam a ser soltas. Nenhuma foto é apagada, e a Mix não muda."))) return;
