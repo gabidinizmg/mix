@@ -31,10 +31,12 @@
   --texto-3: rgba(239,235,249,.38);
   --roxo: #7C54FF;
   --verde: #24FB99;
-  /* as PÁGINAS DO SITE (19/10/2026): âmbar, para não confundir com as
-     tags (roxo) nem com as coleções da Mix (verde) */
-  --pag: #FFB547;
-  --pag-selo: #FFB547;   /* fundo dos selos: o mesmo nos dois temas, texto escuro */
+  /* as PÁGINAS DO SITE: ROXO, como o resto (23/10/2026). Ela: "acho que
+     todo o site podia ser roxinho, nao precisa separar entre esse ambar e
+     roxo". Era ambar desde 19/10. Um tom mais claro que o --roxo, para o
+     texto ter contraste no fundo escuro. */
+  --pag: #A58BFF;
+  --pag-selo: #7C54FF;   /* fundo dos selos: o mesmo nos dois temas, texto branco */
   --amarelo: #FFF20B;
   --ok: #3BD98F;
   --erro: #FF9A8F;
@@ -52,7 +54,7 @@ html[data-tema="claro"] {
   --texto-2: rgba(53,34,112,.66);
   --texto-3: rgba(53,34,112,.45);
   --ok: #0B7A4B;
-  --pag: #A35400;
+  --pag: #5B3BD6;
   --erro: #B3261E;
   --aviso: #8A6100;
   --sombra: rgba(53,34,112,.25);
@@ -307,7 +309,7 @@ h1 { font: 600 22px/1.1 "Outfit",sans-serif; letter-spacing: -.02em; }
 .quadro .novo-bt { justify-self: start; }
 /* AS FAIXAS DE UMA IMAGEM, no pop-up: tags ambar com o × no hover, e o
    menu para por noutra (22/10/2026) */
-.tags-lugar { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 10px; }
+.tags-lugar { display: flex; flex-wrap: wrap; gap: 8px; }
 .tag-lugar { display: inline-flex; align-items: center; gap: 7px; padding: 6px 8px 6px 12px; border-radius: 999px;
   font-size: 13px; color: var(--texto); border: 1px solid var(--pag);
   background: color-mix(in srgb, var(--pag) 14%, transparent); }
@@ -320,6 +322,7 @@ h1 { font: 600 22px/1.1 "Outfit",sans-serif; letter-spacing: -.02em; }
 .sel-lugar { font: inherit; font-size: 13px; color: var(--texto); background: var(--painel-2); border: 1px solid var(--linha);
   border-radius: 999px; padding: 7px 14px; cursor: pointer; max-width: 100%; }
 .sel-lugar:focus-visible { outline: 2px solid var(--pag); outline-offset: 2px; }
+.sep-pag { height: 1px; background: var(--linha); margin: 14px 2px 18px; }
 .site-car { margin: 0 0 12px; }
 .site-tira { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .site-tira .tira { padding: 0; cursor: pointer; }
@@ -562,8 +565,8 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
 .lugar-linha .pos { font-size: 11.5px; color: var(--texto-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .lugar-linha .mini-bt[disabled] { opacity: .3; cursor: default; }
 .lugares { display: grid; gap: 6px; margin: 4px 0 8px; }
-.selo.fora { background: var(--pag-selo); color: #201300; }
-.selo-col span.pag { background: var(--pag-selo); color: #201300; }
+.selo.fora { background: var(--pag-selo); color: #fff; }
+.selo-col span.pag { background: var(--pag-selo); color: #fff; }
 .item.sub.sem-sub .rotulo { font-style: italic; color: var(--texto-3); }
 .novo-bt.sub { font-size: 12.5px; }
 .chip.verde.on { border-color: var(--verde); background: color-mix(in srgb, var(--verde) 16%, transparent); }
@@ -4196,13 +4199,11 @@ function abrirPainel(caminho) {
   const meusLugares = lugaresDe(it).filter(doAlvo);
   const soFoto = !capaS || alvoFoto;
   const faixasTodas = todasFaixas();
-  const blocoSite = !origS
-    ? '<p class="dica">Para fazer um <strong>carrossel do site</strong>, arraste outra imagem para cima desta, no quadro da faixa ou na grade.</p>'
-    : '<div class="site-car"><div class="nome-s" style="margin:2px 0 8px">Carrossel do site · foto ' + (origS.k + 1) + ' de ' + seqS.length + '</div>'
-      + '<p class="dica">As fotos estão embaixo da imagem: arraste para mudar a ordem; a primeira é a capa.</p>'
-      + '<div class="site-acoes">'
-      + '<button type="button" class="mini-bt perigo" data-sitetira="1">' + (capaS ? "desfazer o carrossel" : "tirar do carrossel") + '</button>'
-      + '</div></div>';
+  const corpoSite = !origS
+    ? '<p class="dica">Arraste outra imagem para cima desta, no quadro da faixa ou na grade.</p>'
+    : '<p class="dica">As fotos estão embaixo da imagem: arraste para mudar a ordem. A primeira é a capa.</p>'
+      + '<div class="site-acoes"><button type="button" class="mini-bt perigo" data-sitetira="1">'
+      + (capaS ? "desfazer o carrossel" : "tirar do carrossel") + '</button></div>';
   const corpoAlvo = capaS
     ? '<div class="alternador" id="fLugAlvo" role="group" aria-label="O que entra na faixa">'
       + '<button type="button" data-alvo="grupo" class="' + (alvoFoto ? "" : "on") + '">O carrossel inteiro</button>'
@@ -4219,14 +4220,23 @@ function abrirPainel(caminho) {
       + '<button type="button" class="x" data-lugtira="1" aria-label="Tirar de ' + esc(textoNo(no)) + '">×</button></span>';
   }).join("");
   const livres = faixasTodas.map((no, i) => ({ no, i })).filter((x) => !meusLugares.some((lg) => lugarEm(lg, x.no)));
-  const corpoLugares = corpoAlvo
-    + (tagsLugar ? '<div class="tags-lugar">' + tagsLugar + '</div>' : '<p class="dica">Em nenhuma faixa ainda.</p>')
+  const corpoLugares = (corpoAlvo ? '<div>' + corpoAlvo + '</div>' : "")
+    + (tagsLugar ? '<div class="tags-lugar">' + tagsLugar + '</div>' : "")
     + '<select class="sel-lugar" id="fPorFaixa" aria-label="Pôr numa faixa"><option value="">' + (tagsLugar ? "Mover para outra faixa…" : "+ Pôr numa faixa…") + '</option>'
     + livres.map((x) => '<option value="' + x.i + '">' + esc(textoNo(x.no)) + '</option>').join("")
     + '<option value="novo">+ Novo lugar…</option></select>';
+  /* AS PAGINAS DO SITE NO POP-UP = DUAS SECOES IGUAIS AS DA MIX (23/10/2026).
+     Ela: "nao tem espacamento nenhum, nao tem respiros... do Mix ta perfeito,
+     bem organizadinho, bem minimalista". Rotulo pequeno, o resumo a direita,
+     fechadas (o padrao dela), e o respiro da secao por dentro. */
+  const resumoFaixa = (meusLugares.map((lg) => lg.faixa).join(", ") || "em nenhuma")
+    + (capaS ? (alvoFoto ? " · só esta foto" : " · inteiro") : "");
   const blocoLugares = modo !== "paginas" ? ""
-    : '<div class="secao-pag" style="margin:2px 0 12px"><div class="nome-s" style="margin:4px 0 10px">Páginas do site</div>'
-      + blocoSite + corpoLugares + '</div>';
+    : secao("lugares", "Faixa do site", resumoFaixa, corpoLugares, !meusLugares.length,
+        "Em que faixa das páginas do site a imagem entra. Uma faixa por imagem: escolher outra <strong>move</strong>. Na capa de um carrossel do site, escolha se entra o <strong>carrossel inteiro</strong> (um card que folheia) ou <strong>só esta foto</strong>.")
+      + secao("sitecar", "Carrossel do site", origS ? "foto " + (origS.k + 1) + " de " + seqS.length : "nenhum", corpoSite, false,
+        "Um carrossel só das páginas do site: a Mix não muda. Para criar, arraste uma imagem para cima de outra.")
+      + '<div class="sep-pag" aria-hidden="true"></div>';
   const corpo = blocoLugares + '<div class="linha-idioma"><div class="alternador" id="fIdiomas" role="group"'
     + ' aria-label="Idioma dos textos">' + IDIOMAS.map((lg) =>
       '<button class="' + (idioma === lg[0] ? "on" : "") + '" data-lg="' + lg[0] + '">'
