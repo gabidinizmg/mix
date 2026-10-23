@@ -74,6 +74,15 @@
           ]
         }
       ]
+    },
+    {
+      "name": "festival",
+      "carrosseis": [
+        {
+          "name": "Festival 1",
+          "faixas": []
+        }
+      ]
     }
   ],
   "items": [
