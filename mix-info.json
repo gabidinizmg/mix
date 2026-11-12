@@ -276,28 +276,28 @@
   },
   "collections": {
     "3D": {
-      "order": 5
+      "order": 6
     },
     "Drawing": {
       "order": 7
     },
     "Editing": {
-      "order": 3
-    },
-    "Motion": {
       "order": 4
     },
+    "Motion": {
+      "order": 5
+    },
     "Photography": {
-      "order": 6,
+      "order": 1,
       "tags": [
         "Teste 1"
       ]
     },
     "Social Media": {
-      "order": 2
+      "order": 3
     },
     "UI": {
-      "order": 1
+      "order": 2
     }
   },
   "paginas": [
