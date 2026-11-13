@@ -937,6 +937,19 @@ if (fotosPag.length) saida.fotosDasPaginas = fotosPag;
     const pp = pecasValidas(bruto.pecasPadrao);
     if (pp) site.pecasPadrao = pp; else delete site.controlesPadrao;
   }
+  if (bruto.ordensMix && typeof bruto.ordensMix === "object") {
+    const caminhos = new Set(itens.map((it) => {
+      const m = /cdn\.jsdelivr\.net\/gh\/[^/]+\/[^/]+@[^/]+\/(.+)$/.exec(it.video || it.image || "");
+      if (!m) return it.video || it.image || "";
+      try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
+    }));
+    const ordens = Object.entries(bruto.ordensMix).flatMap(([chave, lista]) => {
+      if ((chave !== "all" && !chave.startsWith("colecao:")) || !Array.isArray(lista)) return [];
+      const valida = [...new Set(lista.filter((c) => caminhos.has(c)))];
+      return valida.length ? [[chave, valida]] : [];
+    });
+    if (ordens.length) site.ordensMix = Object.fromEntries(ordens);
+  }
   if (Object.keys(site).length) saida.site = site;
 }
 fs.writeFileSync(path.join(RAIZ, "images.json"), JSON.stringify(saida, null, 2) + "\n");

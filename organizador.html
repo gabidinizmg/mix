@@ -683,6 +683,29 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
   .topo { padding: 12px 16px; }
   .zoom { margin-left: 0; }
 }
+#btOrganizarGrade, .ordem-acoes button, .ordem-acoes select {
+  font:inherit; color:inherit; background:var(--painel, #272336);
+  border:1px solid currentColor; border-radius:8px; padding:8px 12px;
+}
+#ordemMixDialog { width:min(96vw, 1440px); max-width:none; max-height:94vh; padding:0;
+  border:1px solid #77708a; border-radius:16px; color:inherit; background:var(--fundo); }
+#ordemMixDialog::backdrop { background:rgba(15, 9, 25, .72); }
+.ordem-acoes { position:sticky; top:0; z-index:1; display:flex; gap:10px;
+  align-items:center; flex-wrap:wrap; padding:14px; background:var(--fundo); }
+.ordem-acoes strong { margin-right:auto; }
+.ordem-ajuda { padding:0 14px 12px; }
+#ordemMixGrade { display:grid; grid-auto-rows:1px; column-gap:12px; margin:0 auto 16px;
+  width:calc(100% - 28px); max-width:100%; }
+#ordemMixGrade.celular { width:min(390px, calc(100% - 28px)); }
+.ordem-card { position:relative; min-width:0; overflow:hidden; cursor:grab; border-radius:6px;
+  background:#302844; color:white; }
+.ordem-card :is(img,video) { display:block; width:100%; height:100%; object-fit:cover; }
+.ordem-card span { position:absolute; top:6px; left:6px; padding:2px 6px;
+  background:rgba(22,15,37,.8); border-radius:6px; font-size:12px; pointer-events:none; }
+.ordem-card.alvo-antes { box-shadow:inset 0 4px #be9cff; }
+.ordem-card.alvo-depois { box-shadow:inset 0 -4px #be9cff; }
+.ordem-card:is(.alvo-antes,.alvo-depois) { outline:3px solid #be9cff; }
+.ordem-card.arrastando { opacity:.45; }
 </style>
 
 <script>
@@ -803,6 +826,7 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
       </div>
       <div class="ferramentas">
         <div class="alternador" id="alternador" role="group" aria-label="O que mostrar"></div>
+        <button id="btOrganizarGrade" type="button" hidden>Organizar na grade</button>
         <div class="busca" id="caixaBusca" role="search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.2-3.2"/></svg>
@@ -998,6 +1022,21 @@ html[data-tema="claro"] .ficha .lado-foto { background: var(--painel-2); }
   </div>
 </div>
 
+<dialog id="ordemMixDialog" aria-labelledby="ordemMixTitulo">
+  <div class="ordem-acoes">
+    <strong id="ordemMixTitulo"></strong>
+    <select id="ordemMixTela" aria-label="Tamanho da prévia">
+      <option value="desktop">Desktop</option><option value="celular">Celular</option>
+    </select>
+    <button id="ordemMixDesfazer" type="button">Desfazer</button>
+    <button id="ordemMixCancelar" type="button">Cancelar</button>
+    <button id="ordemMixSalvar" type="button">Salvar ordem</button>
+  </div>
+  <div class="ordem-ajuda">Arraste e solte na metade de cima ou de baixo de um card. Pelo teclado, use Alt + ↑ ou ↓.
+    <span id="ordemMixEstado" role="status"></span>
+  </div>
+  <div id="ordemMixGrade"></div>
+</dialog>
 <script>
 /* ============================================================
    ESTADO
@@ -1356,7 +1395,10 @@ function sincronizar(repo) {
   if (siteCfg === null) siteCfg = Object.assign({}, siteRepo);
   else {
     const c = juntar3(base ? { v: base.site } : null, { v: siteCfg }, { v: siteRepo });
+    const ordens = juntar3(base?.site?.ordensMix, siteCfg.ordensMix, siteRepo.ordensMix);
     siteCfg = Object.assign({}, c.out.v || {});
+    if (Object.keys(ordens.out).length) siteCfg.ordensMix = ordens.out;
+    else delete siteCfg.ordensMix;
   }
   /* AS PÁGINAS: a árvore inteira é UM valor, a mesma regra do `site` */
   const pagRepo = Array.isArray(repo.paginas) ? repo.paginas : [];
@@ -2310,7 +2352,8 @@ function moverTagCol(nome, tag, passo) {
 
 const temTrabalho = () => Object.keys(edicoes).length > 0
   || !!(colecoesDef && Object.keys(colecoesDef).length)
-  || !!(paginasDef && paginasDef.length);
+  || !!(paginasDef && paginasDef.length)
+  || !!Object.keys(siteCfg?.ordensMix || {}).length;
 
 /* ---------- AS PÁGINAS DO SITE ----------  (19/10/2026)
    Ela: imagens do BigaFaixas (página /pro) vindas daqui, organizadas como
@@ -3385,8 +3428,156 @@ function visiveis() {
   /* numa FAIXA, a ordem é a dela - a mesma que o site mostra */
   const fx = faixaAberta();
   if (fx) return l.slice().sort((a, b) => ordemNaFaixa(a, fx) - ordemNaFaixa(b, fx));
-  return l.filter((x) => x.nova).concat(l.filter((x) => !x.nova));
+  const recentes = l.filter((x) => x.nova).concat(l.filter((x) => !x.nova));
+  return modo === "mix" && filtro !== "__arq" && filtro !== "__lixo"
+    ? ordemMixItens(recentes, siteCfg?.ordensMix?.[ordemMixChave(filtroCol)]) : recentes;
 }
+/* A prévia edita uma sequência. Cada largura encaixa essa sequência no mosaico. */
+const ordemMixChave = (colecao) => colecao ? "colecao:" + colecao : "all";
+const ordemMixRank = (lista) => new Map([...new Set(lista)].map((c, i) => [c, i]));
+const ordemMixItens = (lista, caminhos) => {
+  if (!Array.isArray(caminhos) || !caminhos.length) return lista;
+  const rank = ordemMixRank(caminhos);
+  return lista.slice().sort((a, b) => (rank.get(a.caminho) ?? Infinity) - (rank.get(b.caminho) ?? Infinity));
+};
+let ordemMixEdicao = null;
+
+function abrirOrdemMix() {
+  const chave = ordemMixChave(filtroCol);
+  const elegiveis = baseDaVista().filter((it) => !foraDoMixCard(it));
+  const cards = ordemMixItens(elegiveis, siteCfg?.ordensMix?.[chave]);
+  if (cards.length < 2) return;
+  ordemMixEdicao = { chave, cards, historico: [], proporcoes: new Map(), arrastado: null };
+  $("ordemMixTitulo").textContent = "Organizar na grade · " + (filtroCol || "All");
+  $("ordemMixEstado").textContent = "";
+  $("ordemMixDialog").showModal();
+  desenharOrdemMix();
+}
+
+function encaixarOrdemMix() {
+  const ed = ordemMixEdicao;
+  if (!ed || !$("ordemMixDialog").open) return;
+  const grade = $("ordemMixGrade");
+  const largura = grade.clientWidth;
+  const n = $("ordemMixTela").value === "celular" ? 2 : Math.max(1, Math.min(5, Math.floor((largura + 12) / 176)));
+  const w = (largura - 12 * (n - 1)) / n;
+  const alturas = Array(n).fill(0);
+  grade.style.gridTemplateColumns = "repeat(" + n + ", minmax(0, 1fr))";
+  Array.from(grade.children).forEach((card, i) => {
+    const col = alturas.indexOf(Math.min(...alturas));
+    const r = ed.proporcoes.get(ed.cards[i].caminho) || 1;
+    const h = Math.ceil(w / r);
+    card.style.gridColumn = col + 1;
+    card.style.gridRow = (alturas[col] + 1) + " / span " + Math.max(1, h);
+    alturas[col] += h + 12;
+  });
+}
+
+function moverOrdemMix(de, para) {
+  const ed = ordemMixEdicao;
+  if (de < 0 || para < 0 || para >= ed.cards.length || de === para) return;
+  ed.historico.push(ed.cards.slice());
+  ed.cards.splice(para, 0, ed.cards.splice(de, 1)[0]);
+  desenharOrdemMix(para);
+  $("ordemMixEstado").textContent = "Card movido para a posição " + (para + 1) + ".";
+}
+
+function desenharOrdemMix(foco) {
+  const ed = ordemMixEdicao;
+  const grade = $("ordemMixGrade");
+  grade.classList.toggle("celular", $("ordemMixTela").value === "celular");
+  $("ordemMixDesfazer").disabled = !ed.historico.length;
+  $("ordemMixSalvar").disabled = !ed.historico.length;
+  grade.replaceChildren(...ed.cards.map((it, i) => {
+    const card = document.createElement("div");
+    const nome = valGrupo(it, "name") || val(it, "name") || it.caminho.split("/").pop();
+    card.className = "ordem-card";
+    card.draggable = true;
+    card.tabIndex = 0;
+    card.setAttribute("role", "group");
+    card.setAttribute("aria-label", (i + 1) + ". " + nome);
+    const midia = document.createElement(it.image ? "img" : "video");
+    midia.draggable = false;
+    const medir = () => {
+      const w = midia.naturalWidth || midia.videoWidth, h = midia.naturalHeight || midia.videoHeight;
+      if (!w || !h || ordemMixEdicao !== ed) return;
+      ed.proporcoes.set(it.caminho, Math.min(4, Math.max(0.25, w / h)));
+      encaixarOrdemMix();
+    };
+    if (it.image) { midia.alt = ""; midia.loading = "lazy"; midia.onload = medir; }
+    else { midia.preload = "metadata"; midia.muted = true; midia.onloadedmetadata = medir; }
+    midia.src = it.image || it.video;
+    const num = document.createElement("span");
+    num.textContent = (i + 1) + (paginas(it).length > 1 ? " · Carrossel" : "");
+    card.append(midia, num);
+    card.ondragstart = (e) => {
+      ed.arrastado = i;
+      e.dataTransfer.setData("text/plain", it.caminho);
+      e.dataTransfer.effectAllowed = "move";
+      card.classList.add("arrastando");
+    };
+    card.ondragend = () => {
+      ed.arrastado = null;
+      grade.querySelectorAll(".arrastando,.alvo-antes,.alvo-depois").forEach((el) =>
+        el.classList.remove("arrastando", "alvo-antes", "alvo-depois"));
+    };
+    const depois = (e) => { const r = card.getBoundingClientRect(); return e.clientY > r.top + r.height / 2; };
+    card.ondragover = (e) => {
+      if (ed.arrastado === null || ed.arrastado === i) return;
+      e.preventDefault();
+      const d = depois(e);
+      card.classList.toggle("alvo-depois", d);
+      card.classList.toggle("alvo-antes", !d);
+    };
+    card.ondragleave = () => card.classList.remove("alvo-antes", "alvo-depois");
+    card.ondrop = (e) => {
+      if (ed.arrastado === null || ed.arrastado === i) return;
+      e.preventDefault();
+      const de = ed.arrastado;
+      ed.arrastado = null;
+      card.classList.remove("alvo-antes", "alvo-depois");
+      moverOrdemMix(de, i + Number(depois(e)) - Number(de < i));
+    };
+    card.onkeydown = (e) => {
+      if (!e.altKey || !["ArrowUp", "ArrowDown"].includes(e.key)) return;
+      e.preventDefault();
+      moverOrdemMix(i, i + (e.key === "ArrowUp" ? -1 : 1));
+    };
+    return card;
+  }));
+  encaixarOrdemMix();
+  if (foco !== undefined) grade.children[foco]?.focus({ preventScroll: true });
+}
+
+$("btOrganizarGrade").onclick = abrirOrdemMix;
+$("ordemMixTela").onchange = () => {
+  $("ordemMixGrade").classList.toggle("celular", $("ordemMixTela").value === "celular");
+  encaixarOrdemMix();
+};
+new ResizeObserver(encaixarOrdemMix).observe($("ordemMixDialog"));
+$("ordemMixDesfazer").onclick = () => {
+  ordemMixEdicao.cards = ordemMixEdicao.historico.pop();
+  desenharOrdemMix();
+  $("ordemMixEstado").textContent = "Último movimento desfeito.";
+};
+$("ordemMixCancelar").onclick = () => $("ordemMixDialog").close();
+$("ordemMixDialog").onclose = () => {
+  ordemMixEdicao = null;
+  $("ordemMixGrade").replaceChildren();
+  $("btOrganizarGrade").focus();
+};
+$("ordemMixSalvar").onclick = () => {
+  const ed = ordemMixEdicao;
+  if (!ed || !ed.historico.length) return;
+  siteCfg = { ...(siteCfg || {}), ordensMix: {
+    ...(siteCfg?.ordensMix || {}), [ed.chave]: ed.cards.map((it) => it.caminho)
+  } };
+  salvar();
+  $("ordemMixDialog").close();
+  desenhar();
+  mostrarEstado("Ordem guardada · use Salvar no GitHub para enviar", "ok");
+};
+
 function desenharAlternador() {
   const base = baseDaVista();
   if (modo === "paginas") {
@@ -3712,6 +3903,11 @@ function soltarNoQuadro(d, dest, pos, copia) {
 }
 
 function desenharGrade() {
+  const base = baseDaVista();
+  $("btOrganizarGrade").hidden = modo !== "mix" || mostrar === "colecoes" ||
+    !!filtro || !!tagColAtiva() || !!busca.trim() || mostrar === "carrosseis" ||
+    base.filter((it) => !foraDoMixCard(it)).length < 2;
+
   $("grade").style.gridTemplateColumns = "repeat(auto-fill, minmax(" + ZOOMS[zoom] + "px, 1fr))";
   $("btMenos").disabled = zoom === 0;
   $("btMais").disabled = zoom === ZOOMS.length - 1;
@@ -4752,7 +4948,7 @@ function desenharCfgVideos() {
   $("cfgPos").querySelectorAll("[data-v]").forEach((b) => { b.onclick = () => { const v = Number(b.dataset.v); muda("playPosicao", cfg.playPosicao === v ? "" : v); }; });
   $("cfgTam").onchange = () => { const v = $("cfgTam").value.trim(); muda("playTamanho", v === "" ? "" : Math.min(160, Math.max(24, Number(v)))); };
   $("cfgApos").onchange = () => { const v = $("cfgApos").value.trim(); muda("videoEsconderApos", v === "" ? "" : Math.min(10, Math.max(0, Number(v)))); };
-  if ($("cfgLimpar")) $("cfgLimpar").onclick = () => { siteCfg = {}; salvar(); desenharCfgVideos(); mostrarEstado("vídeos no site: do Figma · falta Salvar", "aviso"); };
+  if ($("cfgLimpar")) $("cfgLimpar").onclick = () => { siteCfg = siteCfg?.ordensMix ? { ordensMix: siteCfg.ordensMix } : {}; salvar(); desenharCfgVideos(); mostrarEstado("vídeos no site: do Figma · falta Salvar", "aviso"); };
 }
 
 /* ESPACO NO GITHUB (23/09/2026). Ela: "onde vejo o espaco?" - o GitHub
